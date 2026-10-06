@@ -7,7 +7,7 @@
   <style>
     :root {
       --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-      --card-bg: rgba(30, 41, 59, 0.7);
+      --card-bg: rgba(30, 41, 59, 0.85);
       --primary: #6366f1;
       --primary-hover: #4f46e5;
       --success: #10b981;
@@ -31,12 +31,11 @@
       position: relative;
     }
 
-    /* Sterne im Hintergrund */
     .space-bg {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
-      background-size: 50px 50px;
+      background: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
+      background-size: 40px 40px;
       z-index: 0;
       pointer-events: none;
     }
@@ -45,14 +44,13 @@
       background: var(--card-bg);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       padding: 30px;
       border-radius: 20px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
       max-width: 600px;
       width: 100%;
       z-index: 10;
-      transition: transform 0.3s ease;
     }
 
     .header-info {
@@ -70,10 +68,10 @@
       color: #0f172a;
       padding: 4px 10px;
       border-radius: 12px;
-      font-size: 0.8rem;
+      font-size: 0.85rem;
+      font-weight: 800;
     }
 
-    /* Fortschrittsbalken */
     .progress-bar-container {
       background: rgba(255, 255, 255, 0.1);
       height: 8px;
@@ -85,14 +83,13 @@
       height: 100%;
       background: linear-gradient(90deg, var(--primary), #a855f7);
       width: 0%;
-      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: width 0.3s ease;
     }
 
     h2 {
-      font-size: 1.4rem;
+      font-size: 1.3rem;
       margin-bottom: 20px;
       line-height: 1.4;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
 
     .options-grid {
@@ -101,37 +98,34 @@
     }
 
     .btn-option {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       color: var(--text);
-      padding: 14px 20px;
+      padding: 14px 18px;
       font-size: 1rem;
       text-align: left;
       border-radius: 10px;
       cursor: pointer;
       transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
     }
 
     .btn-option:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.15);
       border-color: var(--primary);
-      transform: translateY(-2px);
+      transform: translateY(-1px);
     }
 
     .btn-option.correct {
-      background: rgba(16, 185, 129, 0.2) !important;
+      background: rgba(16, 185, 129, 0.25) !important;
       border-color: var(--success) !important;
-      box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+      color: #ecfdf5;
       font-weight: bold;
     }
 
     .btn-option.wrong {
-      background: rgba(239, 68, 68, 0.2) !important;
+      background: rgba(239, 68, 68, 0.25) !important;
       border-color: var(--error) !important;
-      box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+      color: #fef2f2;
     }
 
     .feedback-box {
@@ -141,7 +135,7 @@
       border-left: 4px solid;
       background: rgba(255, 255, 255, 0.05);
       display: none;
-      animation: fadeIn 0.3s ease-out;
+      line-height: 1.5;
     }
 
     .next-btn {
@@ -152,7 +146,7 @@
       color: white;
       border: none;
       border-radius: 10px;
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       font-weight: bold;
       cursor: pointer;
       display: none;
@@ -160,40 +154,30 @@
     }
 
     .next-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+      filter: brightness(1.1);
     }
 
-    /* Endbildschirm */
     .result-box {
       text-align: center;
       display: none;
-      animation: zoomIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
     .badge {
-      font-size: 4rem;
+      font-size: 3.5rem;
       margin-bottom: 10px;
-      animation: bounce 2s infinite;
     }
     .rank-title {
-      font-size: 2rem;
+      font-size: 1.8rem;
       font-weight: 800;
-      background: linear-gradient(45deg, #f59e0b, #ec4899);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: #f59e0b;
       margin-bottom: 10px;
     }
-
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes zoomIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
   </style>
 </head>
 <body>
 
   <div class="space-bg"></div>
 
-  <div class="quiz-card" id="quiz-card">
+  <div class="quiz-card">
     <div id="quiz-screen">
       <div class="header-info">
         <span id="meta">MISSION 1 / 4</span>
@@ -216,9 +200,169 @@
     <div id="result-screen" class="result-box">
       <div id="badge-icon" class="badge">🚀</div>
       <div id="rank-display" class="rank-title">QUANTEN-REKRUT</div>
-      <p id="score-display" style="font-size: 1.15rem; margin-bottom: 25px; color: #cbd5e1;"></p>
+      <p id="score-display" style="font-size: 1.1rem; margin-bottom: 25px; color: #cbd5e1;"></p>
       <button class="next-btn" style="display:inline-block;" onclick="location.reload()">Neue Mission starten 🔄</button>
     </div>
   </div>
 
-  <
+  <script>
+    const quizData = [
+      {
+        question: "🚀 Ein Astronaut wirft im völlig leeren Weltraum einen Schraubenschlüssel weg. Was passiert mit dem Schlüssel?",
+        options: [
+          "Er wird langsam langsamer und bleibt stehen.",
+          "Er fliegt für immer mit genau gleicher Geschwindigkeit weiter.",
+          "Er fällt sofort in eine Kreisbahn um den Astronauten.",
+          "Er fliegt in einer Schlangenlinie durch den Raum."
+        ],
+        correct: 1,
+        explanation: "1. Newtonsches Gesetz (Trägheitssatz): Im Vakuum ohne äußere Kräfte bewegt sich ein Körper geradlinig und gleichförmig weiter!"
+      },
+      {
+        question: "💡 Warum bricht ein Glasprisma weißes Licht in Regenbogenfarben?",
+        options: [
+          "Weil verschiedene Farben im Glas unterschiedlich stark abgebremst und gebrochen werden.",
+          "Weil das Prisma das Licht chemisch einfärbt.",
+          "Weil rotes Licht am schnellsten ist und unbeeinflusst bleibt.",
+          "Weil das Glas Wärme abstrahlt."
+        ],
+        correct: 0,
+        explanation: "Dispersion! Jede Wellenlänge (Farbe) hat im Medium einen anderen Brechungsindex. Blau wird stärker gebrochen als Rot."
+      },
+      {
+        question: "🍏 Du lässt eine Feder und eine Bleikugel im Vakuum gleichzeitig fallen. Was passiert?",
+        options: [
+          "Die Bleikugel schlägt deutlich früher auf.",
+          "Beide kommen exakt zur gleichen Zeit unten an.",
+          "Die Feder schwebt nach oben.",
+          "Die Bleikugel fällt langsamer wegen ihrer Trägheit."
+        ],
+        correct: 1,
+        explanation: "Ohne Luftwiderstand fallen alle Massen im gleichen Schwerefeld exakt gleich schnell (g ≈ 9,81 m/s²)."
+      },
+      {
+        question: "⚡ Was gibt die physikalische Einheit 'Ampere' an?",
+        options: [
+          "Die elektrische Spannung",
+          "Den elektrischen Widerstand",
+          "Die elektrische Stromstärke (Ladungsmenge pro Zeit)",
+          "Die verbrauchte Leistung"
+        ],
+        correct: 2,
+        explanation: "Ampere (A) misst die Stromstärke: 1 Ampere = 1 Coulomb Ladung pro Sekunde."
+      }
+    ];
+
+    function getRank(percentage) {
+      if (percentage === 100) return { title: "🌌 Albert Einsteins Erbe", icon: "🌌", msg: "Absolut fehlerfrei! Du bist eine echte Physik-Legende!" };
+      if (percentage >= 75)  return { title: "⚡ Quanten-Meister", icon: "⚛️", msg: "Hervorragend! Die physikalischen Gesetze sitzen." };
+      if (percentage >= 50)  return { title: "🛰️ Orbit-Forscher", icon: "🛰️", msg: "Solide Leistung! Mit etwas Übung wirst du Meister." };
+      return { title: "🌱 Erden-Bürger", icon: "🌍", msg: "Guter Versuch! Schau dir die Grundlagen nochmal an." };
+    }
+
+    let currentIndex = 0;
+    let score = 0;
+    let xp = 0;
+    let audioCtx = null;
+
+    function playTone(freq, type, duration) {
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {
+        // Fallback falls Browser Audio blockiert
+      }
+    }
+
+    function loadQuestion() {
+      const q = quizData[currentIndex];
+      document.getElementById('meta').textContent = `MISSION ${currentIndex + 1} / ${quizData.length}`;
+      document.getElementById('question-text').textContent = q.question;
+      document.getElementById('progress').style.width = `${(currentIndex / quizData.length) * 100}%`;
+      
+      const container = document.getElementById('options-container');
+      container.innerHTML = '';
+      document.getElementById('feedback').style.display = 'none';
+      document.getElementById('next-btn').style.display = 'none';
+
+      q.options.forEach((optText, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-option';
+        btn.textContent = optText;
+        btn.onclick = () => selectOption(i, btn);
+        container.appendChild(btn);
+      });
+    }
+
+    function selectOption(selectedIndex, clickedBtn) {
+      const q = quizData[currentIndex];
+      const buttons = document.querySelectorAll('.btn-option');
+      buttons.forEach(b => b.disabled = true);
+
+      const feedback = document.getElementById('feedback');
+      const isCorrect = (selectedIndex === q.correct);
+
+      if (isCorrect) {
+        score++;
+        xp += 100;
+        document.getElementById('score-badge').textContent = `✨ ${xp} XP`;
+        clickedBtn.classList.add('correct');
+        feedback.style.borderColor = 'var(--success)';
+        feedback.innerHTML = `<strong style="color:var(--success)">RICHTIG! 🎉 (+100 XP)</strong><br><br>${q.explanation}`;
+        playTone(600, 'sine', 0.1);
+        setTimeout(() => playTone(800, 'sine', 0.2), 100);
+      } else {
+        clickedBtn.classList.add('wrong');
+        buttons[q.correct].classList.add('correct');
+        feedback.style.borderColor = 'var(--error)';
+        feedback.innerHTML = `<strong style="color:var(--error)">Leider falsch! ☄️</strong><br>Richtige Antwort: <em>${q.options[q.correct]}</em>.<br><br>${q.explanation}`;
+        playTone(200, 'sawtooth', 0.25);
+      }
+
+      feedback.style.display = 'block';
+      const nextBtn = document.getElementById('next-btn');
+      nextBtn.textContent = (currentIndex === quizData.length - 1) ? 'Ergebnis anzeigen 🎉' : 'Nächste Mission →';
+      nextBtn.style.display = 'block';
+    }
+
+    function nextQuestion() {
+      currentIndex++;
+      if (currentIndex < quizData.length) {
+        loadQuestion();
+      } else {
+        showResults();
+      }
+    }
+
+    function showResults() {
+      document.getElementById('quiz-screen').style.display = 'none';
+      const resultScreen = document.getElementById('result-screen');
+      resultScreen.style.display = 'block';
+
+      const pct = Math.round((score / quizData.length) * 100);
+      const rank = getRank(pct);
+
+      document.getElementById('badge-icon').textContent = rank.icon;
+      document.getElementById('rank-display').textContent = rank.title;
+      document.getElementById('score-display').innerHTML = `Du hast <strong>${score} von ${quizData.length}</strong> Aufgaben gelöst!<br>Gesamt: <strong>${xp} XP</strong> (${pct}%).<br><br>${rank.msg}`;
+    }
+
+    // Direkt ausführen sobald HTML da ist
+    window.addEventListener('DOMContentLoaded', loadQuestion);
+  </script>
+</body>
+</html>
