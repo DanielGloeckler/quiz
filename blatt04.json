@@ -1,0 +1,68 @@
+[
+  {
+    "question": "Welcher Bereich auf der Erde ist für besonders viele aktive Vulkane und Erdbeben bekannt?",
+    "options": [
+      "Der Pazifische Feuerring (Ring of Fire)",
+      "Der Mittelatlantische Rücken",
+      "Der Ostafrikanische Grabenbruch",
+      "Die Eurasische Platte"
+    ],
+    "correct": 0,
+    "explanation": "Der Pazifische Feuerring ist ein hufeisenförmiger Vulkangürtel, der den Pazifischen Ozean umgibt. Dort treten etwa 90 % aller Erdbeben weltweit auf."
+  },
+  {
+    "question": "Wie nennt man flüssiges Gestein, solange es sich noch *unter* der Erdoberfläche befindet?",
+    "options": [
+      "Magma",
+      "Lava",
+      "Basalt",
+      "Bimsstein"
+    ],
+    "correct": 0,
+    "explanation": "Flüssiges Gestein im Erdinneren heißt Magma. Sobald es an die Oberfläche tritt (z. B. bei einem Vulkanausbruch), wird es als Lava bezeichnet."
+  },
+  {
+    "question": "Wie nennt man den Punkt auf der Erdoberfläche, der genau senkrecht über dem Erdbebenherd liegt?",
+    "options": [
+      "Epizentrum",
+      "Hypozentrum",
+      "Seismogramm",
+      "Bruchzone"
+    ],
+    "correct": 0,
+    "explanation": "Das Epizentrum ist der Punkt auf der Erdoberfläche, an dem das Erdbeben meist am stärksten zu spüren ist. Der eigentliche Herd tief in der Erde heißt Hypozentrum."
+  },
+  {
+    "question": "Mit welchem Messgerät werden Erdbebenwellen aufgezeichnet?",
+    "options": [
+      "Seismograph",
+      "Barometer",
+      "Hygrometer",
+      "Geigerzähler"
+    ],
+    "correct": 0,
+    "explanation": "Ein Seismograph zeichnet die Erschütterungen des Bodens als Kurve (Seismogramm) auf."
+  },
+  {
+    "question": "Was beschreibt die Plattentektonik?",
+    "options": [
+      "Die ständige langsame Bewegung der Erdplatten auf dem zähflüssigen Erdmantel.",
+      "Den Aufbau der Erdatmosphäre in verschiedene Schichten.",
+      "Die Entstehung von Ebbe und Flut durch den Mond.",
+      "Die Verwitterung von Gestein durch Wind und Wasser."
+    ],
+    "correct": 0,
+    "explanation": "Die Lithosphäre (Erdkruste) besteht aus Platten, die auf dem Erdmantel 'schwimmen' und sich um wenige Zentimeter pro Jahr bewegen."
+  },
+  {
+    "question": "Welche Skala wird häufig verwendet, um die Stärke (Magnitude) eines Erdbebens anzugeben?",
+    "options": [
+      "Richterskala",
+      "Kelvinskala",
+      "Beaufortskala",
+      "Mohsskala"
+    ],
+    "correct": 0,
+    "explanation": "Die Richterskala misst die freigesetzte Energie (Magnitude) eines Erdbebens. (Die Beaufortskala ist für Wind, Mohs für Härte, Kelvin für Temperatur)."
+  }
+]
