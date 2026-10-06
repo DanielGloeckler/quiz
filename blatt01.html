@@ -3,173 +3,238 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quiz: Blatt 1</title>
+  <title>Interaktives Quiz: /* QUIZ_TITLE */</title>
+  
+  <!-- MathJax fuer LaTeX Formeln -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
   <style>
-    * { box-sizing: border-box; }
+    :root {
+      --bg-color: #f3f4f6;
+      --card-bg: #ffffff;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --success: #16a34a;
+      --error: #dc2626;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --border-color: #e5e7eb;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #f0f2f5;
-      margin: 0;
-      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg-color);
+      color: var(--text-main);
+      min-height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
+      padding: 20px;
     }
+
     .quiz-card {
-      background: #ffffff;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
       padding: 30px;
-      border-radius: 14px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-      max-width: 520px;
+      border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      max-width: 600px;
       width: 100%;
     }
+
+    .header-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .score-badge {
+      background: #fef3c7;
+      color: #92400e;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
     .progress-bar-container {
-      background: #e4e6eb;
+      background: var(--border-color);
       height: 8px;
       border-radius: 4px;
       overflow: hidden;
-      margin-bottom: 20px;
+      margin-bottom: 25px;
     }
+    
     .progress-bar {
       height: 100%;
-      background: #2563eb;
+      background: var(--primary);
       width: 0%;
-      transition: width 0.3s;
+      transition: width 0.3s ease;
     }
-    .q-meta {
-      font-size: 0.85rem;
-      color: #65676b;
-      margin-bottom: 10px;
-      font-weight: 600;
+
+    h2 {
+      font-size: 1.25rem;
+      margin-bottom: 20px;
+      line-height: 1.5;
+      color: var(--text-main);
     }
-    h2 { margin: 0 0 20px 0; font-size: 1.25rem; color: #1c1e21; line-height: 1.4; }
+
+    .options-grid {
+      display: grid;
+      gap: 10px;
+    }
+
     .btn-option {
-      display: block;
-      width: 100%;
-      padding: 13px 16px;
-      margin: 10px 0;
+      background: #f9fafb;
+      border: 2px solid var(--border-color);
+      color: var(--text-main);
+      padding: 14px 18px;
       font-size: 1rem;
       text-align: left;
-      background: #f7f8fa;
-      border: 2px solid #e4e6eb;
-      border-radius: 8px;
+      border-radius: 12px;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.2s ease;
     }
+
     .btn-option:hover:not(:disabled) {
-      background: #edf2f7;
-      border-color: #cbd5e1;
+      background: #f3f4f6;
+      border-color: #d1d5db;
     }
+
     .btn-option.correct {
-      background: #e8f5e9 !important;
-      border-color: #2e7d32 !important;
-      color: #1b5e20;
-      font-weight: bold;
+      background: #f0fdf4 !important;
+      border-color: var(--success) !important;
+      color: #166534;
+      font-weight: 600;
     }
+
     .btn-option.wrong {
-      background: #ffebee !important;
-      border-color: #d32f2f !important;
-      color: #b71c1c;
+      background: #fef2f2 !important;
+      border-color: var(--error) !important;
+      color: #991b1b;
     }
+
     .feedback-box {
-      margin-top: 15px;
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 0.95rem;
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: 12px;
+      background: #f9fafb;
       display: none;
+      line-height: 1.5;
+      font-size: 0.95rem;
+      border-left: 4px solid var(--border-color);
     }
+
     .next-btn {
-      margin-top: 15px;
+      margin-top: 20px;
       width: 100%;
-      padding: 12px;
-      background: #2563eb;
+      padding: 14px;
+      background: var(--primary);
       color: white;
       border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: bold;
+      border-radius: 12px;
+      font-size: 1.05rem;
+      font-weight: 600;
       cursor: pointer;
       display: none;
+      transition: background 0.2s;
     }
-    .next-btn:hover { background: #1d4ed8; }
+
+    .next-btn:hover {
+      background: var(--primary-hover);
+    }
+
+    .result-box {
+      text-align: center;
+      display: none;
+    }
     
-    /* Endscreen */
-    .result-box { text-align: center; display: none; }
     .badge {
-      font-size: 2.2rem;
-      margin: 10px 0;
+      font-size: 4rem;
+      margin-bottom: 15px;
     }
+    
     .rank-title {
-      font-size: 1.6rem;
+      font-size: 1.75rem;
       font-weight: 800;
-      color: #1e293b;
-      margin-bottom: 8px;
+      color: var(--text-main);
+      margin-bottom: 10px;
     }
-    .score-text { font-size: 1.1rem; color: #475569; margin-bottom: 25px; }
+    
+    .score-text {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      margin-bottom: 30px;
+    }
   </style>
 </head>
 <body>
 
   <div class="quiz-card">
     <div id="quiz-screen">
+      <div class="header-info">
+        <span id="meta">Aufgabe 1 / 4</span>
+        <span id="score-badge" class="score-badge">Punkte: 0</span>
+      </div>
+      
       <div class="progress-bar-container">
         <div id="progress" class="progress-bar"></div>
       </div>
-      <div id="meta" class="q-meta">Frage 1 von 3</div>
-      <h2 id="question-text">Frage lädt...</h2>
-      <div id="options-container"></div>
+
+      <h2 id="question-text">Lade Fragen...</h2>
+      
+      <div id="options-container" class="options-grid"></div>
+      
       <div id="feedback" class="feedback-box"></div>
-      <button id="next-btn" class="next-btn" onclick="nextQuestion()">Weiter zur nächsten Frage →</button>
+      <button id="next-btn" class="next-btn" onclick="nextQuestion()">Nächste Aufgabe →</button>
     </div>
 
     <!-- Ergebnis-Bildschirm -->
     <div id="result-screen" class="result-box">
-      <div id="badge-icon" class="badge">🏆</div>
-      <div id="rank-display" class="rank-title">Rang: Legende</div>
-      <div id="score-display" class="score-text">Du hast 3 von 3 Punkten erreicht!</div>
-      <button class="next-btn" style="display:inline-block;" onclick="location.reload()">Noch einmal versuchen 🔄</button>
+      <div id="badge-icon" class="badge">🎓</div>
+      <div id="rank-display" class="rank-title">Laden...</div>
+      <p id="score-display" class="score-text"></p>
+      <button class="next-btn" style="display:inline-block;" onclick="location.reload()">Quiz wiederholen 🔄</button>
     </div>
   </div>
 
   <script>
-    // DEINE FRAGEN HIER EINTRAGEN:
-    const quizData = [
-      {
-        question: "Was ist das Ergebnis von 2 + 2?",
-        options: ["3", "4", "5"],
-        correct: 1, // Index: 0 = erste Antwort, 1 = zweite Antwort
-        explanation: "2 + 2 ergibt 4."
-      },
-      {
-        question: "Welche Einheit hat die elektrische Spannung?",
-        options: ["Ampere", "Volt", "Watt", "Ohm"],
-        correct: 1,
-        explanation: "Ampere ist Stromstärke, Volt ist Spannung, Watt ist Leistung."
-      },
-      {
-        question: "Ist die Funktion f(x) = x² auf ℝ injektiv?",
-        options: ["Ja", "Nein"],
-        correct: 1,
-        explanation: "Nein, da z. B. f(-2) = f(2) = 4 gilt."
-      }
-    ];
+    /* QUIZ_DATA_PLACEHOLDER */
 
-    // RÄNGE FESTLEGEN (in Prozent):
     function getRank(percentage) {
-      if (percentage === 100) return { title: "🌟 Legende", icon: "👑", msg: "Makellose Leistung! Alles richtig!" };
-      if (percentage >= 75)  return { title: "🥇 Meister", icon: "🏆", msg: "Hervorragend verstanden!" };
-      if (percentage >= 50)  return { title: "🥈 Geselle", icon: "📚", msg: "Gute Basis, noch etwas Übung nötig." };
-      return { title: "🌱 Lehrling", icon: "💡", msg: "Schau dir die Aufgaben noch einmal in Ruhe an!" };
+      if (percentage === 100) return { title: "🌟 Perfekt!", icon: "🌟", msg: "Fantastische Leistung, du hast alles richtig!" };
+      if (percentage >= 75)  return { title: "📚 Gut gemacht!", icon: "📚", msg: "Sehr solide Leistung, das Thema sitzt!" };
+      if (percentage >= 50)  return { title: "✏️ Auf gutem Weg", icon: "✏️", msg: "Die Basis ist da, aber ein bisschen Übung schadet nicht." };
+      return { title: "🌱 Weiter üben!", icon: "🌱", msg: "Schau dir die Aufgaben oder das Skript noch einmal in Ruhe an." };
     }
 
     let currentIndex = 0;
     let score = 0;
 
+    function renderMath() {
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise();
+      }
+    }
+
     function loadQuestion() {
       const q = quizData[currentIndex];
-      document.getElementById('meta').textContent = `Frage ${currentIndex + 1} von ${quizData.length}`;
-      document.getElementById('question-text').textContent = q.question;
+      document.getElementById('meta').textContent = `Aufgabe ${currentIndex + 1} von ${quizData.length}`;
+      document.getElementById('question-text').innerHTML = q.question;
       document.getElementById('progress').style.width = `${(currentIndex / quizData.length) * 100}%`;
       
       const container = document.getElementById('options-container');
@@ -180,10 +245,12 @@
       q.options.forEach((optText, i) => {
         const btn = document.createElement('button');
         btn.className = 'btn-option';
-        btn.textContent = optText;
+        btn.innerHTML = optText;
         btn.onclick = () => selectOption(i, btn);
         container.appendChild(btn);
       });
+
+      renderMath();
     }
 
     function selectOption(selectedIndex, clickedBtn) {
@@ -196,22 +263,25 @@
 
       if (isCorrect) {
         score++;
+        document.getElementById('score-badge').textContent = `Punkte: ${score}`;
         clickedBtn.classList.add('correct');
-        feedback.style.background = '#e8f5e9';
-        feedback.style.color = '#1b5e20';
-        feedback.innerHTML = `<strong>Richtig! 🎉 (+1 Punkt)</strong><br>${q.explanation}`;
+        feedback.style.borderColor = 'var(--success)';
+        feedback.style.backgroundColor = '#f0fdf4';
+        feedback.innerHTML = `<strong style="color:var(--success)">Richtig! 🎉</strong><br><br>${q.explanation}`;
       } else {
         clickedBtn.classList.add('wrong');
-        buttons[q.correct].classList.add('correct'); // Richtige Antwort grün hervorheben
-        feedback.style.background = '#ffebee';
-        feedback.style.color = '#b71c1c';
-        feedback.innerHTML = `<strong>Leider falsch.</strong><br>Richtige Antwort: <em>${q.options[q.correct]}</em>.<br>${q.explanation}`;
+        buttons[q.correct].classList.add('correct');
+        feedback.style.borderColor = 'var(--error)';
+        feedback.style.backgroundColor = '#fef2f2';
+        feedback.innerHTML = `<strong style="color:var(--error)">Leider falsch.</strong><br>Die richtige Antwort ist: <em>${q.options[q.correct]}</em>.<br><br>${q.explanation}`;
       }
 
       feedback.style.display = 'block';
       const nextBtn = document.getElementById('next-btn');
-      nextBtn.textContent = (currentIndex === quizData.length - 1) ? 'Ergebnis & Rang ansehen 🎉' : 'Weiter zur nächsten Frage →';
+      nextBtn.textContent = (currentIndex === quizData.length - 1) ? 'Ergebnis anzeigen 🎉' : 'Nächste Aufgabe →';
       nextBtn.style.display = 'block';
+
+      renderMath();
     }
 
     function nextQuestion() {
@@ -233,11 +303,10 @@
 
       document.getElementById('badge-icon').textContent = rank.icon;
       document.getElementById('rank-display').textContent = rank.title;
-      document.getElementById('score-display').innerHTML = `Du hast <strong>${score} von ${quizData.length}</strong> Punkten (${pct}%) erreicht.<br><br>${rank.msg}`;
+      document.getElementById('score-display').innerHTML = `Du hast <strong>${score} von ${quizData.length}</strong> Aufgaben richtig gelöst (${pct}%).<br><br>${rank.msg}`;
     }
 
-    // Start
-    loadQuestion();
+    window.addEventListener('DOMContentLoaded', loadQuestion);
   </script>
 </body>
 </html>
