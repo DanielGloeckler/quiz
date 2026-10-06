@@ -414,7 +414,39 @@
       document.getElementById('score-display').innerHTML = `Du hast <strong>${score} von ${quizData.length}</strong> Aufgaben richtig gelöst (${pct}%).<br><br>${rank.msg}`;
     }
 
-    window.addEventListener('DOMContentLoaded', loadQuestion);
+    // --- NEU: Zufallsgenerator für Fragen und Antworten ---
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    function initQuiz() {
+      if (typeof quizData !== 'undefined' && quizData.length > 0) {
+        // 1. Reihenfolge der Fragen mischen
+        shuffleArray(quizData);
+        
+        // 2. Reihenfolge der Antwortmöglichkeiten mischen
+        quizData.forEach(q => {
+          // Antworten mit der Info "ist das die richtige?" verknüpfen
+          let optionsWithFlag = q.options.map((opt, idx) => {
+            return { text: opt, isCorrect: (idx === q.correct) };
+          });
+          
+          // Mischen
+          shuffleArray(optionsWithFlag);
+          
+          // Zurück in das ursprüngliche Format schreiben, damit loadQuestion() es versteht
+          q.options = optionsWithFlag.map(o => o.text);
+          q.correct = optionsWithFlag.findIndex(o => o.isCorrect);
+        });
+      }
+      loadQuestion(); // Startet das Quiz nach dem Mischen
+    }
+
+    // Event-Listener startet nun initQuiz() anstelle von loadQuestion()
+    window.addEventListener('DOMContentLoaded', initQuiz);
   </script>
 </body>
 </html>
