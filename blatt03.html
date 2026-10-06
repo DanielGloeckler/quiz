@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interaktives Schul-Quiz: Physik - Blatt03</title>
+  
+  <!-- MathJax für LaTeX Formeln -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      --card-bg: #ffffff;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --success: #16a34a;
+      --error: #dc2626;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --border-color: #cbd5e1;
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .quiz-card {
+      background: var(--card-bg);
+      border: 1px solid rgba(203, 213, 225, 0.6);
+      padding: 35px;
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      max-width: 650px;
+      width: 100%;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .header-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .score-badge {
+      background: #e0e7ff;
+      color: #3730a3;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .progress-bar-container {
+      background: #e2e8f0;
+      height: 10px;
+      border-radius: 5px;
+      overflow: hidden;
+      margin-bottom: 25px;
+    }
+    
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), #6366f1);
+      width: 0%;
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 5px;
+    }
+
+    h2 {
+      font-size: 1.35rem;
+      margin-bottom: 22px;
+      line-height: 1.5;
+      color: var(--text-main);
+      font-weight: 700;
+    }
+
+    .options-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .btn-option {
+      background: #f8fafc;
+      border: 2px solid var(--border-color);
+      color: var(--text-main);
+      padding: 15px 18px;
+      font-size: 1rem;
+      text-align: left;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-weight: 500;
+    }
+
+    .btn-option:hover:not(:disabled) {
+      background: #f1f5f9;
+      border-color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    .btn-option.correct {
+      background: #f0fdf4 !important;
+      border-color: var(--success) !important;
+      color: #166534;
+      font-weight: 600;
+      box-shadow: 0 0 10px rgba(22, 163, 74, 0.15);
+    }
+
+    .btn-option.wrong {
+      background: #fef2f2 !important;
+      border-color: var(--error) !important;
+      color: #991b1b;
+      box-shadow: 0 0 10px rgba(220, 38, 38, 0.15);
+    }
+
+    .feedback-box {
+      margin-top: 22px;
+      padding: 18px;
+      border-radius: 12px;
+      background: #f8fafc;
+      display: none;
+      line-height: 1.6;
+      font-size: 0.95rem;
+      border-left: 5px solid var(--border-color);
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .next-btn {
+      margin-top: 22px;
+      width: 100%;
+      padding: 15px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: none;
+      transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    }
+
+    .next-btn:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .result-box {
+      text-align: center;
+      display: none;
+      animation: fadeIn 0.5s ease-out;
+    }
+    
+    .badge {
+      font-size: 4.5rem;
+      margin-bottom: 15px;
+    }
+    
+    .rank-title {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 12px;
+    }
+    
+    .score-text {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      margin-bottom: 30px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="quiz-card">
+    <div id="quiz-screen">
+      <div class="header-info">
+        <span id="meta">Aufgabe 1 von 8</span>
+        <span id="score-badge" class="score-badge">Punkte: 0</span>
+      </div>
+      
+      <div class="progress-bar-container">
+        <div id="progress" class="progress-bar"></div>
+      </div>
+
+      <h2 id="question-text">Lade Fragen...</h2>
+      
+      <div id="options-container" class="options-grid"></div>
+      
+      <div id="feedback" class="feedback-box"></div>
+      <button id="next-btn" class="next-btn" onclick="nextQuestion()">Nächste Aufgabe →</button>
+    </div>
+
+    <!-- Ergebnis-Bildschirm -->
+    <div id="result-screen" class="result-box">
+      <div id="badge-icon" class="badge">🎓</div>
+      <div id="rank-display" class="rank-title">Laden...</div>
+      <p id="score-display" class="score-text"></p>
+      <button class="next-btn" style="display:inline-block;" onclick="location.reload()">Quiz wiederholen 🔄</button>
+    </div>
+  </div>
+
+  <script>
+    const quizData = [
+  {
+    "question": "Welcher Zusammenhang beschreibt die elektrische Leistung P in Abhängigkeit von Spannung U und Stromstärke I?",
+    "options": [
+      "P = U · I",
+      "P = U / I",
+      "P = U² · I",
+      "P = R · I²"
+    ],
+    "correct": 0,
+    "explanation": "Die elektrische Leistung ist das Produkt aus Spannung und Stromstärke: P = U · I."
+  },
+  {
+    "question": "Wie verhält sich der Gesamtwiderstand bei einer Reihenschaltung von drei Ohmschen Widerständen?",
+    "options": [
+      "Er ist die Summe aller Einzelwiderstände (R_ges = R1 + R2 + R3).",
+      "Er wird durch die Kehrwerte addiert.",
+      "Er ist immer kleiner als der kleinste Einzelwiderstand.",
+      "Er hängt nur vom ersten Widerstand ab."
+    ],
+    "correct": 0,
+    "explanation": "In einer Reihenschaltung addieren sich die Widerstände direkt zum Gesamtwiderstand."
+  },
+  {
+    "question": "Was versteht man unter einer harmonischen Schwingung?",
+    "options": [
+      "Eine Bewegung, bei der die Rückstellkraft proportional zur Auslenkung ist.",
+      "Eine Bewegung mit konstanter Beschleunigung in eine Richtung.",
+      "Eine unregelmäßige Wellenbewegung.",
+      "Eine Schwingung, die ohne Reibung sofort stoppt."
+    ],
+    "correct": 0,
+    "explanation": "Eine harmonische Schwingung zeichnet sich dadurch aus, dass die Rückstellkraft proportional zur Auslenkung ist."
+  },
+  {
+    "question": "Wie berechnet sich die Periodendauer T einer Schwingung aus ihrer Frequenz f?",
+    "options": [
+      "T = 1 / f",
+      "T = f²",
+      "T = f · π",
+      "T = f / 2"
+    ],
+    "correct": 0,
+    "explanation": "Periodendauer und Frequenz sind Kehrwerte voneinander: T = 1 / f."
+  },
+  {
+    "question": "Welcher Draht hat bei gleicher Länge und gleichem Material den geringeren elektrischen Widerstand?",
+    "options": [
+      "Ein dicker Draht (großer Querschnitt)",
+      "Ein dünner Draht (kleiner Querschnitt)",
+      "Der Querschnitt hat keinen Einfluss auf den Widerstand.",
+      "Ein extrem langer Draht"
+    ],
+    "correct": 0,
+    "explanation": "Je größer der Querschnitt eines Leiters, desto mehr Platz haben die Elektronen, wodurch der Widerstand sinkt."
+  },
+  {
+    "question": "Mit welchem Gesetz bzw. welcher Regel bestimmt man die Richtung der Kraft auf einen stromdurchflossenen Leiter im Magnetfeld?",
+    "options": [
+      "Drei-Finger-Regel (Lorentz-Kraft)",
+      "Archimedisches Prinzip",
+      "Boyle-Mariottesches Gesetz",
+      "Wärmetransportgesetz"
+    ],
+    "correct": 0,
+    "explanation": "Die Lorentz-Kraft auf stromdurchflossene Leiter wird mithilfe der Drei-Finger-Regel ermittelt."
+  },
+  {
+    "question": "Welcher Energieträger wird in einer Solarzelle direkt in elektrische Energie umgewandelt?",
+    "options": [
+      "Lichtenergie (Strahlungsenergie der Sonne)",
+      "Chemische Bindungsenergie",
+      "Kinetische Windenergie",
+      "Erdwärme (Geothermie)"
+    ],
+    "correct": 0,
+    "explanation": "Solarzellen nutzen den photovoltaischen Effekt, um Sonnenlicht direkt in elektrischen Strom umzuwandeln."
+  },
+  {
+    "question": "Was gibt die Einheit Watt (1 W) ausgedrückt in Grundeinheiten an?",
+    "options": [
+      "1 J/s (Joule pro Sekunde)",
+      "1 V/A (Volt pro Ampere)",
+      "1 N · m²",
+      "1 kg · m/s²"
+    ],
+    "correct": 0,
+    "explanation": "Leistung ist verrichtete Arbeit pro Zeit (P = W / t), weshalb 1 Watt exakt 1 Joule pro Sekunde entspricht."
+  }
+];
+
+    function getRank(percentage) {
+      if (percentage === 100) return { title: "🌟 Hervorragend!", icon: "🌟", msg: "Absolut fehlerfrei! Du hast dieses Thema perfekt gemeistert." };
+      if (percentage >= 75)  return { title: "📚 Sehr gut!", icon: "📚", msg: "Starke Leistung! Du hast den Stoff super verstanden." };
+      if (percentage >= 50)  return { title: "✏️ Solide Basis", icon: "✏️", msg: "Guter Versuch! Die Grundlagen sitzen, aber ein kleiner Blick ins Skript hilft." };
+      return { title: "🌱 Da geht noch mehr!", icon: "🌱", msg: "Kein Problem – schau dir die Erklärungen an und versuche es einfach noch einmal." };
+    }
+
+    let currentIndex = 0;
+    let score = 0;
+
+    function renderMath() {
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise();
+      }
+    }
+
+    function loadQuestion() {
+      const q = quizData[currentIndex];
+      document.getElementById('meta').textContent = `Aufgabe ${currentIndex + 1} von ${quizData.length}`;
+      document.getElementById('question-text').innerHTML = q.question;
+      document.getElementById('progress').style.width = `${(currentIndex / quizData.length) * 100}%`;
+      
+      const container = document.getElementById('options-container');
+      container.innerHTML = '';
+      document.getElementById('feedback').style.display = 'none';
+      document.getElementById('next-btn').style.display = 'none';
+
+      q.options.forEach((optText, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-option';
+        btn.innerHTML = optText;
+        btn.onclick = () => selectOption(i, btn);
+        container.appendChild(btn);
+      });
+
+      renderMath();
+    }
+
+    function selectOption(selectedIndex, clickedBtn) {
+      const q = quizData[currentIndex];
+      const buttons = document.querySelectorAll('.btn-option');
+      buttons.forEach(b => b.disabled = true);
+
+      const feedback = document.getElementById('feedback');
+      const isCorrect = (selectedIndex === q.correct);
+
+      if (isCorrect) {
+        score++;
+        document.getElementById('score-badge').textContent = `Punkte: ${score}`;
+        clickedBtn.classList.add('correct');
+        feedback.style.borderColor = 'var(--success)';
+        feedback.style.backgroundColor = '#f0fdf4';
+        feedback.innerHTML = `<strong style="color:var(--success)">Richtig! 🎉</strong><br><br>${q.explanation}`;
+      } else {
+        clickedBtn.classList.add('wrong');
+        buttons[q.correct].classList.add('correct');
+        feedback.style.borderColor = 'var(--error)';
+        feedback.style.backgroundColor = '#fef2f2';
+        feedback.innerHTML = `<strong style="color:var(--error)">Leider falsch.</strong><br>Die richtige Antwort ist: <em>${q.options[q.correct]}</em>.<br><br>${q.explanation}`;
+      }
+
+      feedback.style.display = 'block';
+      const nextBtn = document.getElementById('next-btn');
+      nextBtn.textContent = (currentIndex === quizData.length - 1) ? 'Ergebnis anzeigen 🎉' : 'Nächste Aufgabe →';
+      nextBtn.style.display = 'block';
+
+      renderMath();
+    }
+
+    function nextQuestion() {
+      currentIndex++;
+      if (currentIndex < quizData.length) {
+        loadQuestion();
+      } else {
+        showResults();
+      }
+    }
+
+    function showResults() {
+      document.getElementById('quiz-screen').style.display = 'none';
+      const resultScreen = document.getElementById('result-screen');
+      resultScreen.style.display = 'block';
+
+      const pct = Math.round((score / quizData.length) * 100);
+      const rank = getRank(pct);
+
+      document.getElementById('badge-icon').textContent = rank.icon;
+      document.getElementById('rank-display').textContent = rank.title;
+      document.getElementById('score-display').innerHTML = `Du hast <strong>${score} von ${quizData.length}</strong> Aufgaben richtig gelöst (${pct}%).<br><br>${rank.msg}`;
+    }
+
+    window.addEventListener('DOMContentLoaded', loadQuestion);
+  </script>
+</body>
+</html>
