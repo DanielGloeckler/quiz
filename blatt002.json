@@ -1,0 +1,90 @@
+[
+  {
+    "question": "⚽ Ein Fußball wird nach oben geschossen. Welcher Energie-Umwandlungsprozess findet auf dem Weg nach oben (ohne Luftwiderstand) statt?",
+    "options": [
+      "Kinetische Energie wird in Lageenergie umgewandelt.",
+      "Lageenergie wird in kinetische Energie umgewandelt.",
+      "Wärmeenergie wird in elektrische Energie umgewandelt.",
+      "Die Gesamtenergie des Balls nimmt ständig zu."
+    ],
+    "correct": 0,
+    "explanation": "Beim Aufsteigen verlangsamt sich der Ball (kinetische Energie $E_{kin}$ sinkt), gewinnt aber an Höhe (Lageenergie $E_{pot}$ steigt)."
+  },
+  {
+    "question": "🧲 Was passiert, wenn man einen Stabmagneten in der Mitte durchsägt?",
+    "options": [
+      "Man erhält einen reinen Nordpol und einen reinen Südpol.",
+      "Der Magnetismus geht komplett verloren.",
+      "Man erhält zwei neue, kleinere Stabmagneten mit jeweils einem Nord- und Südpol.",
+      "Die Magnetfelder heben sich gegenseitig auf."
+    ],
+    "correct": 2,
+    "explanation": "Magnetische Monopole existieren in der Natur nicht. Jeder Teilmagnet besitzt automatisch wieder einen Nord- und einen Südpol."
+  },
+  {
+    "question": "🌊 Wie hängen Ausbreitungsgeschwindigkeit $c$, Frequenz $f$ und Wellenlänge $\\lambda$ einer Welle zusammen?",
+    "options": [
+      "$c = f \\cdot \\lambda$",
+      "$c = \\frac{\\lambda}{f}$",
+      "$c = \\frac{f}{\\lambda}$",
+      "$c = f + \\lambda$"
+    ],
+    "correct": 0,
+    "explanation": "Die Wellengleichung lautet $c = f \\cdot \\lambda$ (Geschwindigkeit ist Frequenz mal Wellenlänge)."
+  },
+  {
+    "question": "🔍 Welche Eigenschaft hat eine Sammellinse (konvexe Linse) im Gegensatz zu einer Zerstreuungslinse?",
+    "options": [
+      "Sie bündelt einfallende parallele Lichtstrahlen in einem Brennpunkt.",
+      "Sie streut das Licht nach außen.",
+      "Sie erzeugt ausschließlich virtuelle Bilder.",
+      "Sie verändert die Wellenlänge des Lichts."
+    ],
+    "correct": 0,
+    "explanation": "Eine Sammellinse bündelt paralleles Licht im Brennpunkt (Fokus), während eine Zerstreuungslinse es auseinanderzieht."
+  },
+  {
+    "question": "⚡ Welcher physikalische Effekt beschreibt die Entstehung einer elektrischen Spannung in einer Spule durch ein sich änderndes Magnetfeld?",
+    "options": [
+      "Piezoelektrischer Effekt",
+      "Elektromagnetische Induktion",
+      "Photoelektrischer Effekt",
+      "Seebeck-Effekt"
+    ],
+    "correct": 1,
+    "explanation": "Das Induktionsgesetz von Faraday beschreibt, dass eine Änderung des magnetischen Flusses in einer Spule eine Induktionsspannung hervorruft."
+  },
+  {
+    "question": "🌡️ Was versteht man unter dem absoluten Nullpunkt der Temperatur?",
+    "options": [
+      "$0\\,\\text{°C}$ (Gefrierpunkt von Wasser)",
+      "$-273{,}15\\,\\text{°C}$ (vollständiger Stillstand der Teilchenbewegung)",
+      "$0\\,\\text{K}$ auf der Celsius-Skala",
+      "Die Temperatur im Zentrum der Sonne"
+    ],
+    "correct": 1,
+    "explanation": "Der absolute Nullpunkt liegt bei $0\\,\\text{K}$ bzw. $-273{,}15\\,\\text{°C}$. Bei dieser Temperatur ist die thermische Eigenbewegung der Teilchen minimal."
+  },
+  {
+    "question": "🚗 Ein Auto beschleunigt gleichmäßig von $0$ auf $20\\,\\text{m/s}$ in $4\\,\\text{sekunden}$. Wie groß ist die Beschleunigung $a$?",
+    "options": [
+      "$80\\,\\text{m/s}^2$",
+      "$5\\,\\text{m/s}^2$",
+      "$10\\,\\text{m/s}^2$",
+      "$0{,}2\\,\\text{m/s}^2$"
+    ],
+    "correct": 1,
+    "explanation": "Die Beschleunigung ist die Geschwindigkeitsänderung pro Zeit: $a = \\frac{\\Delta v}{\\Delta t} = \\frac{20\\,\\text{m/s}}{4\\,\\text{s}} = 5\\,\\text{m/s}^2$."
+  },
+  {
+    "question": "💡 Warum erscheint ein Gegenstand unter Wasser oft flacher, als er tatsächlich ist?",
+    "options": [
+      "Wegen der Lichtbrechung (Refraktion) beim Übergang von Wasser zu Luft.",
+      "Wegen der Lichtreflexion an der Wasseroberfläche.",
+      "Weil Wasser die Lichtgeschwindigkeit erhöht.",
+      "Weil das menschliche Auge unter Wasser keine Tiefen wahrnehmen kann."
+    ],
+    "correct": 0,
+    "explanation": "Beim Austritt des Lichts aus dem Wasser in die Luft wird der Lichtstrahl vom Lot weggebrochen, wodurch unser Gehirn das Bild höher wahrnimmt."
+  }
+]
