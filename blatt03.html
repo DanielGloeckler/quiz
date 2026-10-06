@@ -43,6 +43,23 @@
       padding: 20px;
     }
 
+    /* Offline Banner */
+    #offline-badge {
+      display: none;
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: #f59e0b;
+      color: white;
+      padding: 8px 15px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      z-index: 1000;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      animation: fadeIn 0.3s ease-out;
+    }
+
     .quiz-card {
       background: var(--card-bg);
       border: 1px solid rgba(203, 213, 225, 0.6);
@@ -199,14 +216,43 @@
       margin-bottom: 30px;
       line-height: 1.6;
     }
+
+    /* Urkunden-Styling */
+    .cert-input {
+      width: 100%;
+      padding: 15px;
+      border: 2px solid var(--border-color);
+      border-radius: 10px;
+      font-size: 1.1rem;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .cert-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .certificate-container {
+      background: #fff;
+      border: 8px solid #e2e8f0;
+      border-radius: 15px;
+      padding: 30px 20px;
+      text-align: center;
+      position: relative;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
 
+  <div id="offline-badge">📶 Kein Internet - Quiz läuft offline weiter!</div>
+
   <div class="quiz-card">
+    <!-- Quiz Bereich -->
     <div id="quiz-screen">
       <div class="header-info">
-        <span id="meta">Aufgabe 1 von 8</span>
+        <span id="meta">Aufgabe 1 von X</span>
         <span id="score-badge" class="score-badge">Punkte: 0</span>
       </div>
       
@@ -227,7 +273,41 @@
       <div id="badge-icon" class="badge">🎓</div>
       <div id="rank-display" class="rank-title">Laden...</div>
       <p id="score-display" class="score-text"></p>
-      <button class="next-btn" style="display:inline-block;" onclick="location.reload()">Quiz wiederholen 🔄</button>
+      
+      <button class="next-btn" style="display:inline-block; margin-bottom: 10px;" onclick="location.reload()">Quiz wiederholen 🔄</button>
+      <button class="next-btn" style="display:inline-block; background: #f59e0b; color: white;" onclick="showCertForm()">🏆 Urkunde für Hausaufgabe erstellen</button>
+    </div>
+
+    <!-- Urkunde Formular -->
+    <div id="cert-form-screen" class="result-box">
+      <h2 style="margin-bottom: 10px;">Dein Name für die Urkunde</h2>
+      <p style="color: var(--text-muted); margin-bottom: 20px;">Trage deinen Vornamen ein, um eine Urkunde für den Screenshot zu generieren.</p>
+      <input type="text" id="student-name" class="cert-input" placeholder="Z. B. Lisa oder Tom...">
+      <button class="next-btn" style="display:inline-block; background: #10b981;" onclick="generateCertificate()">Urkunde anzeigen ✨</button>
+    </div>
+
+    <!-- Urkunde Anzeige -->
+    <div id="certificate-screen" style="display: none;">
+      <div class="certificate-container">
+        <div style="font-size: 3.5rem; margin-bottom: 10px;">🏅</div>
+        <h1 style="color: #1e293b; text-transform: uppercase; letter-spacing: 2px; font-size: 1.5rem; margin-bottom: 20px;">Offizielle Urkunde</h1>
+        <p style="color: var(--text-muted); font-size: 1rem; margin-bottom: 10px;">Hiermit wird bestätigt, dass</p>
+        <h2 id="cert-name-display" style="color: var(--primary); font-size: 2.2rem; margin-bottom: 15px; border-bottom: 2px solid var(--primary); display: inline-block; padding-bottom: 5px;">Name</h2>
+        <p style="color: var(--text-muted); font-size: 1rem; margin-bottom: 20px;">das interaktive Fach-Quiz erfolgreich absolviert hat.</p>
+        
+        <div style="background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 10px; padding: 15px; margin-bottom: 20px; display: inline-block;">
+          <span style="font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase;">Erreichte Punktzahl</span><br>
+          <strong id="cert-score-display" style="font-size: 1.8rem; color: #1e293b;">0 / 0</strong>
+        </div>
+        
+        <p id="cert-date-display" style="font-size: 0.85rem; color: #94a3b8; margin-top: 10px;"></p>
+      </div>
+      <p style="text-align: center; margin-top: 20px; font-size: 0.9rem; color: var(--text-muted);">📸 Mache jetzt einen Screenshot von dieser Urkunde!</p>
+    </div>
+
+    <!-- Fußzeile -->
+    <div id="footer-note" style="margin-top: 30px; text-align: center; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid var(--border-color); padding-top: 15px;">
+      💡 <strong>Für zu Hause & unterwegs:</strong> Ideal zur schnellen Wiederholung und Prüfungsvorbereitung!
     </div>
   </div>
 
@@ -323,6 +403,14 @@
   }
 ];
 
+    // --- Offline Erkennung ---
+    window.addEventListener('offline', () => {
+      document.getElementById('offline-badge').style.display = 'block';
+    });
+    window.addEventListener('online', () => {
+      document.getElementById('offline-badge').style.display = 'none';
+    });
+
     function getRank(percentage) {
       if (percentage === 100) return { title: "🌟 Hervorragend!", icon: "🌟", msg: "Absolut fehlerfrei! Du hast dieses Thema perfekt gemeistert." };
       if (percentage >= 75)  return { title: "📚 Sehr gut!", icon: "📚", msg: "Starke Leistung! Du hast den Stoff super verstanden." };
@@ -414,7 +502,30 @@
       document.getElementById('score-display').innerHTML = `Du hast <strong>${score} von ${quizData.length}</strong> Aufgaben richtig gelöst (${pct}%).<br><br>${rank.msg}`;
     }
 
-    // --- NEU: Zufallsgenerator für Fragen und Antworten ---
+    // --- Zertifikats-Logik ---
+    function showCertForm() {
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('cert-form-screen').style.display = 'block';
+      document.getElementById('footer-note').style.display = 'none'; // Fußzeile verstecken für sauberen Screenshot
+    }
+
+    function generateCertificate() {
+      const name = document.getElementById('student-name').value.trim();
+      if (!name) {
+        alert('Bitte trage deinen Namen ein!');
+        return;
+      }
+      
+      document.getElementById('cert-form-screen').style.display = 'none';
+      document.getElementById('certificate-screen').style.display = 'block';
+      
+      document.getElementById('cert-name-display').textContent = name;
+      document.getElementById('cert-score-display').textContent = `${score} / ${quizData.length}`;
+      
+      const today = new Date();
+      document.getElementById('cert-date-display').textContent = `Ausgestellt am: ${today.toLocaleDateString('de-DE')}`;
+    }
+
     function shuffleArray(array) {
       for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -424,28 +535,19 @@
 
     function initQuiz() {
       if (typeof quizData !== 'undefined' && quizData.length > 0) {
-        // 1. Reihenfolge der Fragen mischen
         shuffleArray(quizData);
-        
-        // 2. Reihenfolge der Antwortmöglichkeiten mischen
         quizData.forEach(q => {
-          // Antworten mit der Info "ist das die richtige?" verknüpfen
           let optionsWithFlag = q.options.map((opt, idx) => {
             return { text: opt, isCorrect: (idx === q.correct) };
           });
-          
-          // Mischen
           shuffleArray(optionsWithFlag);
-          
-          // Zurück in das ursprüngliche Format schreiben, damit loadQuestion() es versteht
           q.options = optionsWithFlag.map(o => o.text);
           q.correct = optionsWithFlag.findIndex(o => o.isCorrect);
         });
       }
-      loadQuestion(); // Startet das Quiz nach dem Mischen
+      loadQuestion();
     }
 
-    // Event-Listener startet nun initQuiz() anstelle von loadQuestion()
     window.addEventListener('DOMContentLoaded', initQuiz);
   </script>
 </body>
