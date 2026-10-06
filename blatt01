@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz: Blatt 1</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .quiz-card {
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 14px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      max-width: 520px;
+      width: 100%;
+    }
+    .progress-bar-container {
+      background: #e4e6eb;
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .progress-bar {
+      height: 100%;
+      background: #2563eb;
+      width: 0%;
+      transition: width 0.3s;
+    }
+    .q-meta {
+      font-size: 0.85rem;
+      color: #65676b;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    h2 { margin: 0 0 20px 0; font-size: 1.25rem; color: #1c1e21; line-height: 1.4; }
+    .btn-option {
+      display: block;
+      width: 100%;
+      padding: 13px 16px;
+      margin: 10px 0;
+      font-size: 1rem;
+      text-align: left;
+      background: #f7f8fa;
+      border: 2px solid #e4e6eb;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-option:hover:not(:disabled) {
+      background: #edf2f7;
+      border-color: #cbd5e1;
+    }
+    .btn-option.correct {
+      background: #e8f5e9 !important;
+      border-color: #2e7d32 !important;
+      color: #1b5e20;
+      font-weight: bold;
+    }
+    .btn-option.wrong {
+      background: #ffebee !important;
+      border-color: #d32f2f !important;
+      color: #b71c1c;
+    }
+    .feedback-box {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      display: none;
+    }
+    .next-btn {
+      margin-top: 15px;
+      width: 100%;
+      padding: 12px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      display: none;
+    }
+    .next-btn:hover { background: #1d4ed8; }
+    
+    /* Endscreen */
+    .result-box { text-align: center; display: none; }
+    .badge {
+      font-size: 2.2rem;
+      margin: 10px 0;
+    }
+    .rank-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #1e293b;
+      margin-bottom: 8px;
+    }
+    .score-text { font-size: 1.1rem; color: #475569; margin-bottom: 25px; }
+  </style>
+</head>
+<body>
+
+  <div class="quiz-card">
+    <div id="quiz-screen">
+      <div class="progress-bar-container">
+        <div id="progress" class="progress-bar"></div>
+      </div>
+      <div id="meta" class="q-meta">Frage 1 von 3</div>
+      <h2 id="question-text">Frage lädt...</h2>
+      <div id="options-container"></div>
+      <div id="feedback" class="feedback-box"></div>
+      <button id="next-btn" class="next-btn" onclick="nextQuestion()">Weiter zur nächsten Frage →</button>
+    </div>
+
+    <!-- Ergebnis-Bildschirm -->
+    <div id="result-screen" class="result-box">
+      <div id="badge-icon" class="badge">🏆</div>
+      <div id="rank-display" class="rank-title">Rang: Legende</div>
+      <div id="score-display" class="score-text">Du hast 3 von 3 Punkten erreicht!</div>
+      <button class="next-btn" style="display:inline-block;" onclick="location.reload()">Noch einmal versuchen 🔄</button>
+    </div>
+  </div>
+
+  <script>
+    // DEINE FRAGEN HIER EINTRAGEN:
+    const quizData = [
+      {
+        question: "Was ist das Ergebnis von 2 + 2?",
+        options: ["3", "4", "5"],
+        correct: 1, // Index: 0 = erste Antwort, 1 = zweite Antwort
+        explanation: "2 + 2 ergibt 4."
+      },
+      {
+        question: "Welche Einheit hat die elektrische Spannung?",
+        options: ["Ampere", "Volt", "Watt", "Ohm"],
+        correct: 1,
+        explanation: "Ampere ist Stromstärke, Volt ist Spannung, Watt ist Leistung."
+      },
+      {
+        question: "Ist die Funktion f(x) = x² auf ℝ injektiv?",
+        options: ["Ja", "Nein"],
+        correct: 1,
+        explanation: "Nein, da z. B. f(-2) = f(2) = 4 gilt."
+      }
+    ];
+
+    // RÄNGE FESTLEGEN (in Prozent):
+    function getRank(percentage) {
+      if (percentage === 100) return { title: "🌟 Legende", icon: "👑", msg: "Makellose Leistung! Alles richtig!" };
+      if (percentage >= 75)  return { title: "🥇 Meister", icon: "🏆", msg: "Hervorragend verstanden!" };
+      if (percentage >= 50)  return { title: "🥈 Geselle", icon: "📚", msg: "Gute Basis, noch etwas Übung nötig." };
+      return { title: "🌱 Lehrling", icon: "💡", msg: "Schau dir die Aufgaben noch einmal in Ruhe an!" };
+    }
+
+    let currentIndex = 0;
+    let score = 0;
+
+    function loadQuestion() {
+      const q = quizData[currentIndex];
+      document.getElementById('meta').textContent = `Frage ${currentIndex + 1} von ${quizData.length}`;
+      document.getElementById('question-text').textContent = q.question;
+      document.getElementById('progress').style.width = `${(currentIndex / quizData.length) * 100}%`;
+      
+      const container = document.getElementById('options-container');
+      container.innerHTML = '';
+      document.getElementById('feedback').style.display = 'none';
+      document.getElementById('next-btn').style.display = 'none';
+
+      q.options.forEach((optText, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-option';
+        btn.textContent = optText;
+        btn.onclick = () => selectOption(i, btn);
+        container.appendChild(btn);
+      });
+    }
+
+    function selectOption(selectedIndex, clickedBtn) {
+      const q = quizData[currentIndex];
+      const buttons = document.querySelectorAll('.btn-option');
+      buttons.forEach(b => b.disabled = true);
+
+      const feedback = document.getElementById('feedback');
+      const isCorrect = (selectedIndex === q.correct);
+
+      if (isCorrect) {
+        score++;
+        clickedBtn.classList.add('correct');
+        feedback.style.background = '#e8f5e9';
+        feedback.style.color = '#1b5e20';
+        feedback.innerHTML = `<strong>Richtig! 🎉 (+1 Punkt)</strong><br>${q.explanation}`;
+      } else {
+        clickedBtn.classList.add('wrong');
+        buttons[q.correct].classList.add('correct'); // Richtige Antwort grün hervorheben
+        feedback.style.background = '#ffebee';
+        feedback.style.color = '#b71c1c';
+        feedback.innerHTML = `<strong>Leider falsch.</strong><br>Richtige Antwort: <em>${q.options[q.correct]}</em>.<br>${q.explanation}`;
+      }
+
+      feedback.style.display = 'block';
+      const nextBtn = document.getElementById('next-btn');
+      nextBtn.textContent = (currentIndex === quizData.length - 1) ? 'Ergebnis & Rang ansehen 🎉' : 'Weiter zur nächsten Frage →';
+      nextBtn.style.display = 'block';
+    }
+
+    function nextQuestion() {
+      currentIndex++;
+      if (currentIndex < quizData.length) {
+        loadQuestion();
+      } else {
+        showResults();
+      }
+    }
+
+    function showResults() {
+      document.getElementById('quiz-screen').style.display = 'none';
+      const resultScreen = document.getElementById('result-screen');
+      resultScreen.style.display = 'block';
+
+      const pct = Math.round((score / quizData.length) * 100);
+      const rank = getRank(pct);
+
+      document.getElementById('badge-icon').textContent = rank.icon;
+      document.getElementById('rank-display').textContent = rank.title;
+      document.getElementById('score-display').innerHTML = `Du hast <strong>${score} von ${quizData.length}</strong> Punkten (${pct}%) erreicht.<br><br>${rank.msg}`;
+    }
+
+    // Start
+    loadQuestion();
+  </script>
+</body>
+</html>
