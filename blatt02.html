@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Physik-Quiz: Kraft & Universum</title>
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --success: #10b981;
+      --error: #ef4444;
+      --text: #f8fafc;
+      --accent: #f59e0b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Sterne im Hintergrund */
+    .space-bg {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
+      background-size: 50px 50px;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .quiz-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+      max-width: 600px;
+      width: 100%;
+      z-index: 10;
+      transition: transform 0.3s ease;
+    }
+
+    .header-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      color: #94a3b8;
+    }
+
+    .xp-badge {
+      background: var(--accent);
+      color: #0f172a;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+    }
+
+    /* Fortschrittsbalken */
+    .progress-bar-container {
+      background: rgba(255, 255, 255, 0.1);
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 25px;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), #a855f7);
+      width: 0%;
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      margin-bottom: 20px;
+      line-height: 1.4;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .options-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .btn-option {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text);
+      padding: 14px 20px;
+      font-size: 1rem;
+      text-align: left;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .btn-option:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .btn-option.correct {
+      background: rgba(16, 185, 129, 0.2) !important;
+      border-color: var(--success) !important;
+      box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+      font-weight: bold;
+    }
+
+    .btn-option.wrong {
+      background: rgba(239, 68, 68, 0.2) !important;
+      border-color: var(--error) !important;
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+    }
+
+    .feedback-box {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 10px;
+      border-left: 4px solid;
+      background: rgba(255, 255, 255, 0.05);
+      display: none;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .next-btn {
+      margin-top: 20px;
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(90deg, var(--primary), var(--primary-hover));
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      display: none;
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+    }
+
+    .next-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+    }
+
+    /* Endbildschirm */
+    .result-box {
+      text-align: center;
+      display: none;
+      animation: zoomIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .badge {
+      font-size: 4rem;
+      margin-bottom: 10px;
+      animation: bounce 2s infinite;
+    }
+    .rank-title {
+      font-size: 2rem;
+      font-weight: 800;
+      background: linear-gradient(45deg, #f59e0b, #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes zoomIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+  </style>
+</head>
+<body>
+
+  <div class="space-bg"></div>
+
+  <div class="quiz-card" id="quiz-card">
+    <div id="quiz-screen">
+      <div class="header-info">
+        <span id="meta">MISSION 1 / 4</span>
+        <span id="score-badge" class="xp-badge">✨ 0 XP</span>
+      </div>
+      
+      <div class="progress-bar-container">
+        <div id="progress" class="progress-bar"></div>
+      </div>
+
+      <h2 id="question-text">Frage lädt...</h2>
+      
+      <div id="options-container" class="options-grid"></div>
+      
+      <div id="feedback" class="feedback-box"></div>
+      <button id="next-btn" class="next-btn" onclick="nextQuestion()">Nächste Mission →</button>
+    </div>
+
+    <!-- Ergebnis-Bildschirm -->
+    <div id="result-screen" class="result-box">
+      <div id="badge-icon" class="badge">🚀</div>
+      <div id="rank-display" class="rank-title">QUANTEN-REKRUT</div>
+      <p id="score-display" style="font-size: 1.15rem; margin-bottom: 25px; color: #cbd5e1;"></p>
+      <button class="next-btn" style="display:inline-block;" onclick="location.reload()">Neue Mission starten 🔄</button>
+    </div>
+  </div>
+
+  <
