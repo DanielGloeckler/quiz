@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magnet und Kompass Simulation</title>
+    <title>Magnetfeld-Simulation mit Auswahl</title>
     <style>
         body {
             margin: 0;
@@ -20,12 +20,27 @@
         }
         h1 {
             margin: 10px 0 5px 0;
-            font-size: 24px;
+            font-size: 22px;
         }
-        p {
-            color: #b0b0b0;
-            margin: 0 0 15px 0;
+        .controls {
+            margin-bottom: 10px;
+            background: #2a2a2a;
+            padding: 8px 15px;
+            border-radius: 6px;
+            border: 1px solid #444;
+        }
+        label {
             font-size: 14px;
+            margin-right: 8px;
+            color: #ccc;
+        }
+        select {
+            padding: 5px 10px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
         }
         #canvas-container {
             position: relative;
@@ -46,60 +61,81 @@
 </head>
 <body>
 
-    <h1>Magnet und Kompass</h1>
-    <p>Klicke und ziehe den Stabmagneten mit der Maus über das Feld.</p>
+    <h1>Magnetfeld-Simulation</h1>
+    
+    <div class="controls">
+        <label for="shapeSelect">Magnetform:</label>
+        <select id="shapeSelect">
+            <option value="bar">Stabmagnet</option>
+            <option value="horseshoe">Hufeisenmagnet</option>
+        </select>
+    </div>
 
     <div id="canvas-container">
-        <canvas id="simCanvas" width="800" height="500"></canvas>
+        <canvas id="simCanvas" width="800" height="480"></canvas>
     </div>
 
     <script>
         const canvas = document.getElementById('simCanvas');
         const ctx = canvas.getContext('2d');
+        const shapeSelect = document.getElementById('shapeSelect');
 
-        // Stabmagnet-Objekt
+        // Magnet-Objekt
         const magnet = {
             x: canvas.width / 2,
             y: canvas.height / 2,
-            width: 140,
-            height: 45,
             angle: 0,
+            shape: 'bar',
             isDragging: false,
             offsetX: 0,
             offsetY: 0
         };
 
-        // Magnetpole liegen relativ zum Zentrum des Magneten
-        function getPolePositions() {
+        shapeSelect.addEventListener('change', (e) => {
+            magnet.shape = e.target.value;
+        });
+
+        // Berechnet die Positionen der Pole (Süd- und Nordpol) basierend auf Form und Rotation
+        function getPoles() {
             const cos = Math.cos(magnet.angle);
             const sin = Math.sin(magnet.angle);
-            // Südpol (S) links, Nordpol (N) rechts
-            const dist = magnet.width / 3;
-            return {
-                S: { x: magnet.x - dist * cos, y: magnet.y - dist * sin },
-                N: { x: magnet.x + dist * cos, y: magnet.y + dist * sin }
-            };
+
+            if (magnet.shape === 'bar') {
+                const dist = 45;
+                return [
+                    { x: magnet.x - dist * cos, y: magnet.y - dist * sin, sign: -1 }, // Südpol (Blau)
+                    { x: magnet.x + dist * cos, y: magnet.y + dist * sin, sign: 1 }   // Nordpol (Rot)
+                ];
+            } else {
+                // Hufeisenmagnet (U-Form, Pole liegen nah beieinander an den Enden)
+                // Wir definieren die Enden relativ zum Zentrum
+                const dX = 35;
+                const dY = 35;
+                return [
+                    { x: magnet.x + (dX * cos - (-dY) * sin), y: magnet.y + (dX * sin + (-dY) * cos), sign: -1 }, // Südpol
+                    { x: magnet.x + (dX * cos - (dY) * sin), y: magnet.y + (dX * sin + (dY) * cos), sign: 1 }    // Nordpol
+                ];
+            }
         }
 
-        // Gitter für Eisspäne / Kompassnadeln erstellen
+        // Gitter für die kleinen Kompassnadeln im Hintergrund
         const needles = [];
-        const spacing = 35;
+        const spacing = 32;
         for (let x = spacing; x < canvas.width; x += spacing) {
             for (let y = spacing; y < canvas.height; y += spacing) {
                 needles.push({ x: x, y: y });
             }
         }
 
-        // Maus-Event-Listener für das Verschieben des Magneten
+        // Maus-Steuerung zum Bewegen des Magneten
         canvas.addEventListener('mousedown', (e) => {
             const rect = canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
 
-            // Prüfen, ob die Maus auf dem Magneten klickt
             const dx = mouseX - magnet.x;
             const dy = mouseY - magnet.y;
-            if (Math.abs(dx) < magnet.width / 2 && Math.abs(dy) < magnet.height / 2) {
+            if (Math.sqrt(dx * dx + dy * dy) < 60) {
                 magnet.isDragging = true;
                 magnet.offsetX = dx;
                 magnet.offsetY = dy;
@@ -117,60 +153,30 @@
             magnet.isDragging = false;
         });
 
-        // Touch-Support für Smartphones/Tablets
-        canvas.addEventListener('touchstart', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const touch = e.touches[0];
-            const mouseX = touch.clientX - rect.left;
-            const mouseY = touch.clientY - rect.top;
-
-            const dx = mouseX - magnet.x;
-            const dy = mouseY - magnet.y;
-            if (Math.abs(dx) < magnet.width / 2 && Math.abs(dy) < magnet.height / 2) {
-                magnet.isDragging = true;
-                magnet.offsetX = dx;
-                magnet.offsetY = dy;
-                e.preventDefault();
-            }
-        });
-
-        window.addEventListener('touchmove', (e) => {
-            if (!magnet.isDragging) return;
-            const rect = canvas.getBoundingClientRect();
-            const touch = e.touches[0];
-            magnet.x = touch.clientX - rect.left - magnet.offsetX;
-            magnet.y = touch.clientY - rect.top - magnet.offsetY;
-            e.preventDefault();
-        }, { passive: false });
-
-        window.addEventListener('touchend', () => {
-            magnet.isDragging = false;
-        });
-
-        // Animations- und Render-Schleife
+        // Haupt-Zeichenschleife
         function draw() {
-            // Hintergrund leeren
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 1. Magnetfeldlinien (optionaler visueller Effekt)
-            const poles = getPolePositions();
+            const poles = getPoles();
 
-            // 2. Eisspäne / Kompassnadeln zeichnen
+            // 1. Kleine Kompassnadeln im Hintergrund zeichnen
             needles.forEach(n => {
-                // Vektor vom Südpol zu n (Anziehungskraft / Feldlinien)
-                const dxS = n.x - poles.S.x;
-                const dyS = n.y - poles.S.y;
-                const distS2 = dxS * dxS + dyS * dyS;
+                let Bx = 0;
+                let By = 0;
 
-                // Vektor vom Nordpol zu n
-                const dxN = n.x - poles.N.x;
-                const dyN = n.y - poles.N.y;
-                const distN2 = dxN * dxN + dyN * dyN;
+                // Magnetfeld aus Superposition der Pole berechnen (B ~ sign / r^3)
+                poles.forEach(pole => {
+                    const dx = n.x - pole.x;
+                    const dy = n.y - pole.y;
+                    const dist2 = dx * dx + dy * dy;
+                    const dist = Math.sqrt(dist2);
 
-                // Magnetfeld-Berechnung (Superposition von Nord- und Südpol)
-                // B_Süd = -1 / r^2, B_Nord = +1 / r^2
-                const Bx = (dxN / (Math.pow(distN2, 1.5) + 1000)) - (dxS / (Math.pow(distS2, 1.5) + 1000));
-                const By = (dyN / (Math.pow(distN2, 1.5) + 1000)) - (dyS / (Math.pow(distS2, 1.5) + 1000));
+                    if (dist > 5) {
+                        const force = pole.sign / (Math.pow(dist, 3) + 500);
+                        Bx += dx * force;
+                        By += dy * force;
+                    }
+                });
 
                 const angle = Math.atan2(By, Bx);
 
@@ -179,46 +185,65 @@
                 ctx.translate(n.x, n.y);
                 ctx.rotate(angle);
 
-                // Kleine Kompassnadel (Rot = Nord, Weiß = Süd)
-                ctx.fillStyle = '#ff4d4d'; // Rot (Nord)
-                ctx.fillRect(0, -2, 10, 4);
-                ctx.fillStyle = '#cccccc'; // Weiß/Grau (Süd)
-                ctx.fillRect(-10, -2, 10, 4);
+                // Nordpol (Rot) / Südpol (Grau)
+                ctx.fillStyle = '#ff4d4d';
+                ctx.fillRect(0, -2, 9, 4);
+                ctx.fillStyle = '#888888';
+                ctx.fillRect(-9, -2, 9, 4);
 
                 ctx.restore();
             });
 
-            // 3. Stabmagneten zeichnen
+            // 2. Magneten zeichnen
             ctx.save();
             ctx.translate(magnet.x, magnet.y);
             ctx.rotate(magnet.angle);
 
-            // Magnet-Hintergrund
             ctx.shadowColor = 'rgba(0,0,0,0.5)';
             ctx.shadowBlur = 10;
-            
-            // Linke Hälfte (Südpol - Blau)
-            ctx.fillStyle = '#2196F3';
-            ctx.fillRect(-magnet.width / 2, -magnet.height / 2, magnet.width / 2, magnet.height);
-            
-            // Rechte Hälfte (Nordpol - Rot)
-            ctx.fillStyle = '#F44336';
-            ctx.fillRect(0, -magnet.height / 2, magnet.width / 2, magnet.height);
 
-            // Beschriftung der Pole
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 20px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('S', -magnet.width / 4, 0);
-            ctx.fillText('N', magnet.width / 4, 0);
+            if (magnet.shape === 'bar') {
+                // Stabmagnet
+                ctx.fillStyle = '#2196F3'; // Süd (Blau)
+                ctx.fillRect(-50, -18, 50, 36);
+                ctx.fillStyle = '#F44336'; // Nord (Rot)
+                ctx.fillRect(0, -18, 50, 36);
+
+                // Beschriftung
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('S', -25, 0);
+                ctx.fillText('N', 25, 0);
+            } else {
+                // Hufeisenmagnet (U-Form)
+                ctx.strokeStyle = '#B0BEC5';
+                ctx.lineWidth = 24;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.arc(0, 0, 35, Math.PI * 0.8, Math.PI * 2.2, false);
+                ctx.stroke();
+
+                // Enden einfärben (Süd und Nord)
+                ctx.fillStyle = '#2196F3';
+                ctx.fillRect(20, -38, 25, 20); // Südpol-Ende
+                ctx.fillStyle = '#F44336';
+                ctx.fillRect(20, 18, 25, 20);  // Nordpol-Ende
+
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('S', 32, -28);
+                ctx.fillText('N', 32, 28);
+            }
 
             ctx.restore();
 
             requestAnimationFrame(draw);
         }
 
-        // Start der Simulation
         draw();
     </script>
 </body>
