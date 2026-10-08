@@ -1,276 +1,672 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magnetfeld-Simulation mit Dropdown</title>
+    <title>Arduino Web Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #1a1a1a;
-            color: #ffffff;
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            overflow: hidden;
+        body { margin: 0; overflow: hidden; font-family: 'Inter', sans-serif; }
+        
+        /* Custom scrollbars */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* Workspace Grid Background */
+        .bg-grid {
+            background-color: #1e293b;
+            background-image: radial-gradient(#475569 1.5px, transparent 1.5px);
+            background-size: 24px 24px;
         }
-        h1 {
-            margin: 10px 0 5px 0;
-            font-size: 22px;
-        }
-        .controls {
-            margin-bottom: 10px;
-            background: #2a2a2a;
-            padding: 10px 15px;
-            border-radius: 6px;
-            border: 1px solid #444;
-        }
-        label {
-            font-size: 14px;
-            margin-right: 8px;
-            color: #ccc;
-        }
-        select {
-            padding: 6px 12px;
-            background: #333;
-            color: #fff;
-            border: 1px solid #555;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        #canvas-container {
-            position: relative;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            border-radius: 8px;
-            overflow: hidden;
-            border: 2px solid #444;
-        }
-        canvas {
-            display: block;
-            background: #111;
-            cursor: grab;
-        }
-        canvas:active {
-            cursor: grabbing;
-        }
+
+        /* Hole interactions */
+        .hole { transition: background-color 0.2s; }
+        .hole:hover { background-color: #facc15 !important; transform: scale(1.2); }
+        
+        /* LED Animations */
+        .bulb { transition: all 0.3s ease; }
     </style>
 </head>
-<body>
+<body class="bg-slate-900 text-slate-200 h-screen flex flex-col overflow-hidden select-none">
 
-    <h1>Magnetfeld-Simulation</h1>
-    
-    <div class="controls">
-        <label for="magnetSelect">Magnetform wählen:</label>
-        <select id="magnetSelect">
-            <option value="bar">Stabmagnet</option>
-            <option value="doubleBar">Zwei Stabmagnete</option>
-            <option value="horseshoe">Rechtwinkliger Hufeisenmagnet</option>
-        </select>
-    </div>
+    <!-- Top Navigation Bar -->
+    <header class="h-14 bg-slate-950 border-b border-slate-800 flex items-center justify-between px-6 z-30 shadow-md shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-md bg-teal-600 flex items-center justify-center font-bold text-white shadow-[0_0_10px_rgba(13,148,136,0.5)]">A</div>
+            <h1 class="text-lg font-semibold tracking-wide text-white">CircuitSim Pro</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <div id="warning-msg" class="hidden px-4 py-1.5 bg-red-900/50 text-red-400 border border-red-700/50 rounded-full text-sm font-medium animate-pulse">
+                ⚠️ Short Circuit Detected!
+            </div>
+            <button onclick="clearAll()" class="px-4 py-1.5 text-sm font-medium bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 transition-colors">
+                Clear All
+            </button>
+            <button id="sim-btn" class="px-5 py-1.5 text-sm font-bold bg-green-600 hover:bg-green-500 text-white rounded border border-green-700 transition-colors shadow-lg shadow-green-900/20">
+                Start Simulation
+            </button>
+        </div>
+    </header>
 
-    <div id="canvas-container">
-        <canvas id="simCanvas" width="800" height="480"></canvas>
+    <div class="flex flex-1 overflow-hidden relative">
+        
+        <!-- Sidebar -->
+        <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col z-20 shrink-0 overflow-y-auto">
+            
+            <div class="p-5 border-b border-slate-800">
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Tools</h2>
+                <div class="flex flex-col gap-2">
+                    <button id="tool_pointer" onclick="setActiveTool('pointer')" class="tool-btn flex items-center gap-3 px-3 py-2 rounded-md bg-slate-800 border border-blue-500 text-sm font-medium transition-all text-left">
+                        <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+                        Wire Tool
+                    </button>
+                    <button id="tool_delete" onclick="setActiveTool('delete')" class="tool-btn flex items-center gap-3 px-3 py-2 rounded-md hover:bg-slate-800 border border-transparent text-sm font-medium transition-all text-left text-red-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        Delete Tool
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-5 border-b border-slate-800">
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Wire Color</h2>
+                <div class="flex flex-wrap gap-3">
+                    <button onclick="setWireColor('#ef4444')" class="w-6 h-6 rounded-full bg-red-500 ring-2 ring-offset-2 ring-offset-slate-900 ring-red-500"></button>
+                    <button onclick="setWireColor('#000000')" class="w-6 h-6 rounded-full bg-black border border-gray-600 hover:scale-110 transition-transform"></button>
+                    <button onclick="setWireColor('#3b82f6')" class="w-6 h-6 rounded-full bg-blue-500 hover:scale-110 transition-transform"></button>
+                    <button onclick="setWireColor('#22c55e')" class="w-6 h-6 rounded-full bg-green-500 hover:scale-110 transition-transform"></button>
+                    <button onclick="setWireColor('#eab308')" class="w-6 h-6 rounded-full bg-yellow-500 hover:scale-110 transition-transform"></button>
+                    <button onclick="setWireColor('#f97316')" class="w-6 h-6 rounded-full bg-orange-500 hover:scale-110 transition-transform"></button>
+                </div>
+            </div>
+
+            <div class="p-5">
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Components</h2>
+                <div class="flex flex-col gap-2">
+                    <button id="tool_led_red" onclick="setActiveTool('led_red')" class="tool-btn flex items-center gap-3 px-3 py-2 rounded-md hover:bg-slate-800 border border-transparent text-sm font-medium transition-all text-left">
+                        <div class="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_5px_red]"></div> Red LED
+                    </button>
+                    <button id="tool_led_green" onclick="setActiveTool('led_green')" class="tool-btn flex items-center gap-3 px-3 py-2 rounded-md hover:bg-slate-800 border border-transparent text-sm font-medium transition-all text-left">
+                        <div class="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_5px_green]"></div> Green LED
+                    </button>
+                    <button id="tool_led_blue" onclick="setActiveTool('led_blue')" class="tool-btn flex items-center gap-3 px-3 py-2 rounded-md hover:bg-slate-800 border border-transparent text-sm font-medium transition-all text-left">
+                        <div class="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_5px_blue]"></div> Blue LED
+                    </button>
+                    <button id="tool_led_yellow" onclick="setActiveTool('led_yellow')" class="tool-btn flex items-center gap-3 px-3 py-2 rounded-md hover:bg-slate-800 border border-transparent text-sm font-medium transition-all text-left">
+                        <div class="w-3 h-3 rounded-full bg-yellow-400 shadow-[0_0_5px_yellow]"></div> Yellow LED
+                    </button>
+                </div>
+                
+                <div class="mt-8 p-4 bg-slate-800/50 rounded-lg text-xs text-slate-400 leading-relaxed border border-slate-700/50">
+                    <strong class="text-slate-300 block mb-1">How to use:</strong>
+                    1. Select a tool from the menu.<br>
+                    2. Click holes to draw wires between Arduino and Breadboard.<br>
+                    3. Select an LED, then click on Breadboard terminal strips to place it.<br>
+                    4. Wire power to the anode (longest leg/left) and GND to cathode (right).
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main id="workspace" class="flex-1 bg-grid relative overflow-auto shadow-inner flex justify-center items-start pt-16 pb-16">
+            
+            <div id="canvas" class="relative w-[800px] h-[750px] shrink-0 pointer-events-none">
+                <!-- Layers (Order matters for z-index and click events) -->
+                
+                <!-- 1. Backgrounds (Arduino & Breadboard boards) pointer-events: auto so we can catch unhandled clicks -->
+                <div id="boards-layer" class="absolute inset-0 w-full h-full pointer-events-auto">
+                    <div id="arduino-container" class="absolute left-[170px] top-[40px]"></div>
+                    <div id="breadboard-container" class="absolute left-[120px] top-[380px]"></div>
+                </div>
+
+                <!-- 2. Wires Layer -->
+                <svg id="wires-layer" class="absolute inset-0 w-full h-full overflow-visible z-10">
+                    <defs>
+                        <filter id="wire-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#000" flood-opacity="0.4" />
+                        </filter>
+                    </defs>
+                </svg>
+
+                <!-- 3. Components Layer (LEDs) -->
+                <div id="components-layer" class="absolute inset-0 w-full h-full z-20"></div>
+                
+                <!-- Interactive Hole Overlays will be injected dynamically into boards-layer -->
+            </div>
+            
+        </main>
     </div>
 
     <script>
-        const canvas = document.getElementById('simCanvas');
-        const ctx = canvas.getContext('2d');
-        const magnetSelect = document.getElementById('magnetSelect');
+        
+        // --- State Management ---
+        let activeTool = 'pointer'; 
+        let currentColor = '#ef4444';
+        let isWiring = false;
+        let startNode = null;
+        let currentWireEl = null;
+        let wires = [];
+        let components = [];
+        let isSimulating = false;
+        let ghostLed = null;
 
-        // Magnet-Objekt
-        const magnet = {
-            x: canvas.width / 2,
-            y: canvas.height / 2,
-            angle: 0,
-            type: 'bar',
-            isDragging: false,
-            offsetX: 0,
-            offsetY: 0
+        // Visual properties mapping
+        const ledColors = {
+            red: { bg: '#ef4444', border: '#b91c1c', shadow: 'rgba(239,68,68,0.8)' },
+            green: { bg: '#22c55e', border: '#15803d', shadow: 'rgba(34,197,94,0.8)' },
+            blue: { bg: '#3b82f6', border: '#1d4ed8', shadow: 'rgba(59,130,246,0.8)' },
+            yellow: { bg: '#eab308', border: '#a16207', shadow: 'rgba(234,179,8,0.8)' }
         };
 
-        magnetSelect.addEventListener('change', (e) => {
-            magnet.type = e.target.value;
-        });
-
-        // Berechnet die Positionen der Pole für die jeweilige Magnetform
-        function getPoles() {
-            const cos = Math.cos(magnet.angle);
-            const sin = Math.sin(magnet.angle);
-
-            if (magnet.type === 'bar') {
-                const dist = 45;
-                return [
-                    { x: magnet.x - dist * cos, y: magnet.y - dist * sin, sign: -1 }, // Südpol (Blau)
-                    { x: magnet.x + dist * cos, y: magnet.y + dist * sin, sign: 1 }   // Nordpol (Rot)
-                ];
-            } else if (magnet.type === 'doubleBar') {
-                // Zwei separate Stabmagnete übereinander
-                const dist = 40;
-                const offset = 30;
-                return [
-                    { x: magnet.x - dist * cos - offset * sin, y: magnet.y - dist * sin + offset * cos, sign: -1 },
-                    { x: magnet.x + dist * cos - offset * sin, y: magnet.y + dist * sin + offset * cos, sign: 1 },
-                    { x: magnet.x - dist * cos + offset * sin, y: magnet.y - dist * sin - offset * cos, sign: -1 },
-                    { x: magnet.x + dist * cos + offset * sin, y: magnet.y + dist * sin - offset * cos, sign: 1 }
-                ];
-            } else {
-                // Rechtwinkliger Hufeisenmagnet (U-Form aus Rechtecken)
-                // Die Pole liegen an den beiden offenen Enden rechts
-                const dX = 30;
-                const dY = 35;
-                return [
-                    { x: magnet.x + (dX * cos - (-dY) * sin), y: magnet.y + (dX * sin + (-dY) * cos), sign: -1 }, // Südpol
-                    { x: magnet.x + (dX * cos - (dY) * sin), y: magnet.y + (dX * sin + (dY) * cos), sign: 1 }    // Nordpol
-                ];
-            }
+        
+        // Gets relative coordinates of an element center within the canvas
+        function getCenter(element) {
+            const canvasRect = document.getElementById('canvas').getBoundingClientRect();
+            const rect = element.getBoundingClientRect();
+            return {
+                x: rect.left - canvasRect.left + rect.width / 2,
+                y: rect.top - canvasRect.top + rect.height / 2
+            };
         }
 
-        // Gitter für die kleinen Kompassnadeln im Hintergrund
-        const needles = [];
-        const spacing = 32;
-        for (let x = spacing; x < canvas.width; x += spacing) {
-            for (let y = spacing; y < canvas.height; y += spacing) {
-                needles.push({ x: x, y: y });
-            }
+        // Generates a nice drooping path for wires
+        function getPathD(x1, y1, x2, y2) {
+            const dist = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+            const sag = Math.min(dist * 0.25, 40); 
+            const cy = Math.max(y1, y2) + sag + 10;
+            return `M ${x1} ${y1} Q ${(x1 + x2) / 2} ${cy} ${x2} ${y2}`;
         }
 
-        // Maus-Steuerung
-        canvas.addEventListener('mousedown', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
+        
+        function buildBreadboard() {
+            const container = document.getElementById('breadboard-container');
+            const board = document.createElement('div');
+            board.className = 'w-[560px] h-[312px] bg-[#e2e8f0] rounded-lg shadow-[0_15px_35px_-5px_rgba(0,0,0,0.5)] border border-slate-300 relative';
+            container.appendChild(board);
 
-            const dx = mouseX - magnet.x;
-            const dy = mouseY - magnet.y;
-            if (Math.sqrt(dx * dx + dy * dy) < 70) {
-                magnet.isDragging = true;
-                magnet.offsetX = dx;
-                magnet.offsetY = dy;
+            // Function to create an individual clickable hole
+            function createHole(id, strip, x, y, row=null, col=null) {
+                const hole = document.createElement('div');
+                hole.id = id;
+                hole.dataset.strip = strip;
+                if(row) hole.dataset.row = row;
+                if(col) hole.dataset.col = col;
+                
+                hole.className = 'hole absolute w-3 h-3 bg-slate-800 border border-slate-600 rounded-sm cursor-pointer z-10 pointer-events-auto';
+                hole.style.left = `${x}px`;
+                hole.style.top = `${y}px`;
+                
+                hole.addEventListener('click', handleNodeClick);
+                
+                // Mouse event for Ghost LED snapping
+                hole.addEventListener('mouseenter', () => handleHoleHover(hole));
+                
+                board.appendChild(hole);
+                return hole;
             }
-        });
 
-        window.addEventListener('mousemove', (e) => {
-            if (!magnet.isDragging) return;
-            const rect = canvas.getBoundingClientRect();
-            magnet.x = e.clientX - rect.left - magnet.offsetX;
-            magnet.y = e.clientY - rect.top - magnet.offsetY;
-        });
+            // --- Generate Holes mathematically based on 0.1" (16px) pitch ---
+            
+            // Top Power Rails
+            for(let i=1; i<=30; i++) {
+                let x = 40 + (i-1)*16;
+                createHole(`bb_p1_plus_${i}`, 'p1_plus', x, 20);
+                createHole(`bb_p1_minus_${i}`, 'p1_minus', x, 36);
+            }
 
-        window.addEventListener('mouseup', () => {
-            magnet.isDragging = false;
-        });
-
-        // Zeichenschleife
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            const poles = getPoles();
-
-            // 1. Kleine Kompassnadeln im Hintergrund zeichnen
-            needles.forEach(n => {
-                let Bx = 0;
-                let By = 0;
-
-                poles.forEach(pole => {
-                    const dx = n.x - pole.x;
-                    const dy = n.y - pole.y;
-                    const dist2 = dx * dx + dy * dy;
-                    const dist = Math.sqrt(dist2);
-
-                    if (dist > 5) {
-                        const force = pole.sign / (Math.pow(dist, 3) + 500);
-                        Bx += dx * force;
-                        By += dy * force;
-                    }
+            // Top Terminal Strips (A-E)
+            const rowsTop = ['A','B','C','D','E'];
+            for(let col=1; col<=30; col++) {
+                let x = 40 + (col-1)*16;
+                rowsTop.forEach((row, rIdx) => {
+                    createHole(`bb_${row}_${col}`, `t_top_${col}`, x, 68 + rIdx*16, row, col);
                 });
+            }
 
-                const angle = Math.atan2(By, Bx);
+            // Bottom Terminal Strips (F-J)
+            const rowsBot = ['F','G','H','I','J'];
+            for(let col=1; col<=30; col++) {
+                let x = 40 + (col-1)*16;
+                rowsBot.forEach((row, rIdx) => {
+                    createHole(`bb_${row}_${col}`, `t_bot_${col}`, x, 180 + rIdx*16, row, col);
+                });
+            }
 
-                ctx.save();
-                ctx.translate(n.x, n.y);
-                ctx.rotate(angle);
+            // Bottom Power Rails
+            for(let i=1; i<=30; i++) {
+                let x = 40 + (i-1)*16;
+                createHole(`bb_p2_plus_${i}`, 'p2_plus', x, 276);
+                createHole(`bb_p2_minus_${i}`, 'p2_minus', x, 292);
+            }
 
-                // Nordpol (Rot) / Südpol (Grau)
-                ctx.fillStyle = '#ff4d4d';
-                ctx.fillRect(0, -2, 9, 4);
-                ctx.fillStyle = '#888888';
-                ctx.fillRect(-9, -2, 9, 4);
+            // Decorative lines
+            function drawLine(x, y, color) {
+                const line = document.createElement('div');
+                line.className = `absolute h-0.5 rounded-full ${color}`;
+                line.style.left = `${x}px`; line.style.top = `${y}px`; line.style.width = '476px';
+                board.appendChild(line);
+            }
+            drawLine(40, 12, 'bg-red-500');
+            drawLine(40, 52, 'bg-blue-600');
+            drawLine(40, 268, 'bg-red-500');
+            drawLine(40, 308, 'bg-blue-600');
 
-                ctx.restore();
+            // Center trench
+            const trench = document.createElement('div');
+            trench.className = 'absolute w-[500px] h-[12px] bg-[#cbd5e1] border-y border-slate-300 left-[30px] top-[150px] shadow-inner rounded-full';
+            board.appendChild(trench);
+        }
+
+        
+        function buildArduino() {
+            const container = document.getElementById('arduino-container');
+            const ard = document.createElement('div');
+            ard.className = 'w-[460px] h-[250px] bg-[#006e7a] rounded-lg shadow-[0_15px_35px_-5px_rgba(0,0,0,0.5)] relative border-2 border-[#004e57]';
+            container.appendChild(ard);
+
+            function createPin(id, label, x, y, isBottom) {
+                // Pin Label
+                const lbl = document.createElement('div');
+                lbl.textContent = label;
+                lbl.className = 'absolute text-slate-100 text-[9px] font-mono font-bold tracking-tighter whitespace-nowrap';
+                lbl.style.left = `${x + 6}px`;
+                lbl.style.transform = 'translateX(-50%)';
+                lbl.style.top = isBottom ? `${y - 14}px` : `${y + 16}px`;
+                if(label === 'GND' || label === '5V' || label === '3.3V') lbl.style.color = '#fef08a';
+                ard.appendChild(lbl);
+
+                // Black Plastic Header
+                const block = document.createElement('div');
+                block.className = 'absolute w-[12px] h-[12px] bg-slate-900 rounded-sm flex items-center justify-center';
+                block.style.left = `${x}px`;
+                block.style.top = `${y}px`;
+                
+                // Actual Clickable Pin Hole
+                const hole = document.createElement('div');
+                hole.id = id;
+                hole.dataset.strip = id; // Arduino pins act as independent strips
+                hole.className = 'hole w-[8px] h-[8px] bg-slate-400 border border-slate-600 rounded-sm cursor-pointer pointer-events-auto';
+                hole.addEventListener('click', handleNodeClick);
+                
+                block.appendChild(hole);
+                ard.appendChild(block);
+            }
+
+            // Bottom Headers
+            const botPins = [
+                {id:'arduino_IOREF', lbl:'IOREF'}, {id:'arduino_RESET', lbl:'RES'}, {id:'arduino_3V3', lbl:'3.3V'}, 
+                {id:'arduino_5V', lbl:'5V'}, {id:'arduino_GND1', lbl:'GND'}, {id:'arduino_GND2', lbl:'GND'}, 
+                {id:'arduino_VIN', lbl:'VIN'}, {gap: true}, 
+                {id:'arduino_A0', lbl:'A0'}, {id:'arduino_A1', lbl:'A1'}, {id:'arduino_A2', lbl:'A2'}, 
+                {id:'arduino_A3', lbl:'A3'}, {id:'arduino_A4', lbl:'A4'}, {id:'arduino_A5', lbl:'A5'}
+            ];
+            let curX = 90;
+            botPins.forEach(p => {
+                if(p.gap) { curX += 16; return; }
+                createPin(p.id, p.lbl, curX, 225, true);
+                curX += 16;
             });
 
-            // 2. Ausgewählten Magneten zeichnen
-            ctx.save();
-            ctx.translate(magnet.x, magnet.y);
-            ctx.rotate(magnet.angle);
+            // Top Headers (Right to Left technically, but rendered array is Left to Right visual)
+            const topPins = [
+                {id:'arduino_SCL', lbl:'SCL'}, {id:'arduino_SDA', lbl:'SDA'}, {id:'arduino_AREF', lbl:'AREF'}, 
+                {id:'arduino_GND3', lbl:'GND'}, {id:'arduino_13', lbl:'13'}, {id:'arduino_12', lbl:'12'}, 
+                {id:'arduino_11', lbl:'~11'}, {id:'arduino_10', lbl:'~10'}, {id:'arduino_9', lbl:'~9'}, 
+                {id:'arduino_8', lbl:'8'}, {gap: true},
+                {id:'arduino_7', lbl:'7'}, {id:'arduino_6', lbl:'~6'}, {id:'arduino_5', lbl:'~5'}, 
+                {id:'arduino_4', lbl:'4'}, {id:'arduino_3', lbl:'~3'}, {id:'arduino_2', lbl:'2'}, 
+                {id:'arduino_1', lbl:'TX->1'}, {id:'arduino_0', lbl:'RX<-0'}
+            ];
+            curX = 420;
+            topPins.forEach(p => {
+                if(p.gap) { curX -= 16; return; }
+                createPin(p.id, p.lbl, curX, 10, false);
+                curX -= 16;
+            });
 
-            ctx.shadowColor = 'rgba(0,0,0,0.5)';
-            ctx.shadowBlur = 10;
+            // Decor: USB Port
+            const usb = document.createElement('div');
+            usb.className = 'absolute left-0 top-[15px] w-[35px] h-[45px] bg-[#d1d5db] border-[3px] border-slate-400 rounded-r-md shadow-md flex items-center justify-center';
+            usb.innerHTML = '<div class="w-[20px] h-[15px] bg-[#9ca3af] rounded-[1px]"></div>';
+            ard.appendChild(usb);
 
-            if (magnet.type === 'bar') {
-                // Klassischer Stabmagnet
-                ctx.fillStyle = '#2196F3'; // Süd (Blau)
-                ctx.fillRect(-50, -18, 50, 36);
-                ctx.fillStyle = '#F44336'; // Nord (Rot)
-                ctx.fillRect(0, -18, 50, 36);
+            // Decor: Power Jack
+            const jack = document.createElement('div');
+            jack.className = 'absolute left-0 top-[180px] w-[40px] h-[45px] bg-slate-900 border-2 border-black rounded-r-md shadow-md';
+            ard.appendChild(jack);
 
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 16px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('S', -25, 0);
-                ctx.fillText('N', 25, 0);
-
-            } else if (magnet.type === 'doubleBar') {
-                // Zwei Stabmagnete
-                [-30, 30].forEach(offsetY => {
-                    ctx.fillStyle = '#2196F3';
-                    ctx.fillRect(-45, offsetY - 12, 45, 24);
-                    ctx.fillStyle = '#F44336';
-                    ctx.fillRect(0, offsetY - 12, 45, 24);
-
-                    ctx.fillStyle = '#fff';
-                    ctx.font = 'bold 14px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText('S', -22, offsetY);
-                    ctx.fillText('N', 22, offsetY);
-                });
-
-            } else {
-                // Rechtwinkliger Hufeisenmagnet (U-Form aus harten Ecken, Rot und Grün angemalt)
-                // Verbindungsstück links (Grün oder neutral, wir machen es hier stilecht in Rot/Grün-Kombination)
-                ctx.fillStyle = '#4CAF50'; // Grün für den Rücken
-                ctx.fillRect(-45, -45, 20, 90);
-
-                // Oberer Schenkel (Südpol - Blau/Grün-Mix oder nach Wunsch)
-                ctx.fillStyle = '#2196F3'; 
-                ctx.fillRect(-45, -45, 75, 20);
-
-                // Unterer Schenkel (Nordpol - Rot)
-                ctx.fillStyle = '#F44336'; 
-                ctx.fillRect(-45, 25, 75, 20);
-
-                // Beschriftung an den Polen (Enden rechts)
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 14px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('S', 20, -35);
-                ctx.fillText('N', 20, 35);
-            }
-
-            ctx.restore();
-
-            requestAnimationFrame(draw);
+            // Decor: Main Chip
+            const chip = document.createElement('div');
+            chip.className = 'absolute left-[200px] top-[110px] w-[100px] h-[30px] bg-slate-950 rounded shadow-lg text-slate-500 text-[10px] flex items-center justify-center font-mono tracking-widest';
+            chip.innerText = 'ATMEGA328P';
+            ard.appendChild(chip);
+            
+            // Branding
+            const brand = document.createElement('div');
+            brand.className = 'absolute left-[150px] top-[40px] text-white text-xl font-bold opacity-80';
+            brand.innerText = 'UNO';
+            ard.appendChild(brand);
         }
 
-        draw();
+        
+        function setWireColor(color) {
+            currentColor = color;
+            // Update active ring indicator
+            document.querySelectorAll('aside button.rounded-full').forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-offset-2', 'ring-offset-slate-900');
+                if(btn.getAttribute('onclick').includes(color)) {
+                    btn.classList.add('ring-2', 'ring-offset-2', `ring-[${color}]`, 'ring-offset-slate-900');
+                }
+            });
+        }
+
+        function setActiveTool(tool) {
+            activeTool = tool;
+            
+            // Update Tool UI Styles
+            document.querySelectorAll('.tool-btn').forEach(btn => {
+                btn.classList.remove('bg-slate-800', 'border-blue-500');
+                btn.classList.add('border-transparent');
+            });
+            document.getElementById(`tool_${tool}`).classList.add('bg-slate-800', 'border-blue-500');
+            document.getElementById(`tool_${tool}`).classList.remove('border-transparent');
+
+            // Cancel any ongoing wiring
+            if (isWiring) {
+                currentWireEl.remove();
+                isWiring = false;
+                startNode = null;
+                currentWireEl = null;
+            }
+
+            // Manage Ghost LED visibility
+            if (tool.startsWith('led_') && ghostLed) {
+                const color = tool.split('_')[1];
+                ghostLed.innerHTML = getLedHtml(color);
+            } else if (ghostLed) {
+                ghostLed.style.display = 'none';
+            }
+        }
+
+        function handleNodeClick(e) {
+            if (activeTool.startsWith('led_')) return; // Ignore hole clicks if placing LED
+            
+            const nodeId = e.target.id;
+            
+            if (activeTool === 'pointer') {
+                if (!isWiring) {
+                    // Start drawing a wire
+                    isWiring = true;
+                    startNode = e.target;
+                    
+                    currentWireEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                    currentWireEl.setAttribute("stroke", currentColor);
+                    currentWireEl.setAttribute("stroke-width", "5");
+                    currentWireEl.setAttribute("stroke-linecap", "round");
+                    currentWireEl.setAttribute("fill", "none");
+                    currentWireEl.setAttribute("filter", "url(#wire-shadow)");
+                    currentWireEl.setAttribute("class", "opacity-80 pointer-events-none");
+                    
+                    document.getElementById('wires-layer').appendChild(currentWireEl);
+                } else {
+                    // Finish the wire
+                    if (nodeId === startNode.id) {
+                        currentWireEl.remove();
+                        isWiring = false; startNode = null; return;
+                    }
+                    
+                    // Finalize wire element
+                    currentWireEl.classList.remove("opacity-80", "pointer-events-none");
+                    currentWireEl.classList.add("cursor-pointer", "hover:stroke-pink-500", "transition-colors");
+                    currentWireEl.style.pointerEvents = "stroke"; // Ensure clicking path works
+                    
+                    // Wire Delete Handler
+                    currentWireEl.addEventListener('click', function(ev) {
+                        if (activeTool === 'delete') {
+                            ev.target.remove();
+                            wires = wires.filter(w => w.pathEl !== ev.target);
+                            if(isSimulating) simulate();
+                            ev.stopPropagation();
+                        }
+                    });
+
+                    wires.push({
+                        fromId: startNode.id,
+                        toId: nodeId,
+                        pathEl: currentWireEl,
+                        color: currentColor
+                    });
+
+                    isWiring = false;
+                    startNode = null;
+                    currentWireEl = null;
+                    
+                    if(isSimulating) simulate();
+                }
+            }
+        }
+
+        // Live wire update on mouse move
+        document.getElementById('canvas').addEventListener('mousemove', (e) => {
+            if (isWiring && currentWireEl && startNode) {
+                const startPos = getCenter(startNode);
+                const rect = document.getElementById('wires-layer').getBoundingClientRect();
+                const endX = e.clientX - rect.left;
+                const endY = e.clientY - rect.top;
+                
+                currentWireEl.setAttribute("d", getPathD(startPos.x, startPos.y, endX, endY));
+            }
+        });
+
+        
+        function getLedHtml(color) {
+            const style = ledColors[color];
+            return `
+                <div class="bulb w-6 h-6 rounded-full mx-auto border-2 transition-all duration-300 z-10 relative" 
+                     style="background-color: ${style.bg}; border-color: ${style.border}; filter: brightness(0.8);">
+                    <div class="w-2 h-1 bg-white opacity-40 rounded-full absolute top-1 left-1"></div>
+                </div>
+                <div class="flex justify-between w-[16px] mx-auto -mt-2 z-0 relative">
+                    <div class="w-[2px] h-10 bg-[#94a3b8]"></div> <!-- Anode (Left) -->
+                    <div class="w-[2px] h-8 bg-[#94a3b8]"></div> <!-- Cathode (Right) -->
+                </div>
+            `;
+        }
+
+        function createLedWrapper(color) {
+            const div = document.createElement('div');
+            div.className = 'absolute z-20 pointer-events-auto cursor-pointer drop-shadow-md';
+            div.style.width = '32px';
+            div.style.height = '50px';
+            div.style.transform = 'translate(-50%, 0)';
+            div.innerHTML = getLedHtml(color);
+            return div;
+        }
+
+        // Set visual position so bottom of legs touches holes
+        function positionLedElement(ledEl, h1, h2) {
+            const p1 = getCenter(h1);
+            const p2 = getCenter(h2);
+            ledEl.style.left = `${(p1.x + p2.x) / 2}px`;
+            ledEl.style.top = `${p1.y - 42}px`; 
+        }
+
+        function initGhostLed() {
+            ghostLed = createLedWrapper('red');
+            ghostLed.style.display = 'none';
+            ghostLed.style.opacity = '0.6';
+            ghostLed.style.pointerEvents = 'none';
+            document.getElementById('components-layer').appendChild(ghostLed);
+        }
+
+        function handleHoleHover(hole) {
+            if (activeTool.startsWith('led_')) {
+                const col = parseInt(hole.dataset.col);
+                const row = hole.dataset.row;
+                if (!col || !row) { ghostLed.style.display = 'none'; return; } 
+                
+                const nextHole = document.querySelector(`[data-row="${row}"][data-col="${col+1}"]`);
+                if (nextHole) {
+                    positionLedElement(ghostLed, hole, nextHole);
+                    ghostLed.style.display = 'block';
+                    ghostLed.dataset.h1 = hole.id;
+                    ghostLed.dataset.h2 = nextHole.id;
+                } else {
+                    ghostLed.style.display = 'none';
+                }
+            }
+        }
+
+        // Click to place LED
+        document.getElementById('boards-layer').addEventListener('click', (e) => {
+            if (activeTool.startsWith('led_') && ghostLed.style.display === 'block') {
+                const h1 = document.getElementById(ghostLed.dataset.h1);
+                const h2 = document.getElementById(ghostLed.dataset.h2);
+                if (!h1 || !h2) return;
+
+                const ledColor = activeTool.split('_')[1];
+                const ledEl = createLedWrapper(ledColor);
+                positionLedElement(ledEl, h1, h2);
+                
+                // Add Delete Logic
+                ledEl.addEventListener('click', (ev) => {
+                    if (activeTool === 'delete') {
+                        ledEl.remove();
+                        components = components.filter(c => c.element !== ledEl);
+                        if(isSimulating) simulate();
+                        ev.stopPropagation(); // prevent clicking board
+                    }
+                });
+                
+                document.getElementById('components-layer').appendChild(ledEl);
+                
+                components.push({
+                    type: 'led',
+                    color: ledColor,
+                    anodeId: h1.id,
+                    cathodeId: h2.id,
+                    element: ledEl
+                });
+
+                if(isSimulating) simulate();
+            }
+        });
+
+        
+        function clearAll() {
+            wires.forEach(w => w.pathEl.remove());
+            wires = [];
+            components.forEach(c => c.element.remove());
+            components = [];
+            document.getElementById('warning-msg').classList.add('hidden');
+            if(isSimulating) simulate();
+        }
+
+        function simulate() {
+            if (!isSimulating) return;
+            
+            // Map states: 1 (HIGH), 0 (LOW), undefined (FLOAT)
+            let states = {};
+            let shortCircuit = false;
+            document.getElementById('warning-msg').classList.add('hidden');
+
+            // Initialize Arduino power sources
+            states['arduino_5V'] = 1;
+            states['arduino_3V3'] = 1;
+            states['arduino_13'] = 1; // Standard built-in LED pin high for extra usage
+            states['arduino_12'] = 1; 
+            states['arduino_GND1'] = 0;
+            states['arduino_GND2'] = 0;
+            states['arduino_GND3'] = 0;
+
+            let changed = true;
+            let iter = 0;
+            
+            // Graph Traversal for continuous power flow
+            while(changed && iter < 100) {
+                changed = false;
+                wires.forEach(w => {
+                    let fromStrip = document.getElementById(w.fromId).dataset.strip;
+                    let toStrip = document.getElementById(w.toId).dataset.strip;
+                    
+                    let s1 = states[fromStrip];
+                    let s2 = states[toStrip];
+                    
+                    if (s1 === 1 && s2 === undefined) { states[toStrip] = 1; changed = true; }
+                    if (s1 === 0 && s2 === undefined) { states[toStrip] = 0; changed = true; }
+                    if (s2 === 1 && s1 === undefined) { states[fromStrip] = 1; changed = true; }
+                    if (s2 === 0 && s1 === undefined) { states[fromStrip] = 0; changed = true; }
+                    
+                    // Basic Short Circuit Detection
+                    if ((s1 === 1 && s2 === 0) || (s1 === 0 && s2 === 1)) {
+                        shortCircuit = true;
+                    }
+                });
+                iter++;
+            }
+
+            if (shortCircuit) {
+                document.getElementById('warning-msg').classList.remove('hidden');
+            }
+
+            // Update Component Visuals based on physical strip logic
+            components.forEach(comp => {
+                if(comp.type === 'led') {
+                    let anodeStrip = document.getElementById(comp.anodeId).dataset.strip;
+                    let cathodeStrip = document.getElementById(comp.cathodeId).dataset.strip;
+                    
+                    let bulb = comp.element.querySelector('.bulb');
+                    
+                    // Condition to light up: Anode High, Cathode Low, and No Short on board
+                    if (!shortCircuit && states[anodeStrip] === 1 && states[cathodeStrip] === 0) {
+                        const shadowColor = ledColors[comp.color].shadow;
+                        bulb.style.boxShadow = `0 0 15px ${shadowColor}, 0 0 35px ${shadowColor}`;
+                        bulb.style.filter = 'brightness(1.5)';
+                    } else {
+                        bulb.style.boxShadow = 'none';
+                        bulb.style.filter = 'brightness(0.8)';
+                    }
+                }
+            });
+        }
+
+        
+        window.onload = function() {
+            buildBreadboard();
+            buildArduino();
+            initGhostLed();
+            
+            // Simulation Button Handler
+            const simBtn = document.getElementById('sim-btn');
+            simBtn.addEventListener('click', () => {
+                isSimulating = !isSimulating;
+                if(isSimulating) {
+                    simBtn.textContent = 'Stop Simulation';
+                    simBtn.classList.replace('bg-green-600', 'bg-red-600');
+                    simBtn.classList.replace('hover:bg-green-500', 'hover:bg-red-500');
+                    simBtn.classList.replace('shadow-green-900/20', 'shadow-red-900/20');
+                    simulate();
+                } else {
+                    simBtn.textContent = 'Start Simulation';
+                    simBtn.classList.replace('bg-red-600', 'bg-green-600');
+                    simBtn.classList.replace('hover:bg-red-500', 'hover:bg-green-500');
+                    simBtn.classList.replace('shadow-red-900/20', 'shadow-green-900/20');
+                    document.getElementById('warning-msg').classList.add('hidden');
+                    
+                    // Turn off all LEDs manually
+                    components.forEach(c => {
+                         let bulb = c.element.querySelector('.bulb');
+                         bulb.style.boxShadow = 'none';
+                         bulb.style.filter = 'brightness(0.8)';
+                    });
+                }
+            });
+            
+            // Set default tools visually
+            setActiveTool('pointer');
+            setWireColor('#ef4444');
+        };
     </script>
 </body>
 </html>
