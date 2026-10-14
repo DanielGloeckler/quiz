@@ -1,0 +1,90 @@
+[
+  {
+    "question": "🔗 Zwei Glühlampen sind in einer Reihenschaltung (unverzweigter Stromkreis) angeschlossen. Was passiert, wenn eine der beiden Lampen durchbrennt?",
+    "options": [
+      "Die andere Lampe leuchtet doppelt so hell weiter.",
+      "Die andere Lampe geht ebenfalls aus, da der Stromkreis unterbrochen ist.",
+      "Die andere Lampe leuchtet unverändert weiter.",
+      "Es entsteht automatisch ein Kurzschluss an der Batterie."
+    ],
+    "correct": 1,
+    "explanation": "In einer Reihenschaltung gibt es nur einen einzigen Weg für den elektrischen Strom. Wird dieser an einer Stelle unterbrochen, fließt im gesamten Stromkreis kein Strom mehr."
+  },
+  {
+    "question": "⚡ Welche Gesetzmäßigkeit gilt für die elektrische Stromstärke $I$ in einer Reihenschaltung?",
+    "options": [
+      "$I_{\\text{ges}} = I_1 + I_2$",
+      "$I_{\\text{ges}} = I_1 - I_2$",
+      "$I_{\\text{ges}} = I_1 = I_2$",
+      "Die Stromstärke wird nach jeder Lampe kleiner."
+    ],
+    "correct": 2,
+    "explanation": "In einem unverzweigten Stromkreis fließt durch jedes Bauteil exakt derselbe Strom. Die Stromstärke ist daher überall gleich groß ($I_{\\text{ges}} = I_1 = I_2$)."
+  },
+  {
+    "question": "🔋 An einer $9\\,\\text{V}$-Batterie sind zwei unterschiedliche Lampen in Reihe geschaltet. An der ersten Lampe misst man eine Teilspannung von $U_1 = 3{,}5\\,\\text{V}$. Wie groß ist die Spannung $U_2$ an der zweiten Lampe?",
+    "options": [
+      "$9\\,\\text{V}$",
+      "$3{,}5\\,\\text{V}$",
+      "$5{,}5\\,\\text{V}$",
+      "$12{,}5\\,\\text{V}$"
+    ],
+    "correct": 2,
+    "explanation": "In der Reihenschaltung teilt sich die Gesamtspannung auf die Bauteile auf ($U_{\\text{ges}} = U_1 + U_2$). Es gilt also: $U_2 = 9\\,\\text{V} - 3{,}5\\,\\text{V} = 5{,}5\\,\\text{V}$."
+  },
+  {
+    "question": "🏠 Warum sind alle Steckdosen und Deckenlampen im Haushalt parallel und nicht in Reihe geschaltet?",
+    "options": [
+      "Damit man beim Bau weniger Kabel verlegen muss.",
+      "Damit alle Geräte gleichzeitig eingeschaltet sein müssen, damit Strom fließt.",
+      "Damit jedes Gerät unabhängig bedient werden kann und immer die volle Netzspannung von $230\\,\\text{V}$ erhält.",
+      "Damit sich die Spannung von $230\\,\\text{V}$ gleichmäßig auf alle eingesteckten Geräte aufteilt."
+    ],
+    "correct": 2,
+    "explanation": "In der Parallelschaltung liegt an jedem Zweig dieselbe Spannung ($U_{\\text{ges}} = U_1 = U_2 = 230\\,\\text{V}$) an, und jedes Gerät hat seinen eigenen Stromzweig, der unabhängig ein- und ausgeschaltet werden kann."
+  },
+  {
+    "question": "🔍 Messgeräte-Detektiv: In einer Parallelschaltung aus zwei Lampen zeigt das Amperemeter im Hauptstromkreis $I_{\\text{ges}} = 0{,}6\\,\\text{A}$ an. Durch den ersten Zweig fließen $I_1 = 0{,}25\\,\\text{A}$. Wie groß ist die Stromstärke $I_2$ im zweiten Zweig?",
+    "options": [
+      "$0{,}6\\,\\text{A}$",
+      "$0{,}85\\,\\text{A}$",
+      "$0{,}35\\,\\text{A}$",
+      "$0{,}25\\,\\text{A}$"
+    ],
+    "correct": 2,
+    "explanation": "Am Knotenpunkt teilt sich der Gesamtstrom auf die einzelnen Zweige auf ($I_{\\text{ges}} = I_1 + I_2$). Somit fließt durch den zweiten Zweig $I_2 = 0{,}6\\,\\text{A} - 0{,}25\\,\\text{A} = 0{,}35\\,\\text{A}$."
+  },
+  {
+    "question": "🔌 Zusatzfrage (Sicherheit): Warum löst die Sicherung im Sicherungskasten aus, wenn man zu viele leistungsstarke Geräte (z. B. Wasserkocher, Föhn, Toaster) gleichzeitig an eine einzige Mehrfachsteckdose anschließt?",
+    "options": [
+      "Weil die Spannung in der Steckdose dann auf über $1000\\,\\text{V}$ ansteigt.",
+      "Weil sich in der Parallelschaltung die Teilströme addieren ($I_{\\text{ges}} = I_1 + I_2 + \\dots$) und das Kabel durch den zu hohen Gesamtstrom überhitzen würde.",
+      "Weil die Geräte in einer Mehrfachsteckdose in Reihe geschaltet sind und sich gegenseitig blockieren.",
+      "Weil der Gesamtwiderstand der Schaltung unendlich groß wird."
+    ],
+    "correct": 1,
+    "explanation": "Jedes zusätzliche Gerät bildet einen neuen parallelen Zweig. Die Einzelströme addieren sich im Hauptkabel. Wird der Gesamtstrom zu hoch (meist über $16\\,\\text{A}$), schaltet die Sicherung den Stromkreis zum Schutz vor Kabelbrand ab."
+  },
+  {
+    "question": "🛠️ Zusatzfrage (Messen): Wie müssen ein Amperemeter (Strommessgerät) und ein Voltmeter (Spannungsmessgerät) im Stromkreis angeschlossen werden, um die Werte an einer Lampe korrekt zu bestimmen?",
+    "options": [
+      "Beide Messgeräte werden in Reihe zur Lampe geschaltet.",
+      "Beide Messgeräte werden parallel zur Lampe geschaltet.",
+      "Das Amperemeter wird in Reihe geschaltet, das Voltmeter wird parallel zur Lampe geschaltet.",
+      "Das Amperemeter wird parallel geschaltet, das Voltmeter wird in Reihe zur Lampe geschaltet."
+    ],
+    "correct": 2,
+    "explanation": "Um den Stromfluss zu messen, muss der Strom direkt durch das Amperemeter hindurchfließen (Reihenschaltung). Um den Spannungsunterschied vor und nach der Lampe zu vergleichen, wird das Voltmeter parallel zur Lampe angeschlossen."
+  },
+  {
+    "question": "💡 Knobelfrage (Widerstand & Helligkeit): Zwei baugleiche Lampen sind in Reihe an eine Batterie angeschlossen. Nun wird eine dritte baugleiche Lampe zusätzlich in Reihe dazugeschaltet. Was beobachtet man?",
+    "options": [
+      "Alle drei Lampen leuchten nun schwächer als die zwei Lampen zuvor.",
+      "Alle drei Lampen leuchten nun deutlich heller als zuvor.",
+      "Die ersten beiden Lampen leuchten gleich hell wie vorher, nur die dritte leuchtet schwächer.",
+      "Die Gesamtstromstärke aus der Batterie verdreifacht sich."
+    ],
+    "correct": 0,
+    "explanation": "Durch die dritte Lampe in Reihe vergrößert sich der Gesamtwiderstand im Stromkreis. Dadurch sinkt die Stromstärke $I$, und jede einzelne Lampe erhält zudem nur noch ein Drittel statt der Hälfte der Batteriespannung ($U_{\\text{ges}} = U_1 + U_2 + U_3$)."
+  }
+]
