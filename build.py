@@ -5,17 +5,21 @@ import os
 with open('template.html', 'r', encoding='utf-8') as f:
     template_content = f.read()
 
-json_files = sorted(glob.glob('blatt*.json'))
+# Sucht jetzt nach ALLEN .json-Dateien im Ordner
+json_files = sorted(glob.glob('*.json'))
 
 if not json_files:
-    print("Keine blatt*.json Dateien gefunden.")
+    print("Keine .json Dateien gefunden.")
 else:
     for jf in json_files:
-        basename = os.path.splitext(jf)[0] # z. B. 'blatt01'
+        basename = os.path.splitext(jf)[0] # z. B. 'chemie_test' oder 'mathe_klasse5'
         with open(jf, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
-        title = f"Physik - {basename.capitalize()}"
+        # Erzeugt einen sauberen Titel aus dem Dateinamen (ersetzt _ und - durch Leerzeichen)
+        nice_name = basename.replace('_', ' ').replace('-', ' ').title()
+        title = f"Quiz - {nice_name}"
+        
         data_js = f"const quizData = {json.dumps(data, ensure_ascii=False, indent=2)};"
         
         page = template_content.replace('/* QUIZ_TITLE */', title)
