@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Web-Phyphox: Beschleunigung</title>
+  <!-- Chart.js für Live-Diagramme -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #181818;
+      --card: #262626;
+      --accent: #ff7f00;
+      --text: #f0f0f0;
+      --muted: #aaaaaa;
+      --col-x: #ff4d4d;
+      --col-y: #4dff4d;
+      --col-z: #4da6ff;
+      --col-abs: #ffffff;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 12px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid var(--accent);
+      padding-bottom: 10px;
+      margin-bottom: 14px;
+    }
+
+    header h1 {
+      font-size: 1.25rem;
+      color: var(--accent);
+    }
+
+    .status-badge {
+      font-size: 0.8rem;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: #333;
+      color: var(--muted);
+    }
+
+    .status-badge.active {
+      background: #1b4d20;
+      color: #66ff77;
+    }
+
+    /* Steuerung */
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .controls-row2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    button, select {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid #444;
+      padding: 11px 10px;
+      font-size: 0.95rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.15s;
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+    }
+
+    button.primary.running {
+      background: #d93838;
+      color: #fff;
+      border-color: #d93838;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    /* Live-Messwerte als Kacheln */
+    .readouts {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .tile {
+      background: var(--card);
+      padding: 8px;
+      border-radius: 6px;
+      text-align: center;
+      border-top: 3px solid transparent;
+    }
+
+    .tile.x { border-color: var(--col-x); }
+    .tile.y { border-color: var(--col-y); }
+    .tile.z { border-color: var(--col-z); }
+    .tile.abs { border-color: var(--col-abs); }
+
+    .tile-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+
+    .tile-val {
+      font-family: monospace;
+      font-size: 1.15rem;
+      font-weight: bold;
+    }
+
+    /* Diagramm-Container */
+    .chart-card {
+      background: var(--card);
+      padding: 10px;
+      border-radius: 8px;
+      height: 340px;
+      position: relative;
+      margin-bottom: 12px;
+    }
+
+    .meta-bar {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--muted);
+      padding: 4px 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Beschleunigungsmesser</h1>
+    <span id="statusBadge" class="status-badge">Bereit</span>
+  </header>
+
+  <div class="controls">
+    <button id="startBtn" class="primary">▶ Messung starten</button>
+    <select id="modeSelect">
+      <option value="withG">Mit g (Erdbeschl.)</option>
+      <option value="withoutG">Ohne g (Linear)</option>
+    </select>
+  </div>
+
+  <div class="controls-row2">
+    <button id="simBtn" title="Testdaten am PC erzeugen">⚡ PC-Demo</button>
+    <button id="clearBtn">🗑 Reset</button>
+    <button id="exportBtn" disabled>⬇ CSV Export</button>
+  </div>
+
+  <div class="readouts">
+    <div class="tile x">
+      <div class="tile-label">a_x (m/s²)</div>
+      <div class="tile-val" id="valX">0.00</div>
+    </div>
+    <div class="tile y">
+      <div class="tile-label">a_y (m/s²)</div>
+      <div class="tile-val" id="valY">0.00</div>
+    </div>
+    <div class="tile z">
+      <div class="tile-label">a_z (m/s²)</div>
+      <div class="tile-val" id="valZ">0.00</div>
+    </div>
+    <div class="tile abs">
+      <div class="tile-label">|a| (m/s²)</div>
+      <div class="tile-val" id="valAbs">0.00</div>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <canvas id="accChart"></canvas>
+  </div>
+
+  <div class="meta-bar">
+    <span>Messpunkte: <strong id="sampleCount">0</strong></span>
+    <span>Abtastrate: <strong id="sampleRate">0</strong> Hz</span>
+  </div>
+
+  <script>
+    // --- Konfiguration & Status ---
+    const MAX_VISIBLE_POINTS = 150; // Anzahl der Punkte im sichtbaren Live-Fenster
+    let isRunning = false;
+    let isSimulation = false;
+    let simInterval = null;
+
+    let startTime = 0;
+    let lastFrameTime = 0;
+    let allData = []; // Speichert ALLE Daten für den CSV-Export: [t_s, ax, ay, az, a_abs]
+
+    // DOM-Elemente
+    const startBtn = document.getElementById('startBtn');
+    const simBtn = document.getElementById('simBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const modeSelect = document.getElementById('modeSelect');
+    const statusBadge = document.getElementById('statusBadge');
+
+    // --- Chart.js Initialisierung ---
+    const ctx = document.getElementById('accChart').getContext('2d');
+    const accChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          { label: 'a_x', data: [], borderColor: '#ff4d4d', borderWidth: 1.8, pointRadius: 0, tension: 0.1 },
+          { label: 'a_y', data: [], borderColor: '#4dff4d', borderWidth: 1.8, pointRadius: 0, tension: 0.1 },
+          { label: 'a_z', data: [], borderColor: '#4da6ff', borderWidth: 1.8, pointRadius: 0, tension: 0.1 },
+          { label: '|a|', data: [], borderColor: '#ffffff', borderWidth: 1.5, borderDash: [4, 4], pointRadius: 0, tension: 0.1 }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false, // Wichtig für hohe Performance bei 60 Hz!
+        interaction: { mode: 'nearest', intersect: false },
+        plugins: {
+          legend: {
+            labels: { color: '#f0f0f0', boxWidth: 14 }
+          }
+        },
+        scales: {
+          x: {
+            title: { display: true, text: 'Zeit t (s)', color: '#aaaaaa' },
+            ticks: { color: '#aaaaaa', maxTicksLimit: 7 },
+            grid: { color: '#333333' }
+          },
+          y: {
+            title: { display: true, text: 'Beschleunigung (m/s²)', color: '#aaaaaa' },
+            ticks: { color: '#aaaaaa' },
+            grid: { color: '#333333' },
+            suggestedMin: -12,
+            suggestedMax: 12
+          }
+        }
+      }
+    });
+
+    // --- Messdaten verarbeiten & zeichnen ---
+    function recordSample(ax, ay, az) {
+      const now = performance.now();
+      if (allData.length === 0) startTime = now;
+
+      const t = (now - startTime) / 1000; // Zeit in Sekunden
+      const aAbs = Math.sqrt(ax * ax + ay * ay + az * az);
+
+      // Abtastrate berechnen
+      if (lastFrameTime > 0) {
+        const dt = (now - lastFrameTime) / 1000;
+        if (dt > 0) {
+          document.getElementById('sampleRate').innerText = Math.round(1 / dt);
+        }
+      }
+      lastFrameTime = now;
+
+      // Im Array für Export sichern
+      allData.push([t.toFixed(4), ax.toFixed(4), ay.toFixed(4), az.toFixed(4), aAbs.toFixed(4)]);
+
+      // Zahlenwerte aktualisieren
+      document.getElementById('valX').innerText = ax.toFixed(2);
+      document.getElementById('valY').innerText = ay.toFixed(2);
+      document.getElementById('valZ').innerText = az.toFixed(2);
+      document.getElementById('valAbs').innerText = aAbs.toFixed(2);
+      document.getElementById('sampleCount').innerText = allData.length;
+
+      // In Chart einfügen (Rollendes Fenster)
+      accChart.data.labels.push(t.toFixed(2));
+      accChart.data.datasets[0].data.push(ax);
+      accChart.data.datasets[1].data.push(ay);
+      accChart.data.datasets[2].data.push(az);
+      accChart.data.datasets[3].data.push(aAbs);
+
+      if (accChart.data.labels.length > MAX_VISIBLE_POINTS) {
+        accChart.data.labels.shift();
+        accChart.data.datasets.forEach(ds => ds.data.shift());
+      }
+
+      accChart.update('none');
+    }
+
+    // --- Smartphone Sensor Event-Handler ---
+    function handleMotion(event) {
+      const useG = modeSelect.value === 'withG';
+      const source = useG ? event.accelerationIncludingGravity : event.acceleration;
+
+      if (!source || source.x === null) return;
+      recordSample(source.x || 0, source.y || 0, source.z || 0);
+    }
+
+    // --- Start / Stopp der echten Sensor-Messung ---
+    startBtn.addEventListener('click', async () => {
+      if (isSimulation) stopMeasurement();
+
+      if (!isRunning) {
+        // iOS 13+ Berechtigungsabfrage
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+          try {
+            const state = await DeviceMotionEvent.requestPermission();
+            if (state !== 'granted') {
+              alert('Zugriff auf den Beschleunigungssensor wurde abgelehnt.');
+              return;
+            }
+          } catch (err) {
+            alert('Fehler bei der Sensor-Freigabe: ' + err.message);
+            return;
+          }
+        }
+
+        window.addEventListener('devicemotion', handleMotion);
+        isRunning = true;
+        updateUIState('Messe (Sensor)...');
+      } else {
+        stopMeasurement();
+      }
+    });
+
+    // --- PC-Demo / Simulationsmodus (falls kein Handy-Sensor vorhanden) ---
+    simBtn.addEventListener('click', () => {
+      if (isRunning && !isSimulation) stopMeasurement();
+
+      if (!isSimulation) {
+        isSimulation = true;
+        isRunning = true;
+        updateUIState('Simulation aktiv');
+        simBtn.innerText = '⏹ Demo stoppen';
+
+        simInterval = setInterval(() => {
+          const t = performance.now() / 1000;
+          const gOffset = modeSelect.value === 'withG' ? 9.81 : 0;
+          // Erzeugt gedämpfte Schwingung + leichtes Rauschen
+          const ax = 4 * Math.sin(2 * Math.PI * 0.8 * t) + (Math.random() - 0.5) * 0.4;
+          const ay = 2 * Math.cos(2 * Math.PI * 0.4 * t) + (Math.random() - 0.5) * 0.4;
+          const az = gOffset + 1.5 * Math.sin(2 * Math.PI * 1.5 * t);
+          recordSample(ax, ay, az);
+        }, 33); // ~30 Hz
+      } else {
+        stopMeasurement();
+      }
+    });
+
+    function stopMeasurement() {
+      window.removeEventListener('devicemotion', handleMotion);
+      if (simInterval) clearInterval(simInterval);
+      isRunning = false;
+      isSimulation = false;
+      lastFrameTime = 0;
+
+      startBtn.innerText = '▶ Messung fortsetzen';
+      startBtn.classList.remove('running');
+      simBtn.innerText = '⚡ PC-Demo';
+      statusBadge.innerText = 'Pausiert';
+      statusBadge.classList.remove('active');
+      exportBtn.disabled = allData.length === 0;
+    }
+
+    function updateUIState(statusText) {
+      startBtn.innerText = '⏹ Stopp';
+      startBtn.classList.add('running');
+      statusBadge.innerText = statusText;
+      statusBadge.classList.add('active');
+      exportBtn.disabled = true;
+    }
+
+    // --- Reset ---
+    clearBtn.addEventListener('click', () => {
+      stopMeasurement();
+      allData = [];
+      startTime = 0;
+      startBtn.innerText = '▶ Messung starten';
+      statusBadge.innerText = 'Bereit';
+
+      ['valX', 'valY', 'valZ', 'valAbs'].forEach(id => document.getElementById(id).innerText = '0.00');
+      document.getElementById('sampleCount').innerText = '0';
+      document.getElementById('sampleRate').innerText = '0';
+
+      accChart.data.labels = [];
+      accChart.data.datasets.forEach(ds => ds.data = []);
+      accChart.update();
+      exportBtn.disabled = true;
+    });
+
+    // --- CSV Export ---
+    exportBtn.addEventListener('click', () => {
+      if (allData.length === 0) return;
+      const header = "Zeit_s;a_x_ms2;a_y_ms2;a_z_ms2;a_gesamt_ms2\n";
+      // Deutsches Excel-freundliches Format mit Semikolon
+      const rows = allData.map(row => row.join(';')).join('\n');
+      const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `beschleunigung_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  </script>
+</body>
+</html>
