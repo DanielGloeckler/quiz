@@ -3,198 +3,132 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Stromkreis-Labor – Knoten- &amp; Maschenregel</title>
+<title>Stromkreis mit Glühlampe – Elektronen im Kabel</title>
 <style>
-  *,*::before,*::after{box-sizing:border-box}
-  html,body{margin:0;height:100%}
-  body{
-    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-    background:#0e1520;color:#e6edf7;overflow:hidden;
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #0b111a; color: #e6edf7; overflow: hidden;
   }
-  .app{display:flex;height:100vh;height:100dvh}
+  .app { display: flex; height: 100vh; height: 100dvh; }
 
-  /* ---------- Bühne ---------- */
-  .stage{position:relative;flex:1;min-width:0;background:#0e1520;display:flex;align-items:flex-start;justify-content:flex-start;padding:12px}
-  #cv{
-    border-radius:14px;
-    box-shadow:0 10px 30px rgba(0,0,0,.5);
-    touch-action:none;cursor:pointer;
-    max-width:100%;
-    height:auto;
-    display:block;
+  .stage {
+    position: relative; flex: 1; min-width: 0;
+    background: #0b111a; padding: 12px;
   }
-
-  /* ---------- Panel ---------- */
-  .panel{
-    width:350px;flex:none;background:#131c2b;border-left:1px solid #22304a;
-    padding:18px 16px 28px;overflow-y:auto;
-  }
-  .panel h1{font-size:19px;margin:0 0 4px;letter-spacing:.2px}
-  .panel .sub{margin:0 0 14px;font-size:12.5px;color:#8fa3bf;line-height:1.45}
-
-  .why-box{
-    background:#0e1622;border-left:3px solid #2b6cff;border-radius:0 8px 8px 0;
-    padding:9px 11px;margin-bottom:16px;font-size:12px;line-height:1.5;color:#a9bcd4;
-  }
-  .why-box strong{color:#fff}
-
-  .section-title{
-    font-size:11px;font-weight:700;color:#9db0ca;text-transform:uppercase;
-    letter-spacing:.7px;margin:18px 0 8px;
+  #cv {
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.5);
+    display: block;
   }
 
-  .presets{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px}
-  .presets button{
-    padding:7px 6px;border-radius:7px;border:1px solid #2b3d5a;background:#0e1622;
-    color:#c2d1e4;font:inherit;font-size:11.5px;font-weight:600;cursor:pointer;
-    transition:background .15s;line-height:1.3;
+  .panel {
+    width: 320px; flex: none;
+    background: #131c2b; border-left: 1px solid #22304a;
+    padding: 20px 18px 28px; overflow-y: auto;
   }
-  .presets button:hover{background:#1a2637;color:#fff}
+  .panel h1 { font-size: 18px; margin: 0 0 4px; }
+  .panel .sub { margin: 0 0 18px; font-size: 12.5px; color: #8fa3bf; line-height: 1.45; }
 
-  .palette{
-    display:grid;grid-template-columns:repeat(6,1fr);gap:5px;
-    background:#0e1622;border-radius:10px;padding:8px;border:1px solid #22304a;
-  }
-  .palette button{
-    aspect-ratio:1;border:1px solid #22304a;border-radius:6px;background:#131c2b;
-    color:#cbd5e1;font-size:14px;cursor:pointer;display:flex;align-items:center;
-    justify-content:center;padding:0;transition:all .12s;font-weight:600;
-  }
-  .palette button:hover{background:#1a2637;border-color:#3b82f6}
-  .palette button.active{background:#2b6cff;border-color:#2b6cff;color:#fff;box-shadow:0 0 0 2px rgba(43,108,255,.35)}
-  .palette button svg{width:22px;height:22px;display:block}
-  .palette button.erase{color:#f87171}
-  .palette button.erase.active{background:#dc2626;border-color:#dc2626;color:#fff;box-shadow:0 0 0 2px rgba(220,38,38,.35)}
+  .group { margin-bottom: 18px; }
 
-  .selected-info{
-    background:#0e1622;border:1px solid #22304a;border-radius:9px;
-    padding:10px 12px;font-size:12.5px;color:#c2d1e4;min-height:38px;
-    line-height:1.4;
+  .label {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; font-weight: 700; color: #9db0ca;
+    text-transform: uppercase; letter-spacing: .7px; margin-bottom: 8px;
   }
-  .selected-info .type{color:#ffd166;font-weight:700}
-  .selected-info .hint{color:#6f83a0;font-size:11.5px}
-
-  .value-row{
-    display:flex;gap:8px;margin-top:9px;align-items:center;
-  }
-  .value-row input[type=number]{
-    width:100px;padding:6px 8px;border-radius:7px;border:1px solid #2b3d5a;
-    background:#0e1622;color:#fff;font:inherit;font-size:13px;
-    font-variant-numeric:tabular-nums;
-  }
-  .value-row input[type=number]:focus{outline:none;border-color:#2b6cff}
-  .value-row .unit{font-size:12px;color:#8fa3bf}
-  .value-row .flip{
-    margin-left:auto;padding:6px 10px;border-radius:7px;border:1px solid #2b3d5a;
-    background:#1a2637;color:#cfe0f5;font:inherit;font-size:11.5px;font-weight:600;
-    cursor:pointer;
-  }
-  .value-row .flip:hover{background:#22304a}
-
-  .readout{
-    background:#0e1622;border:1px solid #22304a;border-radius:10px;
-    padding:10px 12px;font-size:12.5px;
-  }
-  .meas{display:flex;justify-content:space-between;gap:8px;padding:3px 0;
-        color:#c2d1e4;font-variant-numeric:tabular-nums}
-  .meas .name{color:#a9bcd4}
-  .meas .val{color:#fff;font-weight:600}
-  .meas .unit{color:#8fa3bf;font-weight:400;margin-left:2px;font-size:11px}
-  .meas.muted{color:#6f83a0;font-style:italic;justify-content:center}
-  .meas.resistor .name{color:#fbbf24}
-  .meas.battery .name{color:#4ade80}
-
-  .tip{
-    font-size:12.5px;line-height:1.5;color:#a9bcd4;background:#0e1622;
-    border-left:3px solid #ffd166;border-radius:0 8px 8px 0;
-    padding:10px 12px;margin-top:6px;min-height:40px;
+  .label output {
+    font-weight: 700; color: #ffd166; text-transform: none;
+    letter-spacing: 0; font-size: 13px;
   }
 
-  .hint{font-size:11.5px;color:#6f83a0;line-height:1.5;margin:14px 0 0}
+  input[type=range] {
+    width: 100%; -webkit-appearance: none; appearance: none;
+    height: 6px; border-radius: 3px;
+    background: #22304a; outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px;
+    border-radius: 50%; background: #ffd166;
+    border: 2px solid #0e1622; cursor: pointer;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #ffd166; border: 2px solid #0e1622; cursor: pointer;
+  }
 
-  @media (max-width:900px){
-    body{overflow:auto}
-    .app{flex-direction:column;height:auto;min-height:100dvh}
-    .stage{height:auto;min-height:280px;justify-content:center}
-    .panel{width:auto;border-left:0;border-top:1px solid #22304a}
+  .btn {
+    width: 100%; padding: 11px; border-radius: 10px;
+    border: 1px solid #2b3d5a; background: #1a2637;
+    color: #cfe0f5; font: inherit; font-weight: 600;
+    font-size: 13.5px; cursor: pointer; margin-bottom: 8px;
+  }
+  .btn:hover { background: #22304a; }
+  .btn.primary { background: #2b6cff; border-color: #2b6cff; color: #fff; }
+  .btn.primary:hover { background: #1e5ce6; }
+
+  .readout {
+    background: #0e1622; border: 1px solid #22304a;
+    border-radius: 10px; padding: 12px 14px; font-size: 13px;
+  }
+  .ro {
+    display: flex; justify-content: space-between;
+    padding: 4px 0; color: #a9bcd4;
+  }
+  .ro b { color: #fff; font-variant-numeric: tabular-nums; }
+
+  .tip {
+    font-size: 13px; line-height: 1.5; color: #a9bcd4;
+    background: #0e1622; border-left: 3px solid #ffd166;
+    border-radius: 0 8px 8px 0; padding: 10px 12px;
+    margin: 0; min-height: 44px;
+  }
+
+  .hint { font-size: 12px; color: #6f83a0; line-height: 1.5; margin: 14px 0 0; }
+
+  @media (max-width: 880px) {
+    body { overflow: auto; }
+    .app { flex-direction: column; height: auto; min-height: 100dvh; }
+    .stage { height: 60vh; min-height: 320px; }
+    .panel { width: auto; border-left: 0; border-top: 1px solid #22304a; }
   }
 </style>
 </head>
 <body>
-
 <div class="app">
   <div class="stage" id="stage">
     <canvas id="cv"></canvas>
   </div>
-
   <aside class="panel">
-    <h1>Stromkreis-Labor</h1>
-    <p class="sub">Baue Schaltungen, beobachte den Stromfluss und prüfe Knoten- &amp; Maschenregel.</p>
+    <h1>Stromkreis mit Glühlampe</h1>
+    <p class="sub">Sieh, wie die Elektronen durch das Kabel fließen und die Lampe zum Leuchten bringen.</p>
 
-    <div class="why-box">
-      <strong>Warum simulieren?</strong> Strom ist unsichtbar. Hier siehst du, wie sich die Elektronen durch die Leitungen bewegen und sich an Knotenpunkten aufteilen.
-    </div>
+    <section class="group">
+      <label class="label" for="voltage">Spannung <output id="voltageVal">4,5 V</output></label>
+      <input type="range" id="voltage" min="1.5" max="12" step="0.5" value="4.5">
+    </section>
 
-    <div class="section-title">Vorlagen</div>
-    <div class="presets">
-      <button data-preset="simple">Einfacher Kreis</button>
-      <button data-preset="series">Reihenschaltung</button>
-      <button data-preset="parallel">Parallel (Knotenregel)</button>
-      <button data-preset="twoloops">Zwei Maschen</button>
-    </div>
+    <section class="group">
+      <label class="label" for="zoom">Zoom im Querschnitt <output id="zoomVal">2,0×</output></label>
+      <input type="range" id="zoom" min="1" max="5" step="0.1" value="2">
+    </section>
 
-    <div class="section-title">Bauteile</div>
-    <div class="palette" id="palette">
-      <button data-tool="wire-h" title="Kabel waagerecht">
-        <svg viewBox="0 0 24 24"><line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="2.5"/></svg>
-      </button>
-      <button data-tool="wire-v" title="Kabel senkrecht">
-        <svg viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="22" stroke="currentColor" stroke-width="2.5"/></svg>
-      </button>
-      <button data-tool="wire-se" title="Ecke (Süd-Ost)">
-        <svg viewBox="0 0 24 24"><path d="M12 22 L12 12 L22 12" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>
-      </button>
-      <button data-tool="wire-sw" title="Ecke (Süd-West)">
-        <svg viewBox="0 0 24 24"><path d="M12 22 L12 12 L2 12" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>
-      </button>
-      <button data-tool="wire-ne" title="Ecke (Nord-Ost)">
-        <svg viewBox="0 0 24 24"><path d="M12 2 L12 12 L22 12" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>
-      </button>
-      <button data-tool="wire-nw" title="Ecke (Nord-West)">
-        <svg viewBox="0 0 24 24"><path d="M12 2 L12 12 L2 12" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>
-      </button>
-      <button data-tool="junction" title="Knotenpunkt">
-        <svg viewBox="0 0 24 24"><line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="2.5"/><line x1="12" y1="2" x2="12" y2="22" stroke="currentColor" stroke-width="2.5"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
-      </button>
-      <button data-tool="resistor-h" title="Widerstand waagerecht">
-        <svg viewBox="0 0 24 24"><path d="M2 12 H6 L8 8 L10 16 L12 8 L14 16 L16 8 L18 12 H22" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-      </button>
-      <button data-tool="resistor-v" title="Widerstand senkrecht">
-        <svg viewBox="0 0 24 24"><path d="M12 2 V6 L8 8 L16 10 L8 12 L16 14 L8 16 L12 18 V22" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-      </button>
-      <button data-tool="battery-h" title="Batterie waagerecht">
-        <svg viewBox="0 0 24 24"><line x1="2" y1="12" x2="9" y2="12" stroke="currentColor" stroke-width="2"/><line x1="9" y1="6" x2="9" y2="18" stroke="currentColor" stroke-width="2.5"/><line x1="13" y1="9" x2="13" y2="15" stroke="currentColor" stroke-width="2.5"/><line x1="13" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="2"/></svg>
-      </button>
-      <button data-tool="battery-v" title="Batterie senkrecht">
-        <svg viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="9" stroke="currentColor" stroke-width="2"/><line x1="6" y1="9" x2="18" y2="9" stroke="currentColor" stroke-width="2.5"/><line x1="9" y1="13" x2="15" y2="13" stroke="currentColor" stroke-width="2.5"/><line x1="12" y1="13" x2="12" y2="22" stroke="currentColor" stroke-width="2"/></svg>
-      </button>
-      <button data-tool="erase" class="erase" title="Löschen">
-        <svg viewBox="0 0 24 24"><path d="M5 5 L19 19 M19 5 L5 19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-      </button>
-    </div>
+    <section class="group">
+      <button class="btn primary" id="play">Pause</button>
+    </section>
 
-    <div class="section-title">Auswahl</div>
-    <div class="selected-info" id="selInfo">
-      <span class="hint">Wähle ein Bauteil aus, um es zu bearbeiten.</span>
-    </div>
+    <section class="group readout">
+      <div class="ro">Strom <b id="roCurrent">0,45 A</b></div>
+      <div class="ro">Leistung <b id="roPower">2,03 W</b></div>
+      <div class="ro">Helligkeit <b id="roBright">50 %</b></div>
+    </section>
 
-    <div class="section-title">Messwerte</div>
-    <div class="readout" id="measurements">
-      <div class="meas muted">Noch keine Bauteile</div>
-    </div>
+    <section class="group">
+      <p class="tip" id="tip">Erhöhe die Spannung und beobachte: Die Elektronen fließen schneller, die Lampe leuchtet heller.</p>
+    </section>
 
-    <div class="section-title">Hinweis</div>
-    <p class="tip" id="tip">Klicke auf ein Bauteil in der Palette und dann auf das Raster, um es zu platzieren. Rechtsklick löscht.</p>
+    <p class="hint">💡 Die blauen Punkte sind Elektronen. Sie fließen vom Minuspol durch das Kabel zur Lampe und zurück zum Pluspol.</p>
   </aside>
 </div>
 
@@ -202,876 +136,511 @@
 (() => {
   'use strict';
 
-  /* ================================================================== */
-  /*  Konstanten & Zustand                                              */
-  /* ================================================================== */
-  const COLS = 11, ROWS = 7;
-  const CELL = 56;
-  const PAD  = 18;
-  const CW = COLS * CELL + PAD * 2;   // 652
-  const CH = ROWS * CELL + PAD * 2;   // 428
-
+  const stage = document.getElementById('stage');
   const canvas = document.getElementById('cv');
   const ctx = canvas.getContext('2d');
 
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width  = CW * dpr;
-  canvas.height = CH * dpr;
-  canvas.style.width  = CW + 'px';
-  canvas.style.height = CH + 'px';
-  ctx.scale(dpr, dpr);
-
-  // Komponenten-Definitionen
-  const COMP = {
-    'wire-h':     { terms: ['W','E'], kind: 'wire', label: 'Kabel' },
-    'wire-v':     { terms: ['N','S'], kind: 'wire', label: 'Kabel' },
-    'wire-se':    { terms: ['S','E'], kind: 'wire', label: 'Ecke' },
-    'wire-sw':    { terms: ['S','W'], kind: 'wire', label: 'Ecke' },
-    'wire-ne':    { terms: ['N','E'], kind: 'wire', label: 'Ecke' },
-    'wire-nw':    { terms: ['N','W'], kind: 'wire', label: 'Ecke' },
-    'junction':   { terms: ['N','S','E','W'], kind: 'junction', label: 'Knoten' },
-    'resistor-h': { terms: ['W','E'], kind: 'resistor', label: 'Widerstand', def: 100 },
-    'resistor-v': { terms: ['N','S'], kind: 'resistor', label: 'Widerstand', def: 100 },
-    'battery-h':  { terms: ['W','E'], kind: 'battery', label: 'Batterie', def: 4.5 },
-    'battery-v':  { terms: ['N','S'], kind: 'battery', label: 'Batterie', def: 4.5 },
+  const state = {
+    voltage: 4.5,
+    resistance: 10,
+    zoom: 2,
+    playing: true,
+    phase: 0,
   };
 
-  // Grid-Zustand: grid[j][i] = null | { type, value, flipped }
-  let grid = [];
-  let selected = null;        // { i, j }
-  let currentTool = null;     // z.B. 'resistor-h' oder 'erase'
-  let animTime = 0;
-  let lastTime = 0;
+  let W = 800, H = 600, dpr = 1;
+  let lastTs = 0;
 
-  // Solver-Ergebnis
-  let edges = [];
-  let terms = [];
-
-  /* ================================================================== */
-  /*  Grid-Hilfsfunktionen                                              */
-  /* ================================================================== */
-  function initGrid() {
-    grid = [];
-    for (let j = 0; j < ROWS; j++) {
-      grid.push(new Array(COLS).fill(null));
-    }
+  /* ---------- Resize ---------- */
+  function resize() {
+    const rect = stage.getBoundingClientRect();
+    W = Math.max(400, rect.width - 24);
+    H = Math.max(400, rect.height - 24);
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
-  function inBounds(i, j) {
-    return i >= 0 && i < COLS && j >= 0 && j < ROWS;
+  /* ---------- Helpers ---------- */
+  function roundRect(c, x, y, w, h, r) {
+    r = Math.min(r, w/2, h/2);
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
   }
 
-  function touchesW(cell) {
-    if (!cell) return false;
-    return ['wire-h','junction','resistor-h','battery-h','wire-sw','wire-nw'].includes(cell.type);
-  }
-  function touchesE(cell) {
-    if (!cell) return false;
-    return ['wire-h','junction','resistor-h','battery-h','wire-se','wire-ne'].includes(cell.type);
-  }
-  function touchesN(cell) {
-    if (!cell) return false;
-    return ['wire-v','junction','resistor-v','battery-v','wire-ne','wire-nw'].includes(cell.type);
-  }
-  function touchesS(cell) {
-    if (!cell) return false;
-    return ['wire-v','junction','resistor-v','battery-v','wire-se','wire-sw'].includes(cell.type);
-  }
+  const getCurrent = () => state.voltage / state.resistance;
+  const getPower = () => state.voltage * state.voltage / state.resistance;
+  const getBrightness = () => Math.min(1, getPower() / 4);
 
-  /* ================================================================== */
-  /*  Schaltkreis aufbauen & lösen                                      */
-  /* ================================================================== */
-  function termPos(i, j, t) {
-    switch (t) {
-      case 'W': return { x: i,       y: j + 0.5 };
-      case 'E': return { x: i + 1,   y: j + 0.5 };
-      case 'N': return { x: i + 0.5, y: j };
-      case 'S': return { x: i + 0.5, y: j + 1 };
-      case 'C': return { x: i + 0.5, y: j + 0.5 };
-    }
+  /* ---------- Circuit geometry ---------- */
+  function getCircuitGeom() {
+    const regionH = H * 0.6;
+    const mx = W * 0.15;
+    const my = regionH * 0.18;
+
+    const leftX = mx;
+    const rightX = W - mx;
+    const topY = my;
+    const botY = regionH - my;
+    const midY = (topY + botY) / 2;
+
+    const batH = 50;
+    const batTop = midY - batH/2;
+    const batBot = midY + batH/2;
+
+    const bulbR = 32;
+
+    return { leftX, rightX, topY, botY, midY, batTop, batBot, bulbR, regionH };
   }
 
-  function rebuild() {
-    const termMap = new Map();
-    const termList = [];
-
-    function getTermId(x, y) {
-      const key = x.toFixed(3) + ',' + y.toFixed(3);
-      if (termMap.has(key)) return termMap.get(key);
-      const id = termList.length;
-      termList.push({ x, y });
-      termMap.set(key, id);
-      return id;
-    }
-
-    const edgeList = [];
-
-    for (let j = 0; j < ROWS; j++) {
-      for (let i = 0; i < COLS; i++) {
-        const cell = grid[j][i];
-        if (!cell) continue;
-        const spec = COMP[cell.type];
-        if (!spec) continue;
-
-        if (cell.type === 'junction') {
-          // Sternförmiger Knoten: Mittelpunkt + 4 Äste
-          const cx = getTermId(i + 0.5, j + 0.5);
-          for (const t of spec.terms) {
-            const p = termPos(i, j, t);
-            const tid = getTermId(p.x, p.y);
-            edgeList.push({
-              from: cx, to: tid,
-              kind: 'wire', value: 0,
-              current: 0,
-              isBranch: true,
-              cell: { i, j }, term: t,
-            });
-          }
-        } else if (spec.terms.length === 2) {
-          const a = termPos(i, j, spec.terms[0]);
-          const b = termPos(i, j, spec.terms[1]);
-          const aid = getTermId(a.x, a.y);
-          const bid = getTermId(b.x, b.y);
-          
-          const flip = !!cell.flipped;
-          edgeList.push({
-            from: flip ? bid : aid,
-            to:   flip ? aid : bid,
-            kind: spec.kind,
-            value: cell.value,
-            current: 0,
-            cell: { i, j }, 
-            termA: spec.terms[0], termB: spec.terms[1],
-            flipped: flip,
-          });
-        }
-      }
-    }
-
-    const N = termList.length;
-    if (N === 0) {
-      terms = []; edges = [];
-      return;
-    }
-
-    // Ground wählen
-    const used = new Set();
-    for (const e of edgeList) { used.add(e.from); used.add(e.to); }
-    if (used.size === 0) { terms = termList; edges = edgeList; return; }
-
-    const sorted = Array.from(used).sort((a,b) => a-b);
-    const ground = sorted[0];
-    const idxMap = new Map();
-    sorted.forEach((n, k) => idxMap.set(n, k));
-
-    const M = edgeList.filter(e => e.kind === 'battery').length;
-    const size = sorted.length - 1 + M;
-
-    const A = Array.from({ length: size }, () => new Float64Array(size));
-    const z = new Float64Array(size);
-
-    const rid = n => n === ground ? -1 : idxMap.get(n) - 1;
-    const WIRE_G = 1e3;
-    const REG_G  = 1e-9;
-
-    let bi = 0;
-    for (const e of edgeList) {
-      const ra = rid(e.from), rb = rid(e.to);
-      if (e.kind === 'wire' || e.kind === 'resistor') {
-        const G = e.kind === 'wire' ? WIRE_G : 1 / Math.max(e.value || 100, 1e-6);
-        if (ra >= 0) A[ra][ra] += G;
-        if (rb >= 0) A[rb][rb] += G;
-        if (ra >= 0 && rb >= 0) {
-          A[ra][rb] -= G;
-          A[rb][ra] -= G;
-        }
-      } else if (e.kind === 'battery') {
-        const row = sorted.length - 1 + bi;
-        const V = e.flipped ? -e.value : e.value;
-        if (ra >= 0) { A[ra][row] += 1; A[row][ra] += 1; }
-        if (rb >= 0) { A[rb][row] -= 1; A[row][rb] -= 1; }
-        z[row] = V;
-        bi++;
-      }
-    }
-
-    for (let k = 0; k < size; k++) A[k][k] += REG_G;
-
-    const x = gauss(A, z);
-    const V = new Float64Array(N);
-    if (x) {
-      for (const [n, k] of idxMap) {
-        V[n] = k === 0 ? 0 : x[k - 1];
-      }
-    }
-
-    // Ströme berechnen
-    bi = 0;
-    for (const e of edgeList) {
-      if (e.kind === 'battery') {
-        const row = sorted.length - 1 + bi;
-        e.current = x ? (e.flipped ? -x[row] : x[row]) : 0;
-        bi++;
-      } else {
-        const R = e.kind === 'wire' ? 1 / WIRE_G : Math.max(e.value || 100, 1e-6);
-        e.current = (V[e.from] - V[e.to]) / R;
-        if (!isFinite(e.current)) e.current = 0;
-      }
-    }
-
-    terms = termList;
-    edges = edgeList;
-    updateReadout();
+  /* ---------- Perimeter path (electron flow direction) ---------- */
+  function getPerimeterPath(g) {
+    const { leftX, rightX, topY, botY, midY, batTop, batBot } = g;
+    return [
+      { a: {x: leftX, y: batBot}, b: {x: leftX, y: botY} },
+      { a: {x: leftX, y: botY}, b: {x: rightX, y: botY} },
+      { a: {x: rightX, y: botY}, b: {x: rightX, y: midY} },
+      { a: {x: rightX, y: midY}, b: {x: rightX, y: topY} },
+      { a: {x: rightX, y: topY}, b: {x: leftX, y: topY} },
+      { a: {x: leftX, y: topY}, b: {x: leftX, y: batTop} },
+    ];
   }
 
-  function gauss(A, b) {
-    const n = A.length;
-    if (n === 0) return null;
-    const M = A.map((row, i) => {
-      const r = new Float64Array(n + 1);
-      r.set(row);
-      r[n] = b[i];
-      return r;
-    });
+  /* ---------- Draw circuit ---------- */
+  function drawCircuit() {
+    const g = getCircuitGeom();
+    const { leftX, rightX, topY, botY, midY, batTop, batBot, bulbR, regionH } = g;
 
-    for (let col = 0; col < n; col++) {
-      let maxRow = col, maxVal = Math.abs(M[col][col]);
-      for (let r = col + 1; r < n; r++) {
-        if (Math.abs(M[r][col]) > maxVal) { maxVal = Math.abs(M[r][col]); maxRow = r; }
-      }
-      if (maxVal < 1e-14) return null;
-      if (maxRow !== col) { const tmp = M[col]; M[col] = M[maxRow]; M[maxRow] = tmp; }
-      const pivot = M[col][col];
-      for (let r = col + 1; r < n; r++) {
-        const f = M[r][col] / pivot;
-        if (f === 0) continue;
-        for (let c = col; c <= n; c++) M[r][c] -= f * M[col][c];
-      }
-    }
+    // Background
+    const bg = ctx.createLinearGradient(0, 0, 0, regionH);
+    bg.addColorStop(0, '#0f1a2a');
+    bg.addColorStop(1, '#0b1420');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, regionH);
 
-    const x = new Float64Array(n);
-    for (let r = n - 1; r >= 0; r--) {
-      let s = M[r][n];
-      for (let c = r + 1; c < n; c++) s -= M[r][c] * x[c];
-      x[r] = s / M[r][r];
-      if (!isFinite(x[r])) return null;
-    }
-    return x;
-  }
-
-  /* ================================================================== */
-  /*  Koordinaten                                                       */
-  /* ================================================================== */
-  function cellCenter(i, j) {
-    return { x: PAD + i * CELL + CELL / 2, y: PAD + j * CELL + CELL / 2 };
-  }
-  function termPx(x, y) {
-    return { x: PAD + x * CELL, y: PAD + y * CELL };
-  }
-
-  /* ================================================================== */
-  /*  Zeichnen                                                          */
-  /* ================================================================== */
-  function drawGrid() {
-    // Hintergrund
-    ctx.fillStyle = '#0f1a26';
-    ctx.fillRect(0, 0, CW, CH);
-
-    // Raster
-    ctx.strokeStyle = 'rgba(45, 65, 95, 0.5)';
+    // Subtle grid
+    ctx.strokeStyle = 'rgba(45, 65, 95, 0.25)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    for (let i = 0; i <= COLS; i++) {
-      const x = PAD + i * CELL + 0.5;
-      ctx.moveTo(x, PAD);
-      ctx.lineTo(x, PAD + ROWS * CELL);
+    for (let x = 0; x < W; x += 40) {
+      ctx.moveTo(x + 0.5, 0);
+      ctx.lineTo(x + 0.5, regionH);
     }
-    for (let j = 0; j <= ROWS; j++) {
-      const y = PAD + j * CELL + 0.5;
-      ctx.moveTo(PAD, y);
-      ctx.lineTo(PAD + COLS * CELL, y);
+    for (let y = 0; y < regionH; y += 40) {
+      ctx.moveTo(0, y + 0.5);
+      ctx.lineTo(W, y + 0.5);
     }
     ctx.stroke();
 
-    // Zarte Punkte an den Ecken
-    ctx.fillStyle = 'rgba(70, 95, 130, 0.4)';
-    for (let j = 0; j <= ROWS; j++) {
-      for (let i = 0; i <= COLS; i++) {
-        ctx.beginPath();
-        ctx.arc(PAD + i * CELL, PAD + j * CELL, 1.2, 0, Math.PI * 2);
-        ctx.fill();
-      }
+    // Ambient light from bulb
+    const brightness = getBrightness();
+    if (brightness > 0.05) {
+      const glowR = 200 + brightness * 150;
+      const grad = ctx.createRadialGradient(rightX, midY, 0, rightX, midY, glowR);
+      grad.addColorStop(0, `rgba(255, 210, 100, ${brightness * 0.15})`);
+      grad.addColorStop(1, 'rgba(255, 210, 100, 0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, regionH);
     }
+
+    // Wires
+    ctx.strokeStyle = '#8899aa';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    ctx.beginPath(); ctx.moveTo(leftX, batTop); ctx.lineTo(leftX, topY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(leftX, topY); ctx.lineTo(rightX, topY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(rightX, topY); ctx.lineTo(rightX, midY - bulbR); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(rightX, midY + bulbR); ctx.lineTo(rightX, botY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(rightX, botY); ctx.lineTo(leftX, botY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(leftX, botY); ctx.lineTo(leftX, batBot); ctx.stroke();
+
+    // Electrons on wires
+    drawCircuitElectrons(g);
+
+    // Battery
+    drawBattery(leftX, batTop, batBot);
+
+    // Bulb
+    drawBulb(rightX, midY, bulbR);
+
+    // Labels
+    ctx.fillStyle = '#a9bcd4';
+    ctx.font = 'bold 12px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('Batterie', leftX, batBot + 40);
+    ctx.fillText('Glühlampe', rightX, midY + bulbR + 40);
+
+    ctx.fillStyle = '#4ade80';
+    ctx.font = 'bold 11px system-ui';
+    ctx.fillText(state.voltage.toFixed(1).replace('.', ',') + ' V', leftX, batTop - 15);
   }
 
-  function drawComponent(i, j, cell) {
-    const spec = COMP[cell.type];
-    if (!spec) return;
-    const center = cellCenter(i, j);
-    const half = CELL / 2;
+  function drawBattery(x, top, bot) {
+    const w = 26;
+    const wShort = 14;
 
-    const isSelected = selected && selected.i === i && selected.j === j;
-
-    // Verbindungen prüfen
-    const conn = {};
-    if (spec.terms.includes('W')) conn.W = inBounds(i-1,j) && touchesE(grid[j][i-1]);
-    if (spec.terms.includes('E')) conn.E = inBounds(i+1,j) && touchesW(grid[j][i+1]);
-    if (spec.terms.includes('N')) conn.N = inBounds(i,j-1) && touchesS(grid[j-1][i]);
-    if (spec.terms.includes('S')) conn.S = inBounds(i,j+1) && touchesN(grid[j+1][i]);
-
-    const color = cell.type.startsWith('resistor') ? '#fbbf24'
-                : cell.type.startsWith('battery')  ? '#4ade80'
-                : cell.type === 'junction'         ? '#60a5fa'
-                : '#94a3b8';
-
-    // Auswahl-Highlight
-    if (isSelected) {
-      ctx.fillStyle = 'rgba(255, 209, 102, 0.15)';
-      ctx.fillRect(PAD + i * CELL + 1, PAD + j * CELL + 1, CELL - 2, CELL - 2);
-      ctx.strokeStyle = 'rgba(255, 209, 102, 0.8)';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(PAD + i * CELL + 1.5, PAD + j * CELL + 1.5, CELL - 3, CELL - 3);
-    }
-
-    // ---- Zeichnen je nach Typ ----
-    if (cell.type === 'junction') {
-      // Äste
-      ctx.strokeStyle = '#60a5fa';
-      ctx.lineWidth = 3;
-      ctx.lineCap = 'round';
-      for (const t of ['N','S','E','W']) {
-        if (!conn[t]) continue;
-        const p = termPos(i, j, t);
-        const px = termPx(p.x, p.y);
-        ctx.beginPath();
-        ctx.moveTo(center.x, center.y);
-        ctx.lineTo(px.x, px.y);
-        ctx.stroke();
-      }
-      // Mittelpunkt
-      ctx.fillStyle = '#60a5fa';
-      ctx.beginPath();
-      ctx.arc(center.x, center.y, 4.5, 0, Math.PI * 2);
-      ctx.fill();
-      return;
-    }
-
-    if (spec.kind === 'wire') {
-      // Kabel
-      ctx.strokeStyle = '#94a3b8';
-      ctx.lineWidth = 3;
-      ctx.lineCap = 'round';
-      let anyConn = false;
-      for (const t of spec.terms) {
-        if (!conn[t]) continue;
-        anyConn = true;
-        const p = termPos(i, j, t);
-        const px = termPx(p.x, p.y);
-        ctx.beginPath();
-        ctx.moveTo(center.x, center.y);
-        ctx.lineTo(px.x, px.y);
-        ctx.stroke();
-      }
-      if (!anyConn) {
-        // Isoliertes Kabel: kleiner Strich
-        const t0 = spec.terms[0], t1 = spec.terms[1];
-        const p0 = termPos(i, j, t0), p1 = termPos(i, j, t1);
-        const px0 = termPx(p0.x, p0.y), px1 = termPx(p1.x, p1.y);
-        ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(center.x + (px0.x - center.x) * 0.3, center.y + (px0.y - center.y) * 0.3);
-        ctx.lineTo(center.x + (px1.x - center.x) * 0.3, center.y + (px1.y - center.y) * 0.3);
-        ctx.stroke();
-      }
-      return;
-    }
-
-    // Widerstand oder Batterie
-    const t0 = termPos(i, j, spec.terms[0]);
-    const t1 = termPos(i, j, spec.terms[1]);
-    const px0 = termPx(t0.x, t0.y);
-    const px1 = termPx(t1.x, t1.y);
-
-    // Zuleitungen
-    ctx.strokeStyle = '#94a3b8';
-    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = '#4ade80';
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(px0.x, px0.y);
-    ctx.lineTo(center.x - (center.x - px0.x) * 0.5 + (center.x - px0.x) * 0.1, 
-               center.y - (center.y - px0.y) * 0.5 + (center.y - px0.y) * 0.1);
+    ctx.moveTo(x - w, top);
+    ctx.lineTo(x + w, top);
     ctx.stroke();
 
-    // Symbol zeichnen
-    const dx = px1.x - px0.x;
-    const dy = px1.y - px0.y;
-    const len = Math.hypot(dx, dy);
-    const ux = dx / len, uy = dy / len;
-    const nx = -uy, ny = ux;
-    const cx = center.x, cy = center.y;
-
-    if (spec.kind === 'resistor') {
-      // Zickzack
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2.5;
-      ctx.lineJoin = 'round';
-      ctx.beginPath();
-      const startX = cx - ux * (len * 0.22);
-      const startY = cy - uy * (len * 0.22);
-      ctx.moveTo(startX, startY);
-      const zig = len * 0.44;
-      const amp = CELL * 0.14;
-      for (let k = 1; k <= 6; k++) {
-        const t = k / 6;
-        const sign = (k % 2 === 0) ? 1 : -1;
-        const px = startX + ux * zig * t + nx * amp * sign;
-        const py = startY + uy * zig * t + ny * amp * sign;
-        ctx.lineTo(px, py);
-      }
-      ctx.stroke();
-
-      // Wert
-      ctx.fillStyle = '#fbbf24';
-      ctx.font = 'bold 10px system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      const labelOffset = 14;
-      const lx = cx + nx * labelOffset;
-      const ly = cy + ny * labelOffset;
-      ctx.fillText(formatOhm(cell.value), lx, ly);
-    } else if (spec.kind === 'battery') {
-      // Pluspol = from-Terminal
-      const plusPos = cell.flipped ? px1 : px0;
-      const minusPos = cell.flipped ? px0 : px1;
-
-      // Plus: lange Linie
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 3;
-      const plusOffset = 0.08;
-      const longLen = CELL * 0.5;
-      ctx.beginPath();
-      ctx.moveTo(plusPos.x + (cx - plusPos.x) * 0.5 + nx * longLen * 0.5, 
-                 plusPos.y + (cy - plusPos.y) * 0.5 + ny * longLen * 0.5);
-      ctx.lineTo(plusPos.x + (cx - plusPos.x) * 0.5 - nx * longLen * 0.5, 
-                 plusPos.y + (cy - plusPos.y) * 0.5 - ny * longLen * 0.5);
-      ctx.stroke();
-
-      // Minus: kurze Linie
-      const shortLen = CELL * 0.28;
-      ctx.beginPath();
-      ctx.moveTo(minusPos.x + (cx - minusPos.x) * 0.5 + nx * shortLen * 0.5,
-                 minusPos.y + (cy - minusPos.y) * 0.5 + ny * shortLen * 0.5);
-      ctx.lineTo(minusPos.x + (cx - minusPos.x) * 0.5 - nx * shortLen * 0.5,
-                 minusPos.y + (cy - minusPos.y) * 0.5 - ny * shortLen * 0.5);
-      ctx.stroke();
-
-      // + und - Beschriftung
-      ctx.fillStyle = color;
-      ctx.font = 'bold 11px system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      const labelOff = 12;
-      const plusLabelX = cx + ux * 0 + nx * -labelOff + ux * -8 * (cell.flipped ? -1 : 1);
-      const plusLabelY = cy + uy * 0 + ny * -labelOff + uy * -8 * (cell.flipped ? -1 : 1);
-      // Vereinfacht: an den Enden
-      ctx.fillText('+', plusPos.x + (cx - plusPos.x) * 0.35 + nx * (labelOff + 2),
-                         plusPos.y + (cy - plusPos.y) * 0.35 + ny * (labelOff + 2));
-      ctx.fillText('−', minusPos.x + (cx - minusPos.x) * 0.35 + nx * (labelOff + 2),
-                         minusPos.y + (cy - minusPos.y) * 0.35 + ny * (labelOff + 2));
-
-      // Spannungswert
-      ctx.fillStyle = '#4ade80';
-      ctx.font = 'bold 10px system-ui, sans-serif';
-      const vx = cx + nx * 18;
-      const vy = cy + ny * 18;
-      ctx.fillText(cell.value.toFixed(1) + 'V', vx, vy);
-    }
-
-    // Zuleitungen auf der anderen Seite
-    ctx.strokeStyle = '#94a3b8';
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.moveTo(center.x + (px1.x - center.x) * 0.5, center.y + (px1.y - center.y) * 0.5);
-    ctx.lineTo(px1.x, px1.y);
+    ctx.moveTo(x - wShort, bot);
+    ctx.lineTo(x + wShort, bot);
     ctx.stroke();
+
+    ctx.fillStyle = '#4ade80';
+    ctx.font = 'bold 14px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('+', x - 32, top);
+    ctx.fillText('−', x - 32, bot);
   }
 
-  function formatOhm(v) {
-    if (v >= 1000) return (v / 1000).toFixed(v % 1000 === 0 ? 0 : 1) + 'kΩ';
-    return v.toFixed(0) + 'Ω';
-  }
+  function drawBulb(x, y, r) {
+    const brightness = getBrightness();
 
-  /* ---------- Strömungspunkte ---------- */
-  function drawFlow(x1, y1, x2, y2, current) {
-    const I = Math.abs(current);
-    if (I < 1e-5) return;
-    const len = Math.hypot(x2 - x1, y2 - y1);
-    if (len < 2) return;
-
-    const sign = Math.sign(current);
-    const speed = Math.min(I * 300, 180); // px/s
-    const spacing = 13;
-
-    let phase = ((animTime * speed * sign) % spacing + spacing) % spacing;
-
-    ctx.fillStyle = '#fef3c7';
-    ctx.shadowColor = 'rgba(254, 243, 199, 0.8)';
-    ctx.shadowBlur = 4;
-    for (let s = phase; s < len; s += spacing) {
-      const t = s / len;
-      const x = x1 + (x2 - x1) * t;
-      const y = y1 + (y2 - y1) * t;
+    // Outer glow
+    if (brightness > 0.05) {
+      const glowR = r * (2 + brightness * 2);
+      const glow = ctx.createRadialGradient(x, y, r * 0.5, x, y, glowR);
+      glow.addColorStop(0, `rgba(255, 240, 150, ${brightness * 0.7})`);
+      glow.addColorStop(0.5, `rgba(255, 200, 80, ${brightness * 0.3})`);
+      glow.addColorStop(1, 'rgba(255, 200, 80, 0)');
+      ctx.fillStyle = glow;
       ctx.beginPath();
-      ctx.arc(x, y, 2.6, 0, Math.PI * 2);
+      ctx.arc(x, y, glowR, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.shadowBlur = 0;
+
+    // Glass bulb body
+    const glass = ctx.createRadialGradient(x - r*0.3, y - r*0.3, r*0.1, x, y, r);
+    if (brightness > 0.1) {
+      glass.addColorStop(0, `rgba(255, 250, 200, ${0.6 + brightness * 0.4})`);
+      glass.addColorStop(0.6, `rgba(255, 220, 130, ${0.4 + brightness * 0.4})`);
+      glass.addColorStop(1, `rgba(255, 180, 80, ${0.3 + brightness * 0.4})`);
+    } else {
+      glass.addColorStop(0, 'rgba(180, 200, 220, 0.4)');
+      glass.addColorStop(1, 'rgba(100, 130, 160, 0.3)');
+    }
+    ctx.fillStyle = glass;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Filament
+    ctx.strokeStyle = brightness > 0.15
+      ? `rgb(255, ${Math.floor(200 + brightness * 55)}, ${Math.floor(100 + brightness * 100)})`
+      : '#5a6a7a';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    const fw = r * 0.7;
+    ctx.moveTo(x - fw/2, y - r*0.25);
+    for (let i = 0; i <= 4; i++) {
+      const t = i / 4;
+      const px = x - fw/2 + fw * t;
+      const py = y - r*0.25 + (i % 2 === 0 ? r*0.5 : 0);
+      ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    // Outline
+    ctx.strokeStyle = brightness > 0.3
+      ? `rgba(255, 220, 120, ${0.6 + brightness * 0.4})`
+      : 'rgba(130, 160, 190, 0.7)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Screw base
+    ctx.fillStyle = '#6b7280';
+    roundRect(ctx, x - r*0.35, y + r*0.85, r*0.7, r*0.35, 3);
+    ctx.fill();
+    ctx.strokeStyle = '#4b5563';
+    ctx.lineWidth = 1;
+    ctx.stroke();
   }
 
-  function drawFlows() {
-    for (const e of edges) {
-      if (Math.abs(e.current) < 1e-5) continue;
-      
-      if (e.isBranch) {
-        // Knoten-Ast
-        const cell = e.cell;
-        const center = cellCenter(cell.i, cell.j);
-        const p = termPos(cell.i, cell.j, e.term);
-        const px = termPx(p.x, p.y);
-        // von center zu px
-        if (e.current > 0) {
-          drawFlow(center.x, center.y, px.x, px.y, e.current);
-        } else {
-          drawFlow(px.x, px.y, center.x, center.y, -e.current);
-        }
-      } else {
-        // Normales Bauteil
-        const cell = e.cell;
-        const a = termPx(termPos(cell.i, cell.j, e.termA).x, termPos(cell.i, cell.j, e.termA).y);
-        const b = termPx(termPos(cell.i, cell.j, e.termB).x, termPos(cell.i, cell.j, e.termB).y);
-        // e.from entspricht termA (wenn nicht geflippt)
-        const flipped = e.flipped;
-        const start = flipped ? b : a;
-        const end   = flipped ? a : b;
-        if (e.current > 0) {
-          drawFlow(start.x, start.y, end.x, end.y, e.current);
-        } else {
-          drawFlow(end.x, end.y, start.x, start.y, -e.current);
-        }
+  function drawCircuitElectrons(g) {
+    const segs = getPerimeterPath(g);
+    const lengths = segs.map(s => Math.hypot(s.b.x - s.a.x, s.b.y - s.a.y));
+    const total = lengths.reduce((a, b) => a + b, 0);
+    if (total < 1) return;
+
+    const spacing = 50;
+    const count = Math.floor(total / spacing);
+    const offset = ((state.phase % total) + total) % total;
+
+    for (let i = 0; i < count; i++) {
+      let s = (i * spacing + offset) % total;
+      let acc = 0;
+      let segIdx = 0;
+      for (let j = 0; j < lengths.length; j++) {
+        if (s < acc + lengths[j]) { segIdx = j; break; }
+        acc += lengths[j];
+        segIdx = j;
       }
+      const t = Math.min(1, Math.max(0, (s - acc) / lengths[segIdx]));
+      const seg = segs[segIdx];
+      const x = seg.a.x + (seg.b.x - seg.a.x) * t;
+      const y = seg.a.y + (seg.b.y - seg.a.y) * t;
+
+      if (Math.hypot(x - g.rightX, y - g.midY) < g.bulbR + 5) continue;
+
+      drawElectron(x, y, 4);
     }
   }
 
-  function draw() {
-    ctx.clearRect(0, 0, CW, CH);
-    drawGrid();
+  function drawElectron(x, y, r) {
+    const glow = ctx.createRadialGradient(x, y, 0, x, y, r * 2.5);
+    glow.addColorStop(0, 'rgba(96, 165, 250, 0.6)');
+    glow.addColorStop(1, 'rgba(96, 165, 250, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 2.5, 0, Math.PI * 2);
+    ctx.fill();
 
-    // Alle Bauteile zeichnen
-    for (let j = 0; j < ROWS; j++) {
-      for (let i = 0; i < COLS; i++) {
-        if (grid[j][i]) drawComponent(i, j, grid[j][i]);
-      }
-    }
+    const body = ctx.createRadialGradient(x - r*0.3, y - r*0.3, r*0.1, x, y, r);
+    body.addColorStop(0, '#dbeafe');
+    body.addColorStop(1, '#3b82f6');
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
-    // Strömung
-    drawFlows();
+  /* ---------- Draw cross-section ---------- */
+  function drawCrossSection() {
+    const regionY = H * 0.6;
+    const regionH = H * 0.4;
 
-    // Legende
-    ctx.fillStyle = 'rgba(169, 188, 212, 0.6)';
-    ctx.font = '11px system-ui, sans-serif';
+    const bg = ctx.createLinearGradient(0, regionY, 0, H);
+    bg.addColorStop(0, '#0a1420');
+    bg.addColorStop(1, '#050a12');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, regionY, W, regionH);
+
+    // Title
+    ctx.fillStyle = '#ffd166';
+    ctx.font = 'bold 13px system-ui';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText('● = Elektronenfluss (je größer der Strom, desto schneller)', PAD, PAD + ROWS * CELL + 6);
+    ctx.fillText('🔍  Blick ins Kabel – so fließen die Elektronen', 20, regionY + 14);
 
-    updateTip();
+    // Zoom
+    const z = state.zoom;
+    const scale = 0.6 + z * 0.2;
+
+    const tubeH = Math.min(regionH * 0.55, 40 * scale + 20);
+    const tubeCY = regionY + regionH * 0.6;
+    const tubeTop = tubeCY - tubeH / 2;
+    const tubeBot = tubeCY + tubeH / 2;
+    const tubeX = 30;
+    const tubeW = W - 60;
+
+    // Tube outer
+    ctx.fillStyle = '#1e293b';
+    roundRect(ctx, tubeX - 4, tubeTop - 6, tubeW + 8, tubeH + 12, 10);
+    ctx.fill();
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Tube inner
+    const innerGrad = ctx.createLinearGradient(0, tubeTop, 0, tubeBot);
+    innerGrad.addColorStop(0, '#0f172a');
+    innerGrad.addColorStop(0.3, '#1e293b');
+    innerGrad.addColorStop(0.7, '#1e293b');
+    innerGrad.addColorStop(1, '#0f172a');
+    ctx.fillStyle = innerGrad;
+    ctx.beginPath();
+    ctx.rect(tubeX, tubeTop, tubeW, tubeH);
+    ctx.fill();
+
+    // Metal texture
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.15)';
+    for (let i = 0; i < tubeW / 15; i++) {
+      const px = tubeX + i * 15 + 7;
+      ctx.beginPath();
+      ctx.arc(px, tubeTop + 3, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(px, tubeBot - 3, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Electrons
+    const electronR = Math.min(tubeH * 0.28, 5 + z * 2);
+    const spacing = electronR * 4.5;
+    const numE = Math.ceil(tubeW / spacing) + 1;
+    const edgeFade = 30;
+
+    for (let i = 0; i < numE; i++) {
+      let x = tubeX + ((i * spacing + state.phase * 0.8) % tubeW);
+      const y = tubeCY;
+
+      let alpha = 1;
+      if (x < tubeX + edgeFade) alpha = (x - tubeX) / edgeFade;
+      if (x > tubeX + tubeW - edgeFade) alpha = (tubeX + tubeW - x) / edgeFade;
+      alpha = Math.max(0, Math.min(1, alpha));
+      if (alpha < 0.05) continue;
+
+      const wobble = Math.sin(x * 0.05 + state.phase * 0.02 + i) * (tubeH * 0.12);
+
+      ctx.globalAlpha = alpha;
+
+      const glow = ctx.createRadialGradient(x, y + wobble, 0, x, y + wobble, electronR * 2.5);
+      glow.addColorStop(0, 'rgba(96, 165, 250, 0.7)');
+      glow.addColorStop(1, 'rgba(96, 165, 250, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(x, y + wobble, electronR * 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      const body = ctx.createRadialGradient(
+        x - electronR*0.3, y + wobble - electronR*0.3, electronR*0.1,
+        x, y + wobble, electronR
+      );
+      body.addColorStop(0, '#dbeafe');
+      body.addColorStop(1, '#3b82f6');
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.arc(x, y + wobble, electronR, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#1e3a8a';
+      ctx.lineWidth = Math.max(1.2, electronR * 0.15);
+      ctx.beginPath();
+      ctx.moveTo(x - electronR * 0.4, y + wobble);
+      ctx.lineTo(x + electronR * 0.4, y + wobble);
+      ctx.stroke();
+
+      ctx.globalAlpha = 1;
+    }
+
+    // Direction arrow
+    const arrowY = tubeTop - 22;
+    const arrowX = 40;
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(arrowX, arrowY);
+    ctx.lineTo(arrowX + 60, arrowY);
+    ctx.stroke();
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.moveTo(arrowX + 60, arrowY);
+    ctx.lineTo(arrowX + 50, arrowY - 6);
+    ctx.lineTo(arrowX + 50, arrowY + 6);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 11px system-ui';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Elektronenfluss', arrowX + 68, arrowY);
   }
 
-  /* ================================================================== */
-  /*  Messwerte & Tipps                                                 */
-  /* ================================================================== */
-  function updateReadout() {
-    const el = document.getElementById('measurements');
-    const items = [];
-    let rIdx = 0, bIdx = 0;
+  /* ---------- Main draw ---------- */
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    drawCircuit();
+    drawCrossSection();
 
-    for (const e of edges) {
-      if (e.isBranch) continue;
-      if (e.kind === 'battery') {
-        bIdx++;
-        const i = Math.abs(e.current);
-        const iStr = i < 0.001 ? (i * 1e6).toFixed(0) + ' µA'
-                   : i < 1 ? (i * 1000).toFixed(1) + ' mA'
-                   : i.toFixed(2) + ' A';
-        items.push(
-          `<div class="meas battery"><span class="name">Batterie ${bIdx}</span>` +
-          `<span class="val">${e.value.toFixed(1)}<span class="unit">V</span> · ${iStr}</span></div>`
-        );
-      } else if (e.kind === 'resistor') {
-        rIdx++;
-        const i = Math.abs(e.current);
-        const u = i * e.value;
-        const iStr = i < 0.001 ? (i * 1e6).toFixed(0) + ' µA'
-                   : i < 1 ? (i * 1000).toFixed(1) + ' mA'
-                   : i.toFixed(2) + ' A';
-        items.push(
-          `<div class="meas resistor"><span class="name">R${rIdx} (${formatOhm(e.value)})</span>` +
-          `<span class="val">${iStr} · ${u.toFixed(2)}<span class="unit">V</span></span></div>`
-        );
-      }
-    }
-
-    if (items.length === 0) {
-      el.innerHTML = '<div class="meas muted">Noch keine Bauteile</div>';
-    } else {
-      el.innerHTML = items.join('');
-    }
+    ctx.strokeStyle = 'rgba(70, 95, 130, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, H * 0.6 + 0.5);
+    ctx.lineTo(W, H * 0.6 + 0.5);
+    ctx.stroke();
   }
 
-  function updateTip() {
-    const el = document.getElementById('tip');
-    if (!selected) {
-      el.textContent = 'Klicke auf ein Bauteil in der Palette und dann auf das Raster, um es zu platzieren. Rechtsklick löscht.';
-      return;
-    }
-    const cell = grid[selected.j][selected.i];
-    if (!cell) { el.textContent = ''; return; }
+  /* ---------- Animation loop ---------- */
+  function loop(ts) {
+    if (!lastTs) lastTs = ts;
+    const dt = Math.min((ts - lastTs) / 1000, 0.1);
+    lastTs = ts;
 
-    if (cell.type === 'junction') {
-      // Knotenregel prüfen
-      const branches = edges.filter(e => e.isBranch && e.cell.i === selected.i && e.cell.j === selected.j);
-      const pos = branches.filter(b => b.current > 1e-5).reduce((s,b) => s + b.current, 0);
-      const neg = branches.filter(b => b.current < -1e-5).reduce((s,b) => s + b.current, 0);
-      el.textContent = `Knotenregel: ∑ I rein = ∑ I raus. ` +
-        `Hier: rein ${Math.abs(pos).toFixed(3)} A, raus ${Math.abs(neg).toFixed(3)} A.`;
-    } else if (cell.type.startsWith('resistor')) {
-      el.textContent = `Ohmsches Gesetz: U = R · I. R = ${formatOhm(cell.value)}.`;
-    } else if (cell.type.startsWith('battery')) {
-      el.textContent = `Batterie: ${cell.value.toFixed(1)} V. Pluspol ist die lange Linie.`;
-    } else {
-      el.textContent = 'Kabel verbindet benachbarte Bauteile.';
-    }
-  }
-
-  function updateSelectionInfo() {
-    const el = document.getElementById('selInfo');
-    if (!selected) {
-      el.innerHTML = '<span class="hint">Wähle ein Bauteil aus, um es zu bearbeiten.</span>';
-      return;
-    }
-    const cell = grid[selected.j][selected.i];
-    if (!cell) {
-      el.innerHTML = '<span class="hint">Wähle ein Bauteil aus, um es zu bearbeiten.</span>';
-      return;
-    }
-    const spec = COMP[cell.type];
-    let html = `<span class="type">${spec.label}</span>`;
-
-    if (spec.kind === 'resistor') {
-      html += `<div class="value-row">
-        <input type="number" id="valInput" value="${cell.value}" min="1" max="10000" step="1">
-        <span class="unit">Ω</span>
-      </div>`;
-    } else if (spec.kind === 'battery') {
-      html += `<div class="value-row">
-        <input type="number" id="valInput" value="${cell.value}" min="0.5" max="24" step="0.5">
-        <span class="unit">V</span>
-        <button class="flip" id="flipBtn">Umpolen</button>
-      </div>`;
-    } else {
-      html += `<div class="value-row"><span class="hint">${spec.kind === 'junction' ? 'Verbindet alle 4 Seiten.' : 'Keine Werte einstellbar.'}</span></div>`;
-    }
-    el.innerHTML = html;
-
-    const input = document.getElementById('valInput');
-    if (input) {
-      input.addEventListener('input', () => {
-        const v = parseFloat(input.value);
-        if (isFinite(v) && v > 0) {
-          cell.value = v;
-          rebuild();
-        }
-      });
-    }
-    const flip = document.getElementById('flipBtn');
-    if (flip) {
-      flip.addEventListener('click', () => {
-        cell.flipped = !cell.flipped;
-        rebuild();
-      });
-    }
-  }
-
-  /* ================================================================== */
-  /*  Interaktion                                                       */
-  /* ================================================================== */
-  function canvasPos(e) {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = CW / rect.width;
-    const scaleY = CH / rect.height;
-    return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
-    };
-  }
-
-  function cellAt(x, y) {
-    const i = Math.floor((x - PAD) / CELL);
-    const j = Math.floor((y - PAD) / CELL);
-    if (!inBounds(i, j)) return null;
-    return { i, j };
-  }
-
-  canvas.addEventListener('contextmenu', e => e.preventDefault());
-
-  canvas.addEventListener('pointerdown', e => {
-    const p = canvasPos(e);
-    const c = cellAt(p.x, p.y);
-    if (!c) return;
-
-    if (e.button === 2) {
-      // Rechtsklick: löschen
-      grid[c.j][c.i] = null;
-      if (selected && selected.i === c.i && selected.j === c.j) selected = null;
-      rebuild(); updateSelectionInfo();
-      return;
+    if (state.playing) {
+      const current = getCurrent();
+      state.phase += current * 180 * dt;
     }
 
-    if (currentTool === 'erase') {
-      grid[c.j][c.i] = null;
-      if (selected && selected.i === c.i && selected.j === c.j) selected = null;
-      rebuild(); updateSelectionInfo();
-      return;
-    }
-
-    if (currentTool) {
-      // Platzieren
-      const spec = COMP[currentTool];
-      if (!spec) return;
-      const existing = grid[c.j][c.i];
-      const newCell = {
-        type: currentTool,
-        value: spec.def !== undefined ? spec.def : 0,
-        flipped: existing && existing.type === currentTool ? !!existing.flipped : false,
-      };
-      grid[c.j][c.i] = newCell;
-      selected = { i: c.i, j: c.j };
-      rebuild(); updateSelectionInfo();
-      return;
-    }
-
-    // Auswahl
-    if (grid[c.j][c.i]) {
-      selected = { i: c.i, j: c.j };
-      updateSelectionInfo();
-      updateTip();
-    } else {
-      selected = null;
-      updateSelectionInfo();
-    }
-  });
-
-  // Palette
-  document.querySelectorAll('[data-tool]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tool = btn.dataset.tool;
-      if (currentTool === tool) {
-        currentTool = null;
-        btn.classList.remove('active');
-      } else {
-        currentTool = tool;
-        document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-      }
-    });
-  });
-
-  /* ================================================================== */
-  /*  Presets                                                           */
-  /* ================================================================== */
-  const PRESETS = {
-    simple: {
-      grid: [
-        ['wire-se', 'resistor-h', 'wire-h', 'wire-sw'],
-        ['battery-v', null, null, 'wire-v'],
-        ['wire-ne', 'wire-h', 'wire-h', 'wire-nw'],
-      ],
-      values: { '1,0': 100, '0,1': 4.5 },
-    },
-    series: {
-      grid: [
-        ['wire-se', 'resistor-h', 'wire-h', 'resistor-h', 'wire-sw'],
-        ['battery-v', null, null, null, 'wire-v'],
-        ['wire-ne', 'wire-h', 'wire-h', 'wire-h', 'wire-nw'],
-      ],
-      values: { '1,0': 100, '3,0': 100, '0,1': 4.5 },
-    },
-    parallel: {
-      grid: [
-        ['wire-se', 'wire-h', 'junction', 'wire-h', 'wire-sw'],
-        ['battery-v', null, 'resistor-v', null, 'resistor-v'],
-        ['wire-ne', 'wire-h', 'junction', 'wire-h', 'wire-nw'],
-      ],
-      values: { '2,1': 100, '4,1': 100, '0,1': 4.5 },
-    },
-    twoloops: {
-      grid: [
-        ['wire-se', 'wire-h', 'junction', 'wire-h', 'wire-sw'],
-        ['battery-v', null, 'resistor-v', null, 'battery-v'],
-        ['wire-ne', 'wire-h', 'junction', 'wire-h', 'wire-nw'],
-      ],
-      values: { '2,1': 100, '0,1': 4.5, '4,1': 3 },
-    },
-  };
-
-  function applyPreset(name) {
-    const preset = PRESETS[name];
-    if (!preset) return;
-    initGrid();
-    for (let j = 0; j < preset.grid.length; j++) {
-      for (let i = 0; i < preset.grid[j].length; i++) {
-        const type = preset.grid[j][i];
-        if (!type) continue;
-        const spec = COMP[type];
-        if (!spec) continue;
-        const valKey = i + ',' + j;
-        grid[j][i] = {
-          type,
-          value: preset.values[valKey] !== undefined ? preset.values[valKey] : (spec.def || 0),
-          flipped: false,
-        };
-      }
-    }
-    selected = null;
-    currentTool = null;
-    document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
-    rebuild();
-    updateSelectionInfo();
-  }
-
-  document.querySelectorAll('[data-preset]').forEach(btn => {
-    btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
-  });
-
-  /* ================================================================== */
-  /*  Animations-Loop                                                   */
-  /* ================================================================== */
-  function loop(timestamp) {
-    if (!lastTime) lastTime = timestamp;
-    const dt = (timestamp - lastTime) / 1000;
-    lastTime = timestamp;
-    animTime += Math.min(dt, 0.1);
     draw();
     requestAnimationFrame(loop);
   }
 
-  /* ================================================================== */
-  /*  Start                                                             */
-  /* ================================================================== */
-  initGrid();
-  applyPreset('parallel');  // Start mit Parallelschaltung (zeigt Knotenregel)
-  updateSelectionInfo();
-  requestAnimationFrame(loop);
+  /* ---------- UI updates ---------- */
+  function updateReadout() {
+    const i = getCurrent();
+    const p = getPower();
+    const b = getBrightness();
 
+    document.getElementById('roCurrent').textContent = i.toFixed(2).replace('.', ',') + ' A';
+    document.getElementById('roPower').textContent = p.toFixed(2).replace('.', ',') + ' W';
+    document.getElementById('roBright').textContent = Math.round(b * 100) + ' %';
+  }
+
+  function updateTip() {
+    const el = document.getElementById('tip');
+    const v = state.voltage;
+    if (v < 3) {
+      el.textContent = 'Bei niedriger Spannung fließen die Elektronen langsam. Die Lampe glimmt nur schwach.';
+    } else if (v < 6) {
+      el.textContent = 'Die Elektronen fließen gleichmäßig durch das Kabel. Die Lampe leuchtet deutlich.';
+    } else if (v < 9) {
+      el.textContent = 'Höhere Spannung: Die Elektronen werden schneller. Die Lampe leuchtet hell.';
+    } else {
+      el.textContent = 'Sehr hohe Spannung: Die Elektronen fließen sehr schnell. Die Lampe würde in Wirklichkeit durchbrennen.';
+    }
+  }
+
+  /* ---------- Events ---------- */
+  document.getElementById('voltage').addEventListener('input', e => {
+    state.voltage = parseFloat(e.target.value);
+    document.getElementById('voltageVal').textContent =
+      state.voltage.toFixed(1).replace('.', ',') + ' V';
+    updateReadout();
+    updateTip();
+  });
+
+  document.getElementById('zoom').addEventListener('input', e => {
+    state.zoom = parseFloat(e.target.value);
+    document.getElementById('zoomVal').textContent =
+      state.zoom.toFixed(1).replace('.', ',') + '×';
+  });
+
+  document.getElementById('play').addEventListener('click', e => {
+    state.playing = !state.playing;
+    e.target.textContent = state.playing ? 'Pause' : 'Abspielen';
+  });
+
+  /* ---------- Init ---------- */
+  const ro = new ResizeObserver(() => resize());
+  ro.observe(stage);
+
+  resize();
+  updateReadout();
+  updateTip();
+  requestAnimationFrame(loop);
 })();
 </script>
 </body>
