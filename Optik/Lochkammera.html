@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lochkamera – Simulation (Strahlenmodell)</title>
+<style>
+    :root {
+        --bg: #0d1117;
+        --panel: #161b22;
+        --panel2: #1a1f27;
+        --border: #30363d;
+        --text: #c9d1d9;
+        --muted: #8b949e;
+        --accent: #58a6ff;
+        --warm: #ffd54a;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0; padding: 20px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: var(--bg); color: var(--text);
+        display: flex; flex-direction: column; align-items: center;
+    }
+    h1 { color: var(--accent); font-size: 1.7rem; margin: 0 0 4px; text-align: center; }
+    .subtitle {
+        color: var(--muted); font-size: 0.95rem; margin-bottom: 22px;
+        text-align: center; max-width: 780px; line-height: 1.5;
+    }
+
+    .layout {
+        display: flex; gap: 20px; flex-wrap: wrap;
+        justify-content: center; align-items: flex-start;
+        width: 100%; max-width: 1420px;
+    }
+    .stage {
+        flex: 1 1 640px; min-width: 320px; max-width: 1000px;
+        background: var(--panel); border: 1px solid var(--border);
+        border-radius: 10px; padding: 12px;
+        box-shadow: 0 6px 22px rgba(0,0,0,.4);
+    }
+    #mainCanvas {
+        width: 100%; aspect-ratio: 1000 / 800; display: block;
+        border-radius: 6px; background: #05070c;
+        border: 1px solid var(--border);
+    }
+    .side {
+        flex: 0 1 360px; min-width: 290px;
+        display: flex; flex-direction: column; gap: 16px;
+    }
+    .card {
+        background: var(--panel); border: 1px solid var(--border);
+        border-radius: 10px; padding: 16px;
+        box-shadow: 0 6px 22px rgba(0,0,0,.4);
+    }
+    .card h3 { margin: 0 0 12px; font-size: 1rem; font-weight: 700; }
+    #frontCanvas {
+        width: 100%; aspect-ratio: 1 / 1; display: block;
+        border-radius: 6px; background: #05070c;
+        border: 1px solid var(--border);
+    }
+    .front-caption {
+        margin: 10px 0 0; font-size: 0.8rem; color: var(--muted);
+        text-align: center; line-height: 1.4;
+    }
+
+    .slider-row { margin-bottom: 16px; }
+    .slider-row:last-child { margin-bottom: 0; }
+    .slider-row label {
+        display: flex; justify-content: space-between; align-items: baseline;
+        font-size: 0.86rem; font-weight: 600; color: var(--accent);
+        margin-bottom: 6px;
+    }
+    .slider-row label span.value {
+        font-family: 'Consolas', 'Courier New', monospace;
+        color: var(--warm); font-size: 0.84rem;
+    }
+    input[type=range] {
+        width: 100%; accent-color: var(--accent); cursor: pointer;
+    }
+    .hint {
+        font-size: 0.76rem; color: var(--muted); margin-top: 4px;
+        line-height: 1.35;
+    }
+
+    .readout {
+        display: grid; grid-template-columns: 1fr auto;
+        gap: 4px 12px; font-size: 0.82rem; margin-top: 4px;
+    }
+    .readout .k { color: var(--muted); }
+    .readout .v {
+        font-family: 'Consolas', 'Courier New', monospace;
+        color: var(--text); text-align: right; font-weight: 600;
+    }
+    .readout .v.hi { color: var(--warm); }
+
+    .info-box {
+        margin-top: 20px; max-width: 1000px; width: 100%;
+        background: var(--panel2); border-left: 4px solid var(--accent);
+        padding: 14px 16px; border-radius: 0 8px 8px 0;
+        font-size: 0.9rem; line-height: 1.6;
+    }
+    .info-box strong { color: var(--accent); }
+    .info-box .formula {
+        font-family: 'Consolas', 'Courier New', monospace;
+        background: #0d1117; padding: 2px 6px; border-radius: 4px;
+        color: var(--warm); font-size: 0.88rem;
+    }
+</style>
+</head>
+<body>
+
+    <h1>Lochkamera – Simulation</h1>
+    <div class="subtitle">
+        Strahlenmodell in Echtzeit: Verschiebe Kerze und Lochblende, verändere die Lochgröße –
+        und beobachte, wie das Bild auf dem Schirm entsteht.
+    </div>
+
+    <div class="layout">
+        <div class="stage">
+            <canvas id="mainCanvas" width="1000" height="800"></canvas>
+        </div>
+
+        <div class="side">
+            <div class="card">
+                <h3>Bild auf dem Schirm</h3>
+                <canvas id="frontCanvas" width="320" height="320"></canvas>
+                <p class="front-caption">Vorderansicht des Schirms (maßstäblich)</p>
+            </div>
+
+            <div class="card">
+                <h3>Einstellungen</h3>
+
+                <div class="slider-row">
+                    <label for="gSlider">
+                        Gegenstandsweite g
+                        <span class="value" id="gVal">350</span>
+                    </label>
+                    <input type="range" id="gSlider" min="120" max="560" value="350" step="1">
+                    <div class="hint">Abstand Kerze → Lochblende</div>
+                </div>
+
+                <div class="slider-row">
+                    <label for="bSlider">
+                        Bildweite b
+                        <span class="value" id="bVal">300</span>
+                    </label>
+                    <input type="range" id="bSlider" min="120" max="560" value="300" step="1">
+                    <div class="hint">Abstand Lochblende → Schirm</div>
+                </div>
+
+                <div class="slider-row">
+                    <label for="dSlider">
+                        Lochgröße d
+                        <span class="value" id="dVal">6</span>
+                    </label>
+                    <input type="range" id="dSlider" min="1" max="30" value="6" step="1">
+                    <div class="hint">Durchmesser der Blendenöffnung</div>
+                </div>
+
+                <div class="readout">
+                    <span class="k">Vergrößerung</span>
+                    <span class="v" id="magOut">0,86</span>
+                    <span class="k">Bildhöhe h′</span>
+                    <span class="v hi" id="hOut">146</span>
+                    <span class="k">Unschärfekreis</span>
+                    <span class="v" id="blurOut">11,1</span>
+                    <span class="k">Helligkeit (rel.)</span>
+                    <span class="v" id="brightOut">1,0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-box">
+        <strong>Was passiert hier?</strong><br>
+        Die Kerze sendet Licht in alle Richtungen. Nur die Strahlen, die durch das Loch der Blende
+        passen, treffen auf den Schirm. Dadurch entsteht ein <em>umgekehrtes</em> Bild.<br><br>
+        Es gilt der Strahlensatz: <span class="formula">h′ / h = b / g</span> &nbsp;→&nbsp;
+        Je größer <em>b</em> oder je kleiner <em>g</em>, desto größer das Bild.<br>
+        Die Lochgröße <em>d</em> bestimmt den Unschärfekreis
+        <span class="formula">D = d · (g + b) / g</span>:
+        Ein größeres Loch lässt mehr Licht durch (heller!), verschmiert aber auch jeden
+        Bildpunkt zu einem Scheibchen (unschärfer!).<br>
+        <span style="color:var(--muted); font-size:0.85rem;">
+            Tipp: Stelle die Lochgröße auf 1 und beobachte, wie das Bild scharf, aber dunkel wird.
+        </span>
+    </div>
+
+<script>
+/* =========================================================
+   Grundlegende Maße (Weltkoordinaten)
+   ========================================================= */
+const W = 1000, H = 800;          // Zeichenfläche (Weltkoordinaten)
+const WALL_X = 900;               // Schirmposition (rechts)
+const AP_Y   = 400;               // Höhe der Lochblende (= optische Achse)
+
+const CANDLE_HALF_H = 85;         // halbe Gesamthöhe der Kerze (Flammenspitze → Boden)
+const CANDLE_HALF_W = 24;         // halbe Breite des Kerzenkörpers
+
+/* Kerze in lokalen Koordinaten (relativ zu (xc, AP_Y)) */
+const FLAME_TOP  = -85;
+const FLAME_BOT  = -45;
+const WICK_BOT   = -35;
+const BODY_BOT   =  85;
+
+/* =========================================================
+   Canvas-Setup
+   ========================================================= */
+const mainCanvas = document.getElementById('mainCanvas');
+const mctx = mainCanvas.getContext('2d');
+const frontCanvas = document.getElementById('frontCanvas');
+const fctx = frontCanvas.getContext('2d');
+
+// Hilfs-Canvas für den Weichzeichner in der Vorderansicht
+const tmpCanvas = document.createElement('canvas');
+tmpCanvas.width = 320; tmpCanvas.height = 320;
+const tmpCtx = tmpCanvas.getContext('2d');
+
+// DPR für die Hauptansicht
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
+mainCanvas.width  = W * DPR;
+mainCanvas.height = H * DPR;
+mctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+/* roundRect-Polyfill (ältere Browser) */
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+        this.moveTo(x + r, y);
+        this.arcTo(x + w, y,     x + w, y + h, r);
+        this.arcTo(x + w, y + h, x,     y + h, r);
+        this.arcTo(x,     y + h, x,     y,     r);
+        this.arcTo(x,     y,     x + w, y,     r);
+        this.closePath();
+        return this;
+    };
+}
+
+/* =========================================================
+   UI-Elemente
+   ========================================================= */
+const gSlider = document.getElementById('gSlider');
+const bSlider = document.getElementById('bSlider');
+const dSlider = document.getElementById('dSlider');
+const gVal = document.getElementById('gVal');
+const bVal = document.getElementById('bVal');
+const dVal = document.getElementById('dVal');
+
+const magOut    = document.getElementById('magOut');
+const hOut      = document.getElementById('hOut');
+const blurOut   = document.getElementById('blurOut');
+const brightOut = document.getElementById('brightOut');
+
+/* =========================================================
+   Hilfsfunktionen
+   ========================================================= */
+
+/* Farbe der Kerze an der Welt-Höhe y (0..1 pro Kanal) */
+function objectColorAt(y) {
+    const ly = y - AP_Y;
+
+    if (ly < FLAME_TOP || ly > BODY_BOT) return null;
+
+    // --- Flamme ---
+    if (ly < FLAME_BOT) {
+        const t = (ly - FLAME_TOP) / (FLAME_BOT - FLAME_TOP); // 0 = Spitze, 1 = Basis
+        const r = 1.00;
+        const g = 0.50 + 0.47 * t;
+        const b = 0.05 + 0.80 * t * t;
+        // in der Mitte am hellsten
+        const br = 0.55 + 0.45 * Math.sin(Math.PI * Math.min(1, Math.max(0, t)));
+        return [r * br, g * br, b * br];
+    }
+
+    // --- Docht ---
+    if (ly < WICK_BOT) {
+        return [0.16, 0.11, 0.08];
+    }
+
+    // --- Kerzenkörper ---
+    const t = (ly - WICK_BOT) / (BODY_BOT - WICK_BOT);
+    const br = 0.94 - 0.16 * t;
+    return [0.98 * br, 0.945 * br, 0.86 * br];
+}
+
+/* Box-Filter (gleitendes Fenster) – O(N) */
+function boxBlur(src, dst, radius) {
+    const N = src.length;
+    const pre = new Float32Array(N + 1);
+    for (let i = 0; i < N; i++) pre[i + 1] = pre[i] + src[i];
+
+    for (let i = 0; i < N; i++) {
+        let lo = Math.round(i - radius);
+        let hi = Math.round(i + radius + 1);
+        if (lo < 0) lo = 0;
+        if (hi > N) hi = N;
+        if (hi <= lo) { dst[i] = src[i]; continue; }
+        dst[i] = (pre[hi] - pre[lo]) / (hi - lo);
+    }
+}
+
+/* Weiche Helligkeits-Kennlinie (verhindert hartes Clipping) */
+function toneMap(v) {
+    if (v <= 0) return 0;
+    return 1 - Math.exp(-v * 2.0);
+}
+
+/* Zeichnet die Kerze in lokalen Koordinaten (Ursprung = Kerzenmitte) */
+function drawCandleShape(ctx) {
+    // --- Körper ---
+    const bodyGrad = ctx.createLinearGradient(-CANDLE_HALF_W, 0, CANDLE_HALF_W, 0);
+    bodyGrad.addColorStop(0.00, '#b9a98c');
+    bodyGrad.addColorStop(0.28, '#f6edd8');
+    bodyGrad.addColorStop(0.55, '#fff8e8');
+    bodyGrad.addColorStop(1.00, '#c4b294');
+
+    ctx.beginPath();
+    ctx.roundRect(-CANDLE_HALF_W, WICK_BOT, CANDLE_HALF_W * 2, BODY_BOT - WICK_BOT, 4);
+    ctx.fillStyle = bodyGrad;
+    ctx.fill();
+
+    // Wachstropfen-Andeutung
+    ctx.beginPath();
+    ctx.ellipse(0, WICK_BOT + 4, CANDLE_HALF_W - 3, 5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,248,232,0.75)';
+    ctx.fill();
+
+    // --- Docht ---
+    ctx.beginPath();
+    ctx.roundRect(-2, FLAME_BOT - 3, 4, 14, 2);
+    ctx.fillStyle = '#2b1e17';
+    ctx.fill();
+
+    // --- Flamme ---
+    const flameGrad = ctx.createRadialGradient(0, FLAME_TOP + 28, 2, 0, FLAME_TOP + 28, 42);
+    flameGrad.addColorStop(0.00, 'rgba(255,255,248,1)');
+    flameGrad.addColorStop(0.22, 'rgba(255,246,170,1)');
+    flameGrad.addColorStop(0.48, 'rgba(255,196,60,0.95)');
+    flameGrad.addColorStop(0.75, 'rgba(255,130,25,0.55)');
+    flameGrad.addColorStop(1.00, 'rgba(255,100,15,0)');
+
+    ctx.beginPath();
+    ctx.moveTo(0, FLAME_TOP);
+    ctx.bezierCurveTo( 9, FLAME_TOP + 14,  14, FLAME_TOP + 28,  13, FLAME_TOP + 40);
+    ctx.bezierCurveTo( 13, FLAME_TOP + 47, -13, FLAME_TOP + 47, -13, FLAME_TOP + 40);
+    ctx.bezierCurveTo(-14, FLAME_TOP + 28,  -9, FLAME_TOP + 14,   0, FLAME_TOP);
+    ctx.closePath();
+    ctx.fillStyle = flameGrad;
+    ctx.fill();
+}
+
+/* =========================================================
+   Hauptansicht (Seitenansicht, Strahlenmodell)
+   ========================================================= */
+let dstR = new Float32Array(H);
+let dstG = new Float32Array(H);
+let dstB = new Float32Array(H);
+let srcR = new Float32Array(H);
+let srcG = new Float32Array(H);
+let srcB = new Float32Array(H);
+let stripCanvas = document.createElement('canvas');
+stripCanvas.width = 1; stripCanvas.height = H;
+let stripCtx = stripCanvas.getContext('2d');
+let stripImage = stripCtx.createImageData(1, H);
+
+function drawMain(g, b, d) {
+    const xc = WALL_X - g - b;   // Kerzenposition
+    const xa = WALL_X - b;       // Blendenposition
+
+    const radiusScreen = (d / 2) * (g + b) / g;   // halbe Unschärfe auf dem Schirm
+    const blurWidth = d * (g + b) / g;            // Unschärfekreis-Durchmesser
+
+    /* ---------- 1) Geometrisches Bild + Unschärfe ---------- */
+    for (let y = 0; y < H; y++) {
+        const yp = AP_Y - (y - AP_Y) * g / b;   // inverses Strahlensatz-Mapping
+        const c = objectColorAt(yp);
+        if (c) { srcR[y] = c[0]; srcG[y] = c[1]; srcB[y] = c[2]; }
+        else   { srcR[y] = 0;    srcG[y] = 0;    srcB[y] = 0;    }
+    }
+
+    boxBlur(srcR, dstR, radiusScreen);
+    boxBlur(srcG, dstG, radiusScreen);
+    boxBlur(srcB, dstB, radiusScreen);
+
+    // Helligkeitsfaktor (größeres Loch → mehr Licht)
+    const gain = Math.min(2.8, Math.max(0.15, 0.12 * Math.pow(d, 1.3)));
+
+    /* ---------- 2) Hintergrund ---------- */
+    mctx.clearRect(0, 0, W, H);
+    const bgGrad = mctx.createLinearGradient(0, 0, 0, H);
+    bgGrad.addColorStop(0, '#070a10');
+    bgGrad.addColorStop(1, '#04060a');
+    mctx.fillStyle = bgGrad;
+    mctx.fillRect(0, 0, W, H);
+
+    /* ---------- 3) Optische Achse (dezent) ---------- */
+    mctx.save();
+    mctx.setLineDash([6, 8]);
+    mctx.strokeStyle = 'rgba(88,166,255,0.13)';
+    mctx.lineWidth = 1;
+    mctx.beginPath();
+    mctx.moveTo(xc - 40, AP_Y);
+    mctx.lineTo(WALL_X, AP_Y);
+    mctx.stroke();
+    mctx.restore();
+
+    /* ---------- 4) Lichtkegel (Strahlenmodell) ---------- */
+    const beams = [
+        { x: xc,                      y: AP_Y + FLAME_TOP + 6 },   // Flammenspitze
+        { x: xc,                      y: AP_Y + FLAME_BOT },       // Flammenfuß
+        { x: xc + CANDLE_HALF_W,      y: AP_Y + WICK_BOT + 18 },   // oberer Körper
+        { x: xc + CANDLE_HALF_W,      y: AP_Y + 30 },              // Körpermitte
+        { x: xc + CANDLE_HALF_W,      y: AP_Y + BODY_BOT - 6 }     // Körperfuß
+    ];
+
+    for (const beam of beams) {
+        const yp = beam.y;
+        const yCenter = AP_Y + (AP_Y - yp) * b / g;
+
+        mctx.beginPath();
+        mctx.moveTo(beam.x, yp);
+        mctx.lineTo(xa, AP_Y - d / 2);
+        mctx.lineTo(WALL_X, yCenter - radiusScreen);
+        mctx.lineTo(WALL_X, yCenter + radiusScreen);
+        mctx.lineTo(xa, AP_Y + d / 2);
+        mctx.closePath();
+
+        mctx.fillStyle = 'rgba(255, 200, 110, 0.055)';
+        mctx.fill();
+    }
+
+    /* ---------- 5) Lochblende ---------- */
+    const wallGrad = mctx.createLinearGradient(xa - 5, 0, xa + 5, 0);
+    wallGrad.addColorStop(0.00, '#232a33');
+    wallGrad.addColorStop(0.45, '#3d4650');
+    wallGrad.addColorStop(1.00, '#1c222a');
+
+    // oberer Teil
+    mctx.fillStyle = wallGrad;
+    mctx.fillRect(xa - 5, 0, 10, AP_Y - d / 2);
+    // unterer Teil
+    mctx.fillRect(xa - 5, AP_Y + d / 2, 10, H - (AP_Y + d / 2));
+
+    // Randkanten hervorheben
+    mctx.strokeStyle = 'rgba(120,140,160,0.35)';
+    mctx.lineWidth = 1;
+    mctx.beginPath();
+    mctx.moveTo(xa - 5, 0);         mctx.lineTo(xa - 5, AP_Y - d / 2);
+    mctx.moveTo(xa + 5, 0);         mctx.lineTo(xa + 5, AP_Y - d / 2);
+    mctx.moveTo(xa - 5, AP_Y + d/2); mctx.lineTo(xa - 5, H);
+    mctx.moveTo(xa + 5, AP_Y + d/2); mctx.lineTo(xa + 5, H);
+    mctx.stroke();
+
+    // Leuchten um das Loch
+    const holeGlow = mctx.createRadialGradient(xa, AP_Y, 1, xa, AP_Y, d * 2.2 + 14);
+    holeGlow.addColorStop(0, 'rgba(255,220,130,0.30)');
+    holeGlow.addColorStop(1, 'rgba(255,220,130,0)');
+    mctx.fillStyle = holeGlow;
+    mctx.beginPath();
+    mctx.arc(xa, AP_Y, d * 2.2 + 14, 0, Math.PI * 2);
+    mctx.fill();
+
+    /* ---------- 6) Schirm (Rückwand) ---------- */
+    const screenGrad = mctx.createLinearGradient(WALL_X, 0, WALL_X + 30, 0);
+    screenGrad.addColorStop(0.00, '#151a21');
+    screenGrad.addColorStop(0.35, '#0f141a');
+    screenGrad.addColorStop(1.00, '#080b0f');
+
+    mctx.fillStyle = screenGrad;
+    mctx.fillRect(WALL_X, 0, 30, H);
+
+    mctx.strokeStyle = 'rgba(120,140,160,0.30)';
+    mctx.lineWidth = 1;
+    mctx.beginPath();
+    mctx.moveTo(WALL_X + 0.5, 0); mctx.lineTo(WALL_X + 0.5, H);
+    mctx.stroke();
+
+    /* ---------- 7) Bild auf dem Schirm ---------- */
+    const sd = stripImage.data;
+    for (let y = 0; y < H; y++) {
+        const r = toneMap(dstR[y] * gain);
+        const gg = toneMap(dstG[y] * gain);
+        const bb = toneMap(dstB[y] * gain);
+
+        const base = 16;
+        sd[y * 4]     = Math.round(base + r * 239);
+        sd[y * 4 + 1] = Math.round(base + gg * 239);
+        sd[y * 4 + 2] = Math.round(base + bb * 239);
+        sd[y * 4 + 3] = 255;
+    }
+    stripCtx.putImageData(stripImage, 0, 0);
+
+    mctx.imageSmoothingEnabled = true;
+    mctx.drawImage(stripCanvas, 0, 0, 1, H, WALL_X, 0, 16, H);
+
+    /* ---------- 8) Kerze ---------- */
+    mctx.save();
+    mctx.translate(xc, AP_Y);
+    // Schatten / Glühen der Flamme
+    const halo = mctx.createRadialGradient(0, FLAME_TOP + 30, 2, 0, FLAME_TOP + 30, 110);
+    halo.addColorStop(0, 'rgba(255,190,90,0.20)');
+    halo.addColorStop(1, 'rgba(255,190,90,0)');
+    mctx.fillStyle = halo;
+    mctx.beginPath();
+    mctx.arc(0, FLAME_TOP + 30, 110, 0, Math.PI * 2);
+    mctx.fill();
+
+    drawCandleShape(mctx);
+    mctx.restore();
+
+    /* ---------- 9) Beschriftungen ---------- */
+    mctx.save();
+    mctx.font = 'bold 13px "Segoe UI", sans-serif';
+    mctx.textAlign = 'center';
+
+    // Kerze
+    mctx.fillStyle = 'rgba(201,209,217,0.85)';
+    mctx.fillText('Kerze', xc, AP_Y + BODY_BOT + 26);
+
+    // Lochblende
+    mctx.fillStyle = 'rgba(88,166,255,0.95)';
+    mctx.fillText('Lochblende', xa, 30);
+    mctx.font = '11px "Segoe UI", sans-serif';
+    mctx.fillStyle = 'rgba(255,213,74,0.85)';
+    mctx.fillText('d = ' + d, xa, 48);
+
+    // Schirm
+    mctx.font = 'bold 13px "Segoe UI", sans-serif';
+    mctx.fillStyle = 'rgba(88,166,255,0.95)';
+    mctx.textAlign = 'left';
+    mctx.fillText('Schirm', WALL_X + 34, 30);
+
+    mctx.restore();
+
+    /* ---------- 10) Maßpfeile (g und b) ---------- */
+    drawDimension(xc + CANDLE_HALF_W, xa, AP_Y + BODY_BOT + 58, 'g');
+    drawDimension(xa, WALL_X, AP_Y + BODY_BOT + 58, 'b');
+
+    /* ---------- 11) Bildhöhe am Schirm markieren ---------- */
+    const yTop = AP_Y - CANDLE_HALF_H * b / g;
+    const yBot = AP_Y + CANDLE_HALF_H * b / g;
+
+    mctx.save();
+    mctx.strokeStyle = 'rgba(255,213,74,0.55)';
+    mctx.lineWidth = 1;
+    mctx.setLineDash([3, 3]);
+    mctx.beginPath();
+    mctx.moveTo(WALL_X - 26, yTop); mctx.lineTo(WALL_X + 22, yTop);
+    mctx.moveTo(WALL_X - 26, yBot); mctx.lineTo(WALL_X + 22, yBot);
+    mctx.stroke();
+    mctx.restore();
+}
+
+/* Maßpfeil mit Beschriftung */
+function drawDimension(x1, x2, y, label) {
+    mctx.save();
+    mctx.strokeStyle = 'rgba(139,148,158,0.65)';
+    mctx.fillStyle = 'rgba(139,148,158,0.65)';
+    mctx.lineWidth = 1;
+
+    mctx.beginPath();
+    mctx.moveTo(x1, y); mctx.lineTo(x2, y);
+    mctx.stroke();
+
+    // Pfeilspitzen
+    const a = 5;
+    mctx.beginPath();
+    mctx.moveTo(x1, y); mctx.lineTo(x1 + a, y - a); mctx.lineTo(x1 + a, y + a);
+    mctx.closePath(); mctx.fill();
+    mctx.beginPath();
+    mctx.moveTo(x2, y); mctx.lineTo(x2 - a, y - a); mctx.lineTo(x2 - a, y + a);
+    mctx.closePath(); mctx.fill();
+
+    // Beschriftung
+    mctx.fillStyle = 'rgba(139,148,158,0.95)';
+    mctx.font = 'italic bold 12px "Segoe UI", sans-serif';
+    mctx.textAlign = 'center';
+    mctx.fillText(label, (x1 + x2) / 2, y - 8);
+
+    mctx.restore();
+}
+
+/* =========================================================
+   Vorderansicht des Schirms
+   ========================================================= */
+function drawFront(g, b, d) {
+    const w = 320, h = 320;
+    fctx.clearRect(0, 0, w, h);
+
+    // Schirm-Hintergrund
+    const bg = fctx.createRadialGradient(w / 2, h / 2, 10, w / 2, h / 2, w * 0.72);
+    bg.addColorStop(0, '#0f141b');
+    bg.addColorStop(1, '#04060a');
+    fctx.fillStyle = bg;
+    fctx.fillRect(0, 0, w, h);
+
+    const pxPerWorld = w / 800;                 // 800 Welteinheiten = Schirmhöhe
+    const s = (b / g) * pxPerWorld;             // Skalierung des Bildes
+    const blurPx = Math.max(0, (d * (g + b) / g / 2) * pxPerWorld);
+
+    /* --- 1) Kerze in ein Zwischen-Canvas zeichnen --- */
+    tmpCtx.clearRect(0, 0, w, h);
+    tmpCtx.save();
+    tmpCtx.translate(w / 2, h / 2);
+    tmpCtx.scale(s, -s);      // -s → vertikal gespiegelt (umgekehrtes Bild!)
+    drawCandleShape(tmpCtx);
+    tmpCtx.restore();
+
+    /* --- 2) Mit Unschärfe auf den Schirm zeichnen --- */
+    fctx.save();
+    if (blurPx > 0.2) {
+        fctx.filter = 'blur(' + blurPx.toFixed(2) + 'px)';
+    }
+    fctx.drawImage(tmpCanvas, 0, 0);
+    fctx.restore();
+    fctx.filter = 'none';
+
+    /* --- 3) Rahmen (Schirmkanten) --- */
+    fctx.strokeStyle = 'rgba(120,140,160,0.25)';
+    fctx.lineWidth = 1;
+    fctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+
+    /* --- 4) Vignette --- */
+    const vig = fctx.createRadialGradient(w / 2, h / 2, w * 0.32, w / 2, h / 2, w * 0.72);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(0,0,0,0.55)');
+    fctx.fillStyle = vig;
+    fctx.fillRect(0, 0, w, h);
+
+    /* --- 5) Hinweis, wenn das Bild über den Schirm hinausragt --- */
+    if (CANDLE_HALF_H * (b / g) * pxPerWorld > h / 2 - 4) {
+        fctx.fillStyle = 'rgba(255,140,80,0.85)';
+        fctx.font = 'bold 11px "Segoe UI", sans-serif';
+        fctx.textAlign = 'center';
+        fctx.fillText('Bild größer als der Schirm', w / 2, h - 12);
+    }
+}
+
+/* =========================================================
+   Anzeige-Werte aktualisieren
+   ========================================================= */
+function updateReadout(g, b, d) {
+    const mag = b / g;
+    const hImg = CANDLE_HALF_H * 2 * mag;
+    const blur = d * (g + b) / g;
+    const gain = Math.min(2.8, Math.max(0.15, 0.12 * Math.pow(d, 1.3)));
+
+    magOut.textContent  = mag.toFixed(2).replace('.', ',');
+    hOut.textContent    = hImg.toFixed(0);
+    blurOut.textContent = blur.toFixed(1).replace('.', ',');
+    brightOut.textContent = gain.toFixed(2).replace('.', ',');
+
+    gVal.textContent = g;
+    bVal.textContent = b;
+    dVal.textContent = d;
+}
+
+/* =========================================================
+   Render-Pipeline
+   ========================================================= */
+function render() {
+    // Werte einlesen und Randbedingungen einhalten
+    let g = +gSlider.value;
+    let b = +bSlider.value;
+    const d = +dSlider.value;
+
+    // Kerze muss im Bild bleiben: g + b ≤ 860
+    if (g + b > 860) {
+        // den zuletzt bewegten Regler anpassen
+        if (document.activeElement === gSlider) {
+            g = 860 - b;
+            gSlider.value = g;
+        } else {
+            b = 860 - g;
+            bSlider.value = b;
+        }
+    }
+
+    updateReadout(g, b, d);
+    drawMain(g, b, d);
+    drawFront(g, b, d);
+}
+
+/* =========================================================
+   Events
+   ========================================================= */
+[gSlider, bSlider, dSlider].forEach(sl => {
+    sl.addEventListener('input', render);
+});
+
+// Erster Aufbau
+render();
+
+// Neu zeichnen, wenn sich die Fenstergröße ändert (nur für die Front-Ansicht nötig)
+window.addEventListener('resize', () => {
+    // Hauptcanvas skaliert per CSS; Frontcanvas bleibt intern 320×320
+    render();
+});
+</script>
+</body>
+</html>
