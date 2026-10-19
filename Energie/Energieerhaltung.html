@@ -3,468 +3,279 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Energieerhaltung – Skateboarder im Halfpipe</title>
+<title>Energy Skate Park – Energieerhaltung</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
   body {
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    background: #0b111a; color: #e6edf7; overflow: hidden;
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #000; color: #fff; overflow: hidden;
+    user-select: none;
   }
-  .app { display: flex; height: 100vh; height: 100dvh; }
+  .app {
+    position: relative; width: 100vw; height: 100vh;
+    display: flex; flex-direction: column;
+    background: #87CEEB; /* Himmelblau */
+  }
 
-  .stage {
-    position: relative; flex: 1; min-width: 0;
-    background: #0b111a; padding: 12px;
-  }
+  /* --- Haupt-Canvas --- */
   #cv {
-    border-radius: 14px;
-    box-shadow: 0 10px 30px rgba(0,0,0,.5);
-    display: block;
+    flex: 1; display: block; width: 100%; height: 100%;
   }
 
-  .panel {
-    width: 340px; flex: none;
-    background: #131c2b; border-left: 1px solid #22304a;
-    padding: 20px 18px 28px; overflow-y: auto;
+  /* --- UI Overlays --- */
+  .ui-layer {
+    position: absolute; inset: 0; pointer-events: none;
   }
-  .panel h1 { font-size: 18px; margin: 0 0 4px; }
-  .panel .sub { margin: 0 0 16px; font-size: 12.5px; color: #8fa3bf; line-height: 1.45; }
-
-  .why-box {
-    background: #0e1622; border-left: 3px solid #2b6cff;
-    border-radius: 0 8px 8px 0; padding: 10px 12px;
-    margin-bottom: 18px; font-size: 12.5px; line-height: 1.5; color: #a9bcd4;
-  }
-  .why-box strong { color: #fff; }
-
-  .group { margin-bottom: 18px; }
-
-  .label {
-    display: flex; justify-content: space-between; align-items: center;
-    font-size: 12px; font-weight: 700; color: #9db0ca;
-    text-transform: uppercase; letter-spacing: .7px; margin-bottom: 8px;
-  }
-  .label output {
-    font-weight: 700; color: #ffd166; text-transform: none;
-    letter-spacing: 0; font-size: 13px;
+  .ui-interactive {
+    pointer-events: auto;
   }
 
-  input[type=range] {
-    width: 100%; -webkit-appearance: none; appearance: none;
-    height: 6px; border-radius: 3px; background: #22304a; outline: none;
+  /* --- Top Left: Energy Bars --- */
+  .energy-panel {
+    position: absolute; top: 16px; left: 16px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid #ccc; border-radius: 8px;
+    padding: 12px 16px; width: 160px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    color: #333;
   }
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 18px; height: 18px;
-    border-radius: 50%; background: #ffd166;
-    border: 2px solid #0e1622; cursor: pointer;
+  .energy-title {
+    font-size: 13px; font-weight: bold; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
   }
-  input[type=range]::-moz-range-thumb {
-    width: 16px; height: 16px; border-radius: 50%;
-    background: #ffd166; border: 2px solid #0e1622; cursor: pointer;
+  .energy-title .dot {
+    width: 8px; height: 8px; background: #ff5722; border-radius: 50%;
+  }
+  .bars-container {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    height: 120px; border-left: 1px solid #999; border-bottom: 1px solid #999;
+    padding: 0 4px; position: relative;
+  }
+  .bar-wrapper {
+    display: flex; flex-direction: column; align-items: center;
+    width: 22%; height: 100%; justify-content: flex-end;
+  }
+  .bar {
+    width: 100%; border-radius: 2px 2px 0 0;
+    transition: height 0.05s;
+  }
+  .bar.kinetic { background: #4CAF50; }
+  .bar.potential { background: #673AB7; }
+  .bar.thermal { background: #F44336; }
+  .bar.total { background: #FFEB3B; border: 1px solid #333; }
+  .bar-label {
+    font-size: 9px; text-align: center; margin-top: 4px;
+    color: #555; font-weight: 600; line-height: 1.1;
   }
 
-  .check {
-    display: flex; align-items: center; gap: 9px;
-    font-size: 13.5px; color: #c2d1e4; padding: 6px 0;
-    cursor: pointer; user-select: none;
+  /* --- Top Right: Controls --- */
+  .top-right {
+    position: absolute; top: 16px; right: 16px;
+    display: flex; flex-direction: column; gap: 10px;
+    align-items: flex-end;
   }
-  .check input { width: 16px; height: 16px; accent-color: #2b6cff; cursor: pointer; }
+  .icon-group {
+    display: flex; gap: 6px; background: rgba(255,255,255,0.9);
+    padding: 4px; border-radius: 6px; border: 1px solid #aaa;
+  }
+  .icon-btn {
+    width: 36px; height: 36px; border: none; background: #f0f0f0;
+    border-radius: 4px; cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+    color: #333;
+  }
+  .icon-btn:hover { background: #e0e0e0; }
+  .icon-btn.active { background: #2196F3; color: #fff; }
+  
+  .track-panel {
+    background: rgba(255,255,255,0.9);
+    border: 1px solid #aaa; border-radius: 8px; padding: 8px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .track-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  }
+  .track-btn {
+    width: 48px; height: 36px; border: 1px solid #ccc;
+    background: #fff; border-radius: 4px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: #333;
+  }
+  .track-btn:hover { border-color: #2196F3; }
+  .track-btn.active { border-color: #2196F3; background: #e3f2fd; }
 
-  .btn {
-    width: 100%; padding: 11px; border-radius: 10px;
-    border: 1px solid #2b3d5a; background: #1a2637; color: #cfe0f5;
-    font: inherit; font-weight: 600; font-size: 13.5px;
-    cursor: pointer; margin-bottom: 8px;
+  .mass-slider-wrap {
+    background: rgba(255,255,255,0.9);
+    border: 1px solid #aaa; border-radius: 8px; padding: 8px 12px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
   }
-  .btn:hover { background: #22304a; }
-  .btn.primary { background: #2b6cff; border-color: #2b6cff; color: #fff; }
-  .btn.primary:hover { background: #1e5ce6; }
+  .mass-slider-wrap input { width: 120px; }
 
-  .readout {
-    background: #0e1622; border: 1px solid #22304a;
-    border-radius: 10px; padding: 12px 14px; font-size: 13px;
+  /* --- Bottom Controls --- */
+  .bottom-bar {
+    position: absolute; bottom: 20px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; align-items: center; gap: 16px;
+    background: rgba(255,255,255,0.9);
+    padding: 10px 20px; border-radius: 30px;
+    border: 1px solid #aaa; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   }
-  .ro {
-    display: flex; justify-content: space-between;
-    padding: 4px 0; color: #a9bcd4;
+  .play-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: none; background: #2196F3; color: #fff;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
   }
-  .ro b { color: #fff; font-variant-numeric: tabular-nums; }
-  .ro.pe b { color: #60a5fa; }
-  .ro.ke b { color: #f59e0b; }
-  .ro.total b { color: #e2e8f0; }
+  .play-btn:hover { background: #1976D2; }
+  
+  .checkbox-wrap {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; color: #333; cursor: pointer; font-weight: 600;
+  }
+  .checkbox-wrap input { width: 16px; height: 16px; cursor: pointer; }
+  
+  .restart-btn {
+    padding: 8px 16px; border-radius: 20px; border: 1px solid #2196F3;
+    background: transparent; color: #2196F3; font-weight: bold;
+    cursor: pointer;
+  }
+  .restart-btn:hover { background: #e3f2fd; }
 
-  .info-title {
-    font-size: 11px; font-weight: 700; color: #9db0ca;
-    text-transform: uppercase; letter-spacing: .7px;
-    margin-bottom: 8px;
-  }
-  .examples {
-    list-style: none; padding: 0; margin: 0;
-    background: #0e1622; border: 1px solid #22304a;
-    border-radius: 10px; padding: 10px 14px;
-    font-size: 12px; line-height: 1.5;
-  }
-  .examples li { padding: 5px 0; color: #a9bcd4; }
-  .examples li + li { border-top: 1px solid #1a2637; }
-  .examples strong { color: #ffd166; }
-
-  .hint { font-size: 12px; color: #6f83a0; line-height: 1.5; margin: 14px 0 0; }
-
-  @media (max-width: 880px) {
-    body { overflow: auto; }
-    .app { flex-direction: column; height: auto; min-height: 100dvh; }
-    .stage { height: auto; min-height: 400px; }
-    .panel { width: auto; border-left: 0; border-top: 1px solid #22304a; }
-  }
 </style>
 </head>
 <body>
 
 <div class="app">
-  <div class="stage" id="stage">
-    <canvas id="cv"></canvas>
-  </div>
+  <canvas id="cv"></canvas>
 
-  <aside class="panel">
-    <h1>Energie im Halfpipe</h1>
-    <p class="sub">Potenzielle und kinetische Energie im Wechselspiel.</p>
-
-    <div class="why-box">
-      <strong>Warum simulieren?</strong> Energie ist unsichtbar. Hier siehst Du, wie Lageenergie in Bewegungsenergie umgewandelt wird – und wieder zurück. Der Energieerhaltungssatz wird sichtbar.
+  <!-- UI Overlay -->
+  <div class="ui-layer">
+    
+    <!-- Top Left: Energy Bars -->
+    <div class="energy-panel">
+      <div class="energy-title"><span class="dot"></span> Energie</div>
+      <div class="bars-container">
+        <div class="bar-wrapper">
+          <div class="bar kinetic" id="bar-ke" style="height: 0%;"></div>
+          <div class="bar-label">Kinetisch</div>
+        </div>
+        <div class="bar-wrapper">
+          <div class="bar potential" id="bar-pe" style="height: 0%;"></div>
+          <div class="bar-label">Potentiell</div>
+        </div>
+        <div class="bar-wrapper">
+          <div class="bar thermal" id="bar-thermal" style="height: 0%;"></div>
+          <div class="bar-label">Thermisch</div>
+        </div>
+        <div class="bar-wrapper">
+          <div class="bar total" id="bar-total" style="height: 0%;"></div>
+          <div class="bar-label">Gesamt</div>
+        </div>
+      </div>
     </div>
 
-    <section class="group">
-      <label class="label" for="startHeight">Starthöhe <output id="startHeightVal">100 %</output></label>
-      <input type="range" id="startHeight" min="10" max="100" step="5" value="100">
-    </section>
+    <!-- Top Right: Controls -->
+    <div class="top-right ui-interactive">
+      <div class="icon-group">
+        <button class="icon-btn" id="btn-grid" title="Raster">▦</button>
+        <button class="icon-btn" id="btn-speed" title="Geschwindigkeit">⚡</button>
+      </div>
 
-    <section class="group">
-      <label class="check"><input type="checkbox" id="friction"> Reibung (Energieverlust)</label>
-    </section>
+      <div class="track-panel">
+        <div style="font-size:11px; font-weight:bold; color:#333; text-align:center;">Strecken</div>
+        <div class="track-grid">
+          <button class="track-btn active" data-track="halfpipe">Halfpipe</button>
+          <button class="track-btn" data-track="ramp">Rampe</button>
+          <button class="track-btn" data-track="wave">Welle</button>
+          <button class="track-btn" data-track="jump">Schanze</button>
+        </div>
+      </div>
 
-    <section class="group">
-      <button class="btn primary" id="play">Pause</button>
-      <button class="btn" id="reset">Zurücksetzen</button>
-    </section>
+      <div class="mass-slider-wrap">
+        <span style="font-size:11px; font-weight:bold; color:#333;">Masse</span>
+        <input type="range" id="mass-slider" min="20" max="100" value="60" step="10">
+      </div>
+    </div>
 
-    <section class="group readout">
-      <div class="ro">Höhe <b id="roHeight">1,50 m</b></div>
-      <div class="ro">Geschwindigkeit <b id="roVel">0,00 m/s</b></div>
-      <div class="ro pe">E<sub>pot</sub> (Lage) <b id="roPE">0 J</b></div>
-      <div class="ro ke">E<sub>kin</sub> (Bewegung) <b id="roKE">0 J</b></div>
-      <div class="ro total">E<sub>gesamt</sub> <b id="roTotal">0 J</b></div>
-    </section>
+    <!-- Bottom Bar -->
+    <div class="bottom-bar ui-interactive">
+      <button class="play-btn" id="btn-play">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path id="play-icon" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+        </svg>
+      </button>
+      
+      <label class="checkbox-wrap">
+        <input type="checkbox" id="chk-slow"> Zeitlupe
+      </label>
+      <label class="checkbox-wrap">
+        <input type="checkbox" id="chk-friction"> Reibung
+      </label>
 
-    <section class="group">
-      <div class="info-title">Weitere Alltagsbeispiele</div>
-      <ul class="examples">
-        <li><strong>Pendel (Uhr):</strong> Lage ↔ Bewegung</li>
-        <li><strong>Achterbahn:</strong> Lage → Bewegung → Lage …</li>
-        <li><strong>Wasserkraftwerk:</strong> Wasser (Lage) → Turbine (Bewegung) → Generator (elektrisch)</li>
-        <li><strong>Gummiband:</strong> Spannenergie → Bewegung</li>
-        <li><strong>Fallendes Buch:</strong> Lage → Bewegung → Schall + Wärme</li>
-        <li><strong>Fahrrad bergab:</strong> Lage → Bewegung</li>
-      </ul>
-    </section>
+      <button class="restart-btn" id="btn-reset">Skater neu starten</button>
+    </div>
 
-    <p class="hint">💡 Beobachte: E<sub>gesamt</sub> bleibt konstant, solange keine Reibung wirkt. Nur die Verteilung zwischen Lage- und Bewegungsenergie ändert sich.</p>
-  </aside>
+  </div>
 </div>
 
 <script>
 (() => {
   'use strict';
 
-  const stage = document.getElementById('stage');
   const canvas = document.getElementById('cv');
   const ctx = canvas.getContext('2d');
 
-  /* ---------- Konstanten ---------- */
+  // --- Physik-Parameter ---
   const G = 9.81;
-  const L = 2.0;      // halbe Breite in m
-  const H = 1.5;      // max. Tiefe in m
-  const MASS = 50;    // kg
-  const MAX_E = MASS * G * H;   // Referenz-Energie (bei Start ganz oben)
+  const PX_PER_M = 45;       // Skalierung: 1 Meter = 45 Pixel
+  const GROUND_Y_OFFSET = 80; // Abstand vom unteren Rand zur y=0 Linie
 
-  /* ---------- Zustand ---------- */
-  const state = {
-    x: -L,
-    v: 0,
-    damping: 0,
+  let state = {
+    mass: 60,
     playing: true,
-    startHeight: H,
-    history: [],
-    simTime: 0,
+    slowMo: false,
+    showGrid: false,
+    showSpeed: false,
+    friction: false,
+    track: 'halfpipe',
+    x: -6, v: 0, // x in Metern, v in m/s
+    thermalEnergy: 0,
+    lastTs: 0,
   };
 
-  /* ---------- Canvas-Größe ---------- */
-  let W = 0, Hc = 0, dpr = 1;
-  let sceneH = 0, chartH = 0;
-  let scaleX = 0, scaleY = 0, centerX = 0, groundY = 0;
+  let W, H, dpr;
+  let origin = { x: 0, y: 0 }; // Canvas-Koordinaten für (0,0)
 
-  /* ---------- Physik ---------- */
-  function heightAt(x) { return H * (x / L) ** 2; }
-  function slopeAt(x) { return 2 * H * x / (L * L); }
-  function curvAt() { return 2 * H / (L * L); }
-
-  function energies(x = state.x, v = state.v) {
-    const h = heightAt(x);
-    const hp = slopeAt(x);
-    const pe = MASS * G * h;
-    const ke = 0.5 * MASS * v * v * (1 + hp * hp);
-    const speed = Math.abs(v) * Math.sqrt(1 + hp * hp);
-    return { pe, ke, total: pe + ke, speed, height: h };
-  }
-
-  function step(dt) {
-    const x = state.x;
-    const v = state.v;
-    const hp = slopeAt(x);
-    const hpp = curvAt();
-    let a = -(G * hp + v * v * hp * hpp) / (1 + hp * hp);
-    a -= state.damping * v;
-
-    state.v += a * dt;
-    state.x += state.v * dt;
-
-    if (state.x > L) { state.x = L; state.v = -Math.abs(state.v); }
-    if (state.x < -L) { state.x = -L; state.v = Math.abs(state.v); }
-
-    state.simTime += dt;
-
-    const e = energies();
-    state.history.push({
-      t: state.simTime,
-      pe: e.pe,
-      ke: e.ke,
-      total: e.total,
-    });
-    if (state.history.length > 900) state.history.shift();
-  }
-
-  /* ---------- Resize ---------- */
-  function resize() {
-    const rect = stage.getBoundingClientRect();
-    const w = Math.max(420, rect.width - 24);
-    const h = Math.max(420, rect.height - 24);
-
-    W = w;
-    Hc = h;
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-
-    canvas.width = W * dpr;
-    canvas.height = Hc * dpr;
-    canvas.style.width = W + 'px';
-    canvas.style.height = Hc + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    sceneH = Hc * 0.68;
-    chartH = Hc - sceneH;
-
-    // Skalierung im Scene-Bereich
-    const bowlW = W * 0.6;
-    const bowlH = sceneH * 0.55;
-    scaleX = (bowlW / 2) / L;
-    scaleY = bowlH / H;
-    centerX = W / 2;
-    groundY = sceneH * 0.82;
-
-    draw();
-  }
-
-  /* ---------- Zeichnen: Szene ---------- */
-  function drawBackground() {
-    // Szene
-    const bg = ctx.createLinearGradient(0, 0, 0, sceneH);
-    bg.addColorStop(0, '#0d1725');
-    bg.addColorStop(1, '#1a2637');
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, W, sceneH);
-
-    // Chart
-    const bg2 = ctx.createLinearGradient(0, sceneH, 0, Hc);
-    bg2.addColorStop(0, '#0a1420');
-    bg2.addColorStop(1, '#050a12');
-    ctx.fillStyle = bg2;
-    ctx.fillRect(0, sceneH, W, chartH);
-
-    // Trennlinie
-    ctx.strokeStyle = 'rgba(70, 95, 130, 0.5)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, sceneH + 0.5);
-    ctx.lineTo(W, sceneH + 0.5);
-    ctx.stroke();
-
-    // Sterne / Staub
-    ctx.fillStyle = 'rgba(148, 163, 184, 0.15)';
-    for (let i = 0; i < 40; i++) {
-      const x = (i * 137.5) % W;
-      const y = ((i * 71.3) % (sceneH * 0.5));
-      ctx.beginPath();
-      ctx.arc(x, y, 0.8, 0, Math.PI * 2);
-      ctx.fill();
+  // --- Strecken-Funktionen (y in Metern, x in Metern) ---
+  const TRACKS = {
+    halfpipe: {
+      name: 'Halfpipe',
+      length: 16, // von -8 bis 8
+      y: (x) => 0.08 * x * x,
+      minY: 0, maxY: 5.12,
+    },
+    ramp: {
+      name: 'Rampe',
+      length: 16,
+      y: (x) => x < 0 ? -0.4 * x : 0, // Steil links, flach rechts
+      minY: 0, maxY: 3.2,
+    },
+    wave: {
+      name: 'Welle',
+      length: 16,
+      y: (x) => 1.5 + Math.sin(x * 0.8) * 1.5 + 1.5,
+      minY: 0, maxY: 4.5,
+    },
+    jump: {
+      name: 'Schanze',
+      length: 16,
+      y: (x) => x < -2 ? 0.15 * (x + 2) * (x + 2) : (x > 2 ? 0.15 * (x - 2) * (x - 2) : 0),
+      minY: 0, maxY: 5.4,
     }
-  }
+  };
 
-  function worldToScreen(x, h) {
-    return {
-      x: centerX + x * scaleX,
-      y: groundY - h * scaleY,
-    };
-  }
-
-  function drawBowl() {
-    // Bowl-Kurve als Parabel
-    ctx.strokeStyle = '#475569';
-    ctx.lineWidth = 10;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-
-    ctx.beginPath();
-    const N = 120;
-    for (let i = 0; i <= N; i++) {
-      const xw = -L + (2 * L) * i / N;
-      const p = worldToScreen(xw, heightAt(xw));
-      if (i === 0) ctx.moveTo(p.x, p.y);
-      else ctx.lineTo(p.x, p.y);
-    }
-    ctx.stroke();
-
-    // Glanzkante
-    ctx.strokeStyle = 'rgba(148, 163, 184, 0.6)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    for (let i = 0; i <= N; i++) {
-      const xw = -L + (2 * L) * i / N;
-      const p = worldToScreen(xw, heightAt(xw));
-      if (i === 0) ctx.moveTo(p.x, p.y - 3);
-      else ctx.lineTo(p.x, p.y - 3);
-    }
-    ctx.stroke();
-
-    // Pfeiler / Stützen an den Rändern
-    for (const sign of [-1, 1]) {
-      const p = worldToScreen(sign * L, H);
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(p.x, p.y);
-      ctx.lineTo(p.x, groundY + 20);
-      ctx.stroke();
-
-      // Endkappe
-      ctx.fillStyle = '#475569';
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Bodenlinie
-    ctx.strokeStyle = 'rgba(148, 163, 184, 0.2)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 6]);
-    ctx.beginPath();
-    ctx.moveTo(20, groundY + 20);
-    ctx.lineTo(W - 20, groundY + 20);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-
-  function drawSkater() {
-    const h = heightAt(state.x);
-    const p = worldToScreen(state.x, h);
-
-    // Rotation: Tangente an die sichtbare Kurve
-    const slope = slopeAt(state.x);
-    const visualSlope = slope * scaleY / scaleX;
-    const rotation = -Math.atan(visualSlope);
-
-    ctx.save();
-    ctx.translate(p.x, p.y);
-    ctx.rotate(rotation);
-
-    // Schatten
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.beginPath();
-    ctx.ellipse(0, 6, 22, 4, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Skateboard
-    ctx.fillStyle = '#d97706';
-    roundRect(ctx, -16, -2, 32, 5, 2.5);
-    ctx.fill();
-    ctx.strokeStyle = '#92400e';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // Räder
-    ctx.fillStyle = '#1e293b';
-    ctx.beginPath();
-    ctx.arc(-11, 5, 3, 0, Math.PI * 2);
-    ctx.arc(11, 5, 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#64748b';
-    ctx.beginPath();
-    ctx.arc(-11, 5, 1.2, 0, Math.PI * 2);
-    ctx.arc(11, 5, 1.2, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Beine
-    ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth = 5;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(-4, 0);
-    ctx.lineTo(-3, -18);
-    ctx.moveTo(4, 0);
-    ctx.lineTo(3, -18);
-    ctx.stroke();
-
-    // Körper
-    const bodyGrad = ctx.createLinearGradient(-8, -34, 8, -18);
-    bodyGrad.addColorStop(0, '#3b82f6');
-    bodyGrad.addColorStop(1, '#1d4ed8');
-    ctx.fillStyle = bodyGrad;
-    roundRect(ctx, -7, -34, 14, 18, 4);
-    ctx.fill();
-
-    // Arme
-    ctx.strokeStyle = '#3b82f6';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(-7, -28);
-    ctx.lineTo(-14, -20);
-    ctx.moveTo(7, -28);
-    ctx.lineTo(14, -20);
-    ctx.stroke();
-
-    // Kopf
-    ctx.fillStyle = '#fcd34d';
-    ctx.beginPath();
-    ctx.arc(0, -43, 8, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Helm
-    ctx.fillStyle = '#dc2626';
-    ctx.beginPath();
-    ctx.arc(0, -44, 8, Math.PI, 0);
-    ctx.fill();
-    ctx.fillStyle = '#b91c1c';
-    ctx.beginPath();
-    ctx.arc(0, -44, 8, Math.PI, 0);
-    ctx.fill();
-
-    // Helm-Glanz
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.beginPath();
-    ctx.ellipse(-3, -46, 2, 1.2, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.restore();
-  }
-
+  // --- Hilfsfunktionen ---
   function roundRect(c, x, y, w, h, r) {
     r = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
     c.beginPath();
@@ -476,324 +287,425 @@
     c.closePath();
   }
 
-  /* ---------- Energiebalken ---------- */
-  function drawEnergyBar() {
-    const e = energies();
-    const barX = W - 66;
-    const barW = 26;
-    const barTop = sceneH * 0.15;
-    const barBot = groundY - 10;
-    const barMaxH = barBot - barTop;
+  function getTrack() { return TRACKS[state.track]; }
 
-    const maxE = MAX_E * 1.05;
-    const peH = (e.pe / maxE) * barMaxH;
-    const keH = (e.ke / maxE) * barMaxH;
-    const totalH = peH + keH;
-
-    // Hintergrund
-    ctx.fillStyle = 'rgba(14, 22, 34, 0.85)';
-    roundRect(ctx, barX - 12, barTop - 24, barW + 24, barMaxH + 48, 10);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(43, 61, 90, 0.9)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // Label oben
-    ctx.fillStyle = '#9db0ca';
-    ctx.font = 'bold 10px system-ui';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillText('Energie', barX + barW / 2, barTop - 8);
-
-    // Referenzlinie (100% = MAX_E)
-    const refY = barBot - barMaxH;
-    ctx.strokeStyle = 'rgba(226, 232, 240, 0.3)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([3, 4]);
-    ctx.beginPath();
-    ctx.moveTo(barX - 4, refY);
-    ctx.lineTo(barX + barW + 4, refY);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // PE (blau) unten
-    const peY = barBot - peH;
-    const peGrad = ctx.createLinearGradient(0, peY, 0, barBot);
-    peGrad.addColorStop(0, '#60a5fa');
-    peGrad.addColorStop(1, '#3b82f6');
-    ctx.fillStyle = peGrad;
-    roundRect(ctx, barX, peY, barW, peH, peH > 6 ? 4 : 0);
-    ctx.fill();
-
-    // KE (orange) oben
-    const keY = peY - keH;
-    const keGrad = ctx.createLinearGradient(0, keY, 0, peY);
-    keGrad.addColorStop(0, '#fbbf24');
-    keGrad.addColorStop(1, '#f59e0b');
-    ctx.fillStyle = keGrad;
-    roundRect(ctx, barX, keY, barW, keH, keH > 6 ? 4 : 0);
-    ctx.fill();
-
-    // Rahmen der Gesamtsäule
-    ctx.strokeStyle = 'rgba(226, 232, 240, 0.8)';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(barX, barBot - totalH, barW, totalH);
-
-    // Labels
-    ctx.font = 'bold 9px system-ui';
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
-
-    if (peH > 14) {
-      ctx.fillStyle = '#fff';
-      ctx.fillText('E_pot', barX - 6, barBot - peH / 2);
-    }
-    if (keH > 14) {
-      ctx.fillStyle = '#fff';
-      ctx.fillText('E_kin', barX - 6, peY - keH / 2);
-    }
-
-    // Werte rechts
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#e2e8f0';
-    ctx.font = 'bold 11px system-ui';
-    ctx.fillText(Math.round(e.total) + ' J', barX + barW + 8, barBot - totalH);
+  // Welt- zu Canvas-Koordinaten
+  function toScreen(x, y) {
+    return {
+      x: origin.x + x * PX_PER_M,
+      y: origin.y - y * PX_PER_M
+    };
   }
 
-  /* ---------- Chart ---------- */
-  function drawChart() {
-    const padL = 52, padR = 14, padT = 18, padB = 24;
-    const plotX = padL;
-    const plotY = sceneH + padT;
-    const plotW = W - padL - padR;
-    const plotH = chartH - padT - padB;
+  // --- Resize ---
+  function resize() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    W = rect.width;
+    H = rect.height;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // Titel
-    ctx.fillStyle = '#ffd166';
-    ctx.font = 'bold 11px system-ui';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText('Energieverlauf über die Zeit', padL, sceneH + 4);
-
-    if (state.history.length < 2) {
-      ctx.fillStyle = '#6f83a0';
-      ctx.font = 'italic 11px system-ui';
-      ctx.textAlign = 'center';
-      ctx.fillText('Noch keine Daten…', plotX + plotW / 2, plotY + plotH / 2);
-      return;
-    }
-
-    const now = state.simTime;
-    const t0 = Math.max(0, now - 6);
-
-    // Dynamischer Maximalwert
-    let maxE = 0;
-    for (const h of state.history) {
-      if (h.t >= t0 && h.total > maxE) maxE = h.total;
-    }
-    maxE = Math.max(maxE * 1.1, 1);
-
-    // Gitter
-    ctx.strokeStyle = 'rgba(70, 95, 130, 0.25)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i <= 4; i++) {
-      const y = plotY + (plotH * i / 4);
-      ctx.beginPath();
-      ctx.moveTo(plotX, y + 0.5);
-      ctx.lineTo(plotX + plotW, y + 0.5);
-      ctx.stroke();
-
-      // Y-Label
-      const val = maxE * (1 - i / 4);
-      ctx.fillStyle = '#6f83a0';
-      ctx.font = '9px system-ui';
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(Math.round(val) + ' J', plotX - 6, y);
-    }
-
-    // X-Achse Labels
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    for (let i = 0; i <= 4; i++) {
-      const x = plotX + plotW * i / 4;
-      const t = t0 + (now - t0) * i / 4;
-      ctx.fillText(t.toFixed(1) + 's', x, plotY + plotH + 4);
-    }
-
-    // Achsen
-    ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(plotX, plotY);
-    ctx.lineTo(plotX, plotY + plotH);
-    ctx.lineTo(plotX + plotW, plotY + plotH);
-    ctx.stroke();
-
-    // Punkte extrahieren
-    const points = state.history.filter(h => h.t >= t0);
-    if (points.length < 2) return;
-
-    const xOf = t => plotX + ((t - t0) / (now - t0)) * plotW;
-    const yOf = e => plotY + plotH - (e / maxE) * plotH;
-
-    // Total (weiß, gestrichelt)
-    ctx.strokeStyle = '#e2e8f0';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([5, 4]);
-    ctx.beginPath();
-    points.forEach((p, i) => {
-      const x = xOf(p.t);
-      const y = yOf(p.total);
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // PE (blau) als Fläche + Linie
-    ctx.fillStyle = 'rgba(59, 130, 246, 0.15)';
-    ctx.beginPath();
-    ctx.moveTo(xOf(points[0].t), yOf(0));
-    for (const p of points) ctx.lineTo(xOf(p.t), yOf(p.pe));
-    ctx.lineTo(xOf(points[points.length - 1].t), yOf(0));
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.strokeStyle = '#60a5fa';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    points.forEach((p, i) => {
-      const x = xOf(p.t);
-      const y = yOf(p.pe);
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
-
-    // KE (orange) als Linie
-    ctx.strokeStyle = '#f59e0b';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    points.forEach((p, i) => {
-      const x = xOf(p.t);
-      const y = yOf(p.ke);
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
-
-    // Legende
-    ctx.font = '10px system-ui';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    const legendY = plotY + 10;
-    let lx = plotX + 10;
-
-    ctx.fillStyle = '#60a5fa';
-    ctx.fillRect(lx, legendY - 1, 12, 3);
-    ctx.fillStyle = '#c2d1e4';
-    ctx.fillText('E_pot', lx + 16, legendY);
-    lx += 60;
-
-    ctx.fillStyle = '#f59e0b';
-    ctx.fillRect(lx, legendY - 1, 12, 3);
-    ctx.fillStyle = '#c2d1e4';
-    ctx.fillText('E_kin', lx + 16, legendY);
-    lx += 60;
-
-    ctx.strokeStyle = '#e2e8f0';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([4, 3]);
-    ctx.beginPath();
-    ctx.moveTo(lx, legendY);
-    ctx.lineTo(lx + 12, legendY);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = '#c2d1e4';
-    ctx.fillText('E_gesamt', lx + 16, legendY);
+    // Origin setzen (untere Mitte)
+    origin.x = W / 2;
+    origin.y = H - GROUND_Y_OFFSET;
   }
 
-  /* ---------- Haupt-Draw ---------- */
+  // --- Physik Update ---
+  function updatePhysics(dt) {
+    if (!state.playing) return;
+
+    const track = getTrack();
+    const currentX = state.x;
+    const currentY = track.y(currentX);
+
+    // Steigung berechnen (numerisch)
+    const eps = 0.001;
+    const dy = track.y(currentX + eps) - track.y(currentX - eps);
+    const dx = 2 * eps;
+    const slope = dy / dx;
+    const angle = Math.atan(slope);
+
+    // Energie-Erhaltung
+    // E_total = E_kin + E_pot + E_thermal = konstant
+    // Wenn wir die Startenergie kennen (an Position x_start mit v=0), können wir v berechnen.
+    // Aber wir machen es inkrementell (Euler):
+    
+    // Beschleunigung entlang der Bahn: a = -g * sin(theta)
+    // Aber wir müssen die horizontale Beschleunigung berechnen.
+    // a_x = a * cos(theta)
+    
+    let a = -G * Math.sin(angle);
+    
+    // Reibung
+    let frictionWork = 0;
+    if (state.friction) {
+      const mu = 0.08; // Reibungskoeffizient
+      const normalForce = state.mass * G * Math.cos(angle);
+      const frictionForce = mu * normalForce;
+      const frictionDecel = frictionForce / state.mass; // m/s^2
+      
+      if (Math.abs(state.v) > 0.01) {
+        const dir = Math.sign(state.v);
+        a -= dir * frictionDecel;
+        
+        // Thermische Energie akkumulieren
+        const distance = Math.abs(state.v) * dt;
+        state.thermalEnergy += frictionForce * distance;
+      }
+    }
+
+    // Geschwindigkeit aktualisieren (entlang der Bahn)
+    // Wir tracken v als Skalar (Betrag der Geschwindigkeit entlang der Bahn)
+    // Da die Bewegung 1D entlang der Kurve ist, ist v die Geschwindigkeit in x-Richtung geteilt durch cos(theta).
+    // Einfacher: Wir tracken die Energie und leiten v ab.
+    
+    const v_x = state.v;
+    const v_total = v_x / Math.cos(angle);
+    
+    // Energie-Ansatz (stabiler):
+    // E_kin = 0.5 * m * v_total^2
+    // E_pot = m * g * y
+    // E_total = E_kin + E_pot + E_thermal
+    
+    const v_x_new = state.v + a * Math.cos(angle) * dt;
+    const v_total_new = v_x_new / Math.cos(angle);
+    
+    // Neue Position
+    let newX = state.x + v_x_new * dt;
+    
+    // Kollisionsabfrage mit den Rändern
+    const bounds = track.length / 2;
+    if (newX < -bounds) {
+      newX = -bounds;
+      state.v = Math.abs(v_x_new) * 0.9; // Kleiner Energieverlust beim Anschlag
+    } else if (newX > bounds) {
+      newX = bounds;
+      state.v = -Math.abs(v_x_new) * 0.9;
+    } else {
+      state.v = v_x_new;
+    }
+
+    // Wenn die Geschwindigkeit sehr klein wird und wir am untersten Punkt sind, stoppen
+    if (Math.abs(state.v) < 0.05 && Math.abs(a * Math.cos(angle)) < 0.1) {
+      // Nur stoppen, wenn wir nicht gerade auf einer Steigung sind
+      const y = track.y(newX);
+      if (y < 0.1) { // Nah am tiefsten Punkt
+         state.v = 0;
+      }
+    }
+
+    state.x = newX;
+  }
+
+  // --- Zeichnen ---
   function draw() {
-    ctx.clearRect(0, 0, W, Hc);
-    drawBackground();
-    drawBowl();
+    ctx.clearRect(0, 0, W, H);
+
+    // Himmel
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
+    skyGrad.addColorStop(0, '#4facfe');
+    skyGrad.addColorStop(1, '#00f2fe');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Berge im Hintergrund
+    ctx.fillStyle = '#a0aab5';
+    ctx.beginPath();
+    ctx.moveTo(0, origin.y);
+    ctx.lineTo(W * 0.15, origin.y - 120);
+    ctx.lineTo(W * 0.3, origin.y - 40);
+    ctx.lineTo(W * 0.45, origin.y - 150);
+    ctx.lineTo(W * 0.6, origin.y);
+    ctx.fill();
+    
+    ctx.fillStyle = '#8e99a6';
+    ctx.beginPath();
+    ctx.moveTo(W * 0.4, origin.y);
+    ctx.lineTo(W * 0.7, origin.y - 80);
+    ctx.lineTo(W * 0.85, origin.y - 30);
+    ctx.lineTo(W, origin.y);
+    ctx.fill();
+
+    // Boden
+    ctx.fillStyle = '#8B5A2B';
+    ctx.fillRect(0, origin.y, W, H - origin.y);
+    ctx.fillStyle = '#654321';
+    ctx.fillRect(0, origin.y, W, 10);
+
+    // Raster
+    if (state.showGrid) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 1;
+      for (let x = -10; x <= 10; x++) {
+        const p = toScreen(x, 0);
+        ctx.beginPath(); ctx.moveTo(p.x, 0); ctx.lineTo(p.x, origin.y); ctx.stroke();
+      }
+      for (let y = 0; y <= 8; y++) {
+        const p = toScreen(0, y);
+        if (p.y > 0) {
+          ctx.beginPath(); ctx.moveTo(0, p.y); ctx.lineTo(W, p.y); ctx.stroke();
+        }
+      }
+    }
+
+    // Strecke zeichnen
+    const track = getTrack();
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 10;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    
+    const bounds = track.length / 2;
+    const steps = 100;
+    for (let i = 0; i <= steps; i++) {
+      const x = -bounds + (2 * bounds) * (i / steps);
+      const y = track.y(x);
+      const p = toScreen(x, y);
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+
+    // Schienen-Glanz
+    ctx.strokeStyle = '#999';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const x = -bounds + (2 * bounds) * (i / steps);
+      const y = track.y(x);
+      const p = toScreen(x, y);
+      if (i === 0) ctx.moveTo(p.x, p.y - 3);
+      else ctx.lineTo(p.x, p.y - 3);
+    }
+    ctx.stroke();
+
+    // Skater zeichnen
     drawSkater();
-    drawEnergyBar();
-    drawChart();
-    updateReadouts();
+
+    // UI Update
+    updateUI();
   }
 
-  /* ---------- Readouts ---------- */
-  function updateReadouts() {
-    const e = energies();
-    document.getElementById('roHeight').textContent = e.height.toFixed(2).replace('.', ',') + ' m';
-    document.getElementById('roVel').textContent = e.speed.toFixed(2).replace('.', ',') + ' m/s';
-    document.getElementById('roPE').textContent = Math.round(e.pe) + ' J';
-    document.getElementById('roKE').textContent = Math.round(e.ke) + ' J';
-    document.getElementById('roTotal').textContent = Math.round(e.total) + ' J';
+  function drawSkater() {
+    const track = getTrack();
+    const currentY = track.y(state.x);
+    const p = toScreen(state.x, currentY);
+
+    // Steigung für Rotation
+    const eps = 0.001;
+    const dy = track.y(state.x + eps) - track.y(state.x - eps);
+    const dx = 2 * eps;
+    const angle = Math.atan2(dy * PX_PER_M, dx * PX_PER_M); // In Canvas-Skalierung
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(angle);
+
+    // Schatten
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(0, 2, 22, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Skateboard
+    ctx.fillStyle = '#e67e22';
+    roundRect(ctx, -18, -4, 36, 6, 3);
+    ctx.fill();
+    ctx.strokeStyle = '#d35400';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Räder
+    ctx.fillStyle = '#2c3e50';
+    ctx.beginPath();
+    ctx.arc(-12, 4, 4, 0, Math.PI * 2);
+    ctx.arc(12, 4, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Beine
+    ctx.strokeStyle = '#2c3e50';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-5, -2);
+    ctx.lineTo(-3, -18);
+    ctx.moveTo(5, -2);
+    ctx.lineTo(3, -18);
+    ctx.stroke();
+
+    // Körper
+    const bodyGrad = ctx.createLinearGradient(-10, -35, 10, -15);
+    bodyGrad.addColorStop(0, '#3498db');
+    bodyGrad.addColorStop(1, '#2980b9');
+    ctx.fillStyle = bodyGrad;
+    roundRect(ctx, -9, -36, 18, 20, 6);
+    ctx.fill();
+
+    // Arme
+    ctx.strokeStyle = '#3498db';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-9, -28);
+    ctx.lineTo(-16, -18);
+    ctx.moveTo(9, -28);
+    ctx.lineTo(16, -18);
+    ctx.stroke();
+
+    // Kopf
+    ctx.fillStyle = '#f1c40f';
+    ctx.beginPath();
+    ctx.arc(0, -46, 8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Helm
+    ctx.fillStyle = '#e74c3c';
+    ctx.beginPath();
+    ctx.arc(0, -47, 9, Math.PI, 0);
+    ctx.fill();
+
+    ctx.restore();
+
+    // Geschwindigkeitsanzeige
+    if (state.showSpeed) {
+      const speed = Math.abs(state.v) * 3.6; // km/h
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y - 70, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(Math.round(speed) + '', p.x, p.y - 72);
+      ctx.font = '8px sans-serif';
+      ctx.fillText('km/h', p.x, p.y - 62);
+    }
   }
 
-  /* ---------- Animations-Loop ---------- */
-  let lastTs = 0;
+  // --- UI Update ---
+  function updateUI() {
+    const track = getTrack();
+    const y = track.y(state.x);
+    const maxY = track.maxY || 5;
+    const maxE = state.mass * G * maxY;
+
+    // Kinetische Energie (v_total = v * sqrt(1 + slope^2))
+    const eps = 0.001;
+    const dy = track.y(state.x + eps) - track.y(state.x - eps);
+    const dx = 2 * eps;
+    const slope = dy / dx;
+    const v_total = state.v * Math.sqrt(1 + slope * slope);
+    
+    const ke = 0.5 * state.mass * v_total * v_total;
+    const pe = state.mass * G * y;
+    const thermal = state.thermalEnergy;
+    const total = ke + pe + thermal;
+
+    // Referenz für die Balken: Die maximale Energie, die der Skater am Start hatte.
+    // Wenn wir die Strecke wechseln, setzen wir thermal auf 0 und starten neu.
+    // Max Energie ist ungefähr m * g * maxY.
+    const refMax = Math.max(maxE, total, 1);
+
+    document.getElementById('bar-ke').style.height = (ke / refMax * 100) + '%';
+    document.getElementById('bar-pe').style.height = (pe / refMax * 100) + '%';
+    document.getElementById('bar-thermal').style.height = (thermal / refMax * 100) + '%';
+    document.getElementById('bar-total').style.height = (total / refMax * 100) + '%';
+
+    // Werte in den Labels anzeigen (optional, aber nett)
+    // document.querySelector('.bar.kinetic').title = `${Math.round(ke)} J`;
+  }
+
+  // --- Loop ---
   function loop(ts) {
-    if (!lastTs) lastTs = ts;
-    const dt = Math.min((ts - lastTs) / 1000, 0.05);
-    lastTs = ts;
+    if (!state.lastTs) state.lastTs = ts;
+    let dt = (ts - state.lastTs) / 1000;
+    state.lastTs = ts;
 
-    if (state.playing) {
-      // Mehrere Substeps für Stabilität
-      const sub = 4;
-      for (let i = 0; i < sub; i++) step(dt / sub);
+    // Zeitlupe
+    if (state.slowMo) dt *= 0.3;
+    
+    // Cap dt, um Sprünge zu vermeiden
+    dt = Math.min(dt, 0.05);
+
+    // Physik-Update in kleinen Schritten (für Stabilität)
+    const subSteps = 4;
+    for (let i = 0; i < subSteps; i++) {
+      updatePhysics(dt / subSteps);
     }
 
     draw();
     requestAnimationFrame(loop);
   }
 
-  /* ---------- Reset ---------- */
-  function reset() {
+  // --- Reset ---
+  function resetSkater() {
+    const track = getTrack();
+    state.x = -track.length / 2 + 0.5; // Start links
     state.v = 0;
-    state.x = -L * Math.sqrt(state.startHeight / H);
-    state.simTime = 0;
-    state.history = [];
-    state.damping = document.getElementById('friction').checked ? 0.15 : 0;
-    // Ein Startwert für die History, damit der Chart nicht leer startet
-    const e = energies();
-    state.history.push({ t: 0, pe: e.pe, ke: e.ke, total: e.total });
+    state.thermalEnergy = 0;
+    // Ein kleiner Anstoß, damit er losfährt
+    state.v = 0.5;
   }
 
-  /* ---------- UI ---------- */
-  document.getElementById('startHeight').addEventListener('input', e => {
-    const pct = parseInt(e.target.value);
-    state.startHeight = H * pct / 100;
-    document.getElementById('startHeightVal').textContent = pct + ' %';
-    reset();
-    draw();
-  });
-
-  document.getElementById('friction').addEventListener('change', e => {
-    state.damping = e.target.checked ? 0.15 : 0;
-  });
-
-  document.getElementById('play').addEventListener('click', e => {
+  // --- Event Listeners ---
+  document.getElementById('btn-play').addEventListener('click', (e) => {
     state.playing = !state.playing;
-    e.target.textContent = state.playing ? 'Pause' : 'Abspielen';
-    lastTs = 0;
+    const icon = document.getElementById('play-icon');
+    if (state.playing) {
+      icon.setAttribute('d', 'M6 19h4V5H6v14zm8-14v14h4V5h-4z'); // Pause
+    } else {
+      icon.setAttribute('d', 'M8 5v14l11-7z'); // Play
+    }
   });
 
-  document.getElementById('reset').addEventListener('click', () => {
-    reset();
-    draw();
+  document.getElementById('chk-slow').addEventListener('change', (e) => {
+    state.slowMo = e.target.checked;
   });
 
-  /* ---------- Start ---------- */
+  document.getElementById('chk-friction').addEventListener('change', (e) => {
+    state.friction = e.target.checked;
+  });
+
+  document.getElementById('btn-reset').addEventListener('click', resetSkater);
+
+  document.getElementById('btn-grid').addEventListener('click', (e) => {
+    state.showGrid = !state.showGrid;
+    e.currentTarget.classList.toggle('active', state.showGrid);
+  });
+
+  document.getElementById('btn-speed').addEventListener('click', (e) => {
+    state.showSpeed = !state.showSpeed;
+    e.currentTarget.classList.toggle('active', state.showSpeed);
+  });
+
+  document.getElementById('mass-slider').addEventListener('input', (e) => {
+    state.mass = parseInt(e.target.value);
+    // Wenn die Masse geändert wird, setzen wir die thermische Energie zurück,
+    // um konsistente Verhältnisse zu haben.
+    state.thermalEnergy = 0;
+  });
+
+  document.querySelectorAll('.track-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.querySelectorAll('.track-btn').forEach(b => b.classList.remove('active'));
+      e.currentTarget.classList.add('active');
+      state.track = e.currentTarget.dataset.track;
+      resetSkater();
+    });
+  });
+
+  // --- Start ---
   const ro = new ResizeObserver(() => resize());
-  ro.observe(stage);
+  ro.observe(canvas.parentElement);
 
-  reset();
   resize();
+  resetSkater();
   requestAnimationFrame(loop);
 })();
 </script>
