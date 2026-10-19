@@ -45,6 +45,10 @@
             flex-direction: column;
             align-items: center;
         }
+        .card h3 {
+            margin-top: 0;
+            color: #c9d1d9;
+        }
         canvas {
             background-color: #010409;
             border-radius: 6px;
@@ -81,7 +85,7 @@
             padding: 12px;
             border-radius: 0 6px 6px 0;
             font-size: 0.95rem;
-            line-height: 1.4;
+            line-height: 1.5;
         }
         .btn-group {
             display: flex;
@@ -111,14 +115,12 @@
     <div class="subtitle">Physikunterricht Klasse 7/8 – Verknüpfung von Beobachtungsebene & Modellebene</div>
 
     <div class="container">
-        <!-- Modellebene: Weltall-Perspektive -->
         <div class="card">
             <h3>Modellebene (Aus dem Weltall)</h3>
             <canvas id="spaceCanvas" width="400" height="400"></canvas>
             <p style="font-size: 0.85rem; color: #8b949e; margin-top: 8px;">Sonne strahlt von links ein.</p>
         </div>
 
-        <!-- Beobachtungsebene: Erd-Perspektive -->
         <div class="card">
             <h3>Beobachtungsebene (Von der Erde aus)</h3>
             <canvas id="earthCanvas" width="400" height="400"></canvas>
@@ -134,14 +136,12 @@
 
         <div class="btn-group">
             <button onclick="setAngle(0)">Neumond</button>
-            <button onclick="setAngle(90)">Zunehm. Halbmond (Erstes Viertel)</button>
+            <button onclick="setAngle(90)">Zunehm. Halbmond</button>
             <button onclick="setAngle(180)">Vollmond</button>
-            <button onclick="setAngle(270)">Abnehm. Halbmond (Letztes Viertel)</button>
+            <button onclick="setAngle(270)">Abnehm. Halbmond</button>
         </div>
 
-        <div class="info-box" id="explanationText">
-            <strong>Beobachtung vs. Erklärung:</strong> Auf der Erde sehen wir (Beobachtungsebene) nur den beleuchteten Teil des Mondes. Das Modell im Weltall (Modellebene) erklärt, <i>warum</i> das so ist: Die Sonne beleuchtet immer genau die Hälfte des Mondes, und durch den Umlauf verändert sich unser Blickwinkel.
-        </div>
+        <div class="info-box" id="explanationText"></div>
     </div>
 
     <script>
@@ -153,10 +153,37 @@
         const phaseNameEl = document.getElementById('phaseName');
         const explanationText = document.getElementById('explanationText');
 
+        // Sterne einmalig generieren (nicht in jedem Frame neu → kein Flackern)
+        const starsSpace = generateStars(400, 400, 100);
+        const starsEarth = generateStars(400, 400, 100);
+
+        function generateStars(w, h, count) {
+            const arr = [];
+            for (let i = 0; i < count; i++) {
+                arr.push({
+                    x: Math.random() * w,
+                    y: Math.random() * h,
+                    size: Math.random() * 1.2 + 0.3,
+                    alpha: Math.random() * 0.6 + 0.3
+                });
+            }
+            return arr;
+        }
+
+        function drawStars(ctx, stars) {
+            stars.forEach(s => {
+                ctx.globalAlpha = s.alpha;
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+        }
+
         function updateSimulation() {
             const angleDeg = parseFloat(orbitSlider.value);
             const angleRad = (angleDeg * Math.PI) / 180;
-
             drawSpaceView(angleRad);
             drawEarthView(angleDeg);
             updateExplanation(angleDeg);
@@ -167,201 +194,314 @@
             updateSimulation();
         }
 
-        function drawSpaceView(angle) {
-            spaceCtx.clearRect(0, 0, spaceCanvas.width, spaceCanvas.height);
+        // ---------- ERDE (mit Kontinenten) ----------
+        function drawEarth(ctx, cx, cy, r) {
+            const oceanGrad = ctx.createRadialGradient(cx - r*0.3, cy - r*0.3, r*0.1, cx, cy, r);
+            oceanGrad.addColorStop(0, '#5ab0ff');
+            oceanGrad.addColorStop(1, '#0d3d6b');
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+            ctx.fillStyle = oceanGrad;
+            ctx.fill();
 
-            const cx = spaceCanvas.width / 2;
-            const cy = spaceCanvas.height / 2;
-            const orbitRadius = 130;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+            ctx.clip();
+            ctx.fillStyle = '#2d6e2d';
+            // Kontinent-Andeutungen
+            ctx.beginPath();
+            ctx.ellipse(cx + r*0.05, cy - r*0.05, r*0.35, r*0.45, 0.2, 0, 2*Math.PI);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(cx - r*0.5, cy + r*0.15, r*0.22, r*0.45, -0.3, 0, 2*Math.PI);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(cx + r*0.55, cy - r*0.25, r*0.28, r*0.28, 0.3, 0, 2*Math.PI);
+            ctx.fill();
+            ctx.restore();
 
-            // Sonnenstrahlen-Hinweis (Sonne links)
-            spaceCtx.fillStyle = '#f1e05a';
-            spaceCtx.font = '14px sans-serif';
-            spaceCtx.fillText("☀️ Sonne (Licht von links)", 20, 30);
-
-            // Erde in der Mitte
-            spaceCtx.beginPath();
-            spaceCtx.arc(cx, cy, 22, 0, 2 * Math.PI);
-            spaceCtx.fillStyle = '#1f6feb';
-            spaceCtx.fill();
-            spaceCtx.lineWidth = 2;
-            spaceCtx.strokeStyle = '#58a6ff';
-            spaceCtx.stroke();
-            
-            spaceCtx.fillStyle = '#ffffff';
-            spaceCtx.font = '11px sans-serif';
-            spaceCtx.fillText("Erde", cx - 13, cy + 4);
-
-            // Mond-Umlaufbahn (gestrichelt)
-            spaceCtx.beginPath();
-            spaceCtx.arc(cx, cy, orbitRadius, 0, 2 * Math.PI);
-            spaceCtx.strokeStyle = '#30363d';
-            spaceCtx.setLineDash([4, 4]);
-            spaceCtx.stroke();
-            spaceCtx.setLineDash([]);
-
-            // Mondposition berechnen (Umlauf gegen den Uhrzeigersinn)
-            const moonX = cx + orbitRadius * Math.cos(angle);
-            const moonY = cy + orbitRadius * Math.sin(angle);
-
-            // Mond zeichnen
-            spaceCtx.beginPath();
-            spaceCtx.arc(moonX, moonY, 14, 0, 2 * Math.PI);
-            spaceCtx.fillStyle = '#8b949e';
-            spaceCtx.fill();
-            spaceCtx.strokeStyle = '#c9d1d9';
-            spaceCtx.stroke();
-
-            // Beleuchtete Hälfte des Mondes visualisieren (Sonne kommt von links -> x < cx im Weltall-Modell, korrigiert auf Lichtrichtung)
-            // Da Winkel 0 = Neumond (zwischen Erde und Sonne, d.h. links von der Erde)
-            // Lassen wir den Mond-Orbit so laufen: Winkel 0 ist bei x = cx - orbitRadius (Sonne strahlt von links).
-            // Passen wir die Koordinaten an:
+            // Atmosphären-Glow
+            const atmoGrad = ctx.createRadialGradient(cx, cy, r*0.95, cx, cy, r*1.2);
+            atmoGrad.addColorStop(0, 'rgba(100, 180, 255, 0.4)');
+            atmoGrad.addColorStop(1, 'rgba(100, 180, 255, 0)');
+            ctx.beginPath();
+            ctx.arc(cx, cy, r*1.2, 0, 2 * Math.PI);
+            ctx.fillStyle = atmoGrad;
+            ctx.fill();
         }
 
-        // Wir schreiben die Weltall-Ansicht präzise für: 0° = Neumond (links), 90° = Oben, 180° = Vollmond (rechts), 270° = Unten
+        // ---------- MONDIKRATER ----------
+        function drawCraters(ctx, cx, cy, r) {
+            const craters = [
+                { x: -0.40, y: -0.30, size: 0.08 },
+                { x:  0.20, y: -0.40, size: 0.05 },
+                { x:  0.50, y:  0.10, size: 0.10 },
+                { x: -0.20, y:  0.30, size: 0.07 },
+                { x:  0.15, y:  0.50, size: 0.06 },
+                { x: -0.55, y:  0.20, size: 0.04 },
+                { x:  0.35, y: -0.15, size: 0.045 },
+                { x: -0.15, y: -0.15, size: 0.03 },
+                { x: -0.30, y: -0.50, size: 0.055 },
+                { x:  0.25, y:  0.40, size: 0.04 },
+                { x:  0.55, y: -0.35, size: 0.035 },
+                { x: -0.05, y:  0.10, size: 0.05 }
+            ];
+            craters.forEach(c => {
+                const px = cx + c.x * r;
+                const py = cy + c.y * r;
+                const pr = c.size * r;
+                ctx.beginPath();
+                ctx.arc(px, py, pr, 0, 2 * Math.PI);
+                ctx.fillStyle = 'rgba(120, 120, 110, 0.5)';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(px - pr*0.15, py - pr*0.15, pr*0.65, 0, 2 * Math.PI);
+                ctx.fillStyle = 'rgba(240, 240, 230, 0.2)';
+                ctx.fill();
+            });
+        }
+
+        // ---------- MODELLEBENE (Weltall) ----------
         function drawSpaceView(angleRad) {
             spaceCtx.clearRect(0, 0, spaceCanvas.width, spaceCanvas.height);
             const cx = spaceCanvas.width / 2;
             const cy = spaceCanvas.height / 2;
             const orbitRadius = 130;
+            const moonRadius = 14;
 
-            // Sonne links andeuten
-            spaceCtx.fillStyle = '#f1e05a';
-            spaceCtx.font = '14px sans-serif';
-            spaceCtx.fillText("☀️ Licht von der Sonne (links)", 15, 25);
+            // Sterne
+            drawStars(spaceCtx, starsSpace);
+
+            // Lichtstrahlen
+            spaceCtx.strokeStyle = 'rgba(255, 220, 100, 0.12)';
+            spaceCtx.lineWidth = 1;
+            for (let i = 0; i < 25; i++) {
+                const y = 10 + i * (spaceCanvas.height - 20) / 24;
+                spaceCtx.beginPath();
+                spaceCtx.moveTo(70, y);
+                spaceCtx.lineTo(spaceCanvas.width, y);
+                spaceCtx.stroke();
+            }
+
+            // Sonne links
+            const sunX = -30, sunY = cy, sunR = 90;
+            const sunGlow = spaceCtx.createRadialGradient(sunX, sunY, sunR * 0.5, sunX, sunY, sunR * 2.5);
+            sunGlow.addColorStop(0, 'rgba(255, 200, 60, 0.4)');
+            sunGlow.addColorStop(0.5, 'rgba(255, 160, 40, 0.15)');
+            sunGlow.addColorStop(1, 'rgba(255, 140, 20, 0)');
+            spaceCtx.fillStyle = sunGlow;
+            spaceCtx.beginPath();
+            spaceCtx.arc(sunX, sunY, sunR * 2.5, 0, 2 * Math.PI);
+            spaceCtx.fill();
+
+            const sunDisk = spaceCtx.createRadialGradient(sunX - sunR*0.3, sunY - sunR*0.3, sunR*0.1, sunX, sunY, sunR);
+            sunDisk.addColorStop(0, '#fffde0');
+            sunDisk.addColorStop(0.5, '#ffdd55');
+            sunDisk.addColorStop(1, '#ff9800');
+            spaceCtx.fillStyle = sunDisk;
+            spaceCtx.beginPath();
+            spaceCtx.arc(sunX, sunY, sunR, 0, 2 * Math.PI);
+            spaceCtx.fill();
+
+            spaceCtx.fillStyle = '#ffd54a';
+            spaceCtx.font = 'bold 13px sans-serif';
+            spaceCtx.fillText("☀️ Sonne", 20, cy - sunR - 8);
+            spaceCtx.font = '11px sans-serif';
+            spaceCtx.fillStyle = 'rgba(255, 220, 100, 0.75)';
+            spaceCtx.fillText("Licht →", 25, cy + sunR + 18);
 
             // Umlaufbahn
             spaceCtx.beginPath();
             spaceCtx.arc(cx, cy, orbitRadius, 0, 2 * Math.PI);
-            spaceCtx.strokeStyle = '#30363d';
+            spaceCtx.strokeStyle = 'rgba(88, 166, 255, 0.25)';
             spaceCtx.setLineDash([4, 4]);
+            spaceCtx.lineWidth = 1;
             spaceCtx.stroke();
             spaceCtx.setLineDash([]);
 
             // Erde
-            spaceCtx.beginPath();
-            spaceCtx.arc(cx, cy, 20, 0, 2 * Math.PI);
-            spaceCtx.fillStyle = '#1f6feb';
-            spaceCtx.fill();
-            spaceCtx.strokeStyle = '#58a6ff';
-            spaceCtx.stroke();
-            spaceCtx.fillStyle = '#fff';
-            spaceCtx.font = '10px sans-serif';
-            spaceCtx.fillText("Erde", cx - 11, cy + 4);
+            drawEarth(spaceCtx, cx, cy, 20);
 
-            // Mond Position (Winkel 0 ist links / Neumond)
-            // x = cx - orbitRadius * cos(angle) etc. Um es intuitiv zu machen:
-            // Winkel 0: Mond steht links (Neumond)
+            // Mond
             const moonX = cx - orbitRadius * Math.cos(angleRad);
             const moonY = cy - orbitRadius * Math.sin(angleRad);
 
-            // Mond-Halbierung (Sonne beleuchtet immer die linke Hälfte im Weltall)
+            // Dunkle Basis
             spaceCtx.beginPath();
-            spaceCtx.arc(moonX, moonY, 14, 0, 2 * Math.PI);
-            spaceCtx.fillStyle = '#21262d'; // schattige Seite
+            spaceCtx.arc(moonX, moonY, moonRadius, 0, 2 * Math.PI);
+            spaceCtx.fillStyle = '#2a2a35';
             spaceCtx.fill();
 
-            // Da Sonne von links scheint, ist die linke Hälfte des Mondes beleuchtet
+            // Beleuchtete (linke) Hälfte – Sonne kommt von links
+            spaceCtx.save();
             spaceCtx.beginPath();
-            spaceCtx.arc(moonX, moonY, 14, -Math.PI / 2, Math.PI / 2, false);
-            spaceCtx.fillStyle = '#e6edf3'; // beleuchtete Seite
+            spaceCtx.arc(moonX, moonY, moonRadius, Math.PI/2, -Math.PI/2, false);
+            spaceCtx.clip();
+            spaceCtx.beginPath();
+            spaceCtx.arc(moonX, moonY, moonRadius, 0, 2 * Math.PI);
+            spaceCtx.fillStyle = '#e8e8d8';
             spaceCtx.fill();
-            spaceCtx.strokeStyle = '#30363d';
+            drawCraters(spaceCtx, moonX, moonY, moonRadius);
+            spaceCtx.restore();
+
+            // Umriss
+            spaceCtx.beginPath();
+            spaceCtx.arc(moonX, moonY, moonRadius, 0, 2 * Math.PI);
+            spaceCtx.strokeStyle = 'rgba(180, 180, 180, 0.3)';
+            spaceCtx.lineWidth = 1;
             spaceCtx.stroke();
 
-            spaceCtx.fillStyle = '#8b949e';
+            spaceCtx.fillStyle = '#c9d1d9';
             spaceCtx.font = '10px sans-serif';
-            spaceCtx.fillText("Mond", moonX - 14, moonY - 18);
+            spaceCtx.fillText("Mond", moonX - 12, moonY - moonRadius - 5);
         }
 
+        // ---------- BEOBACHTUNGSEBENE (Erde) ----------
         function drawEarthView(angleDeg) {
             earthCtx.clearRect(0, 0, earthCanvas.width, earthCanvas.height);
             const cx = earthCanvas.width / 2;
             const cy = earthCanvas.height / 2;
-            const radius = 120;
+            const radius = 100;
 
-            // Kreisumriss des Mondes aus Sicht der Erde
+            // Sterne
+            drawStars(earthCtx, starsEarth);
+
+            // Horizont / Boden
+            const groundY = earthCanvas.height - 25;
+            const groundGrad = earthCtx.createLinearGradient(0, groundY - 20, 0, earthCanvas.height);
+            groundGrad.addColorStop(0, 'rgba(15, 25, 15, 0)');
+            groundGrad.addColorStop(0.5, 'rgba(15, 30, 15, 0.6)');
+            groundGrad.addColorStop(1, 'rgba(8, 15, 8, 0.95)');
+            earthCtx.fillStyle = groundGrad;
+            earthCtx.fillRect(0, groundY - 20, earthCanvas.width, earthCanvas.height - groundY + 20);
+
+            // Hügel-Silhouette
+            earthCtx.beginPath();
+            earthCtx.moveTo(0, groundY + 5);
+            for (let x = 0; x <= earthCanvas.width; x += 10) {
+                const y = groundY + 5 - Math.sin(x * 0.015) * 8 - Math.sin(x * 0.05) * 3;
+                earthCtx.lineTo(x, y);
+            }
+            earthCtx.lineTo(earthCanvas.width, earthCanvas.height);
+            earthCtx.lineTo(0, earthCanvas.height);
+            earthCtx.closePath();
+            earthCtx.fillStyle = 'rgba(10, 20, 10, 0.95)';
+            earthCtx.fill();
+
+            // Mond-Glow
+            const glowGrad = earthCtx.createRadialGradient(cx, cy, radius * 0.9, cx, cy, radius * 1.5);
+            glowGrad.addColorStop(0, 'rgba(230, 230, 210, 0.12)');
+            glowGrad.addColorStop(1, 'rgba(230, 230, 210, 0)');
+            earthCtx.fillStyle = glowGrad;
+            earthCtx.beginPath();
+            earthCtx.arc(cx, cy, radius * 1.5, 0, 2 * Math.PI);
+            earthCtx.fill();
+
+            // Dunkle Grundscheibe
             earthCtx.beginPath();
             earthCtx.arc(cx, cy, radius, 0, 2 * Math.PI);
-            earthCtx.fillStyle = '#161b22';
+            earthCtx.fillStyle = '#16161e';
             earthCtx.fill();
-            earthCtx.strokeStyle = '#30363d';
-            earthCtx.lineWidth = 2;
-            earthCtx.stroke();
 
-            // Berechnung der Sichelform basierend auf dem Winkel (Phasenformel für grafische Annäherung)
-            // angleDeg: 0 = Neumond, 90 = Zunehmend, 180 = Vollmond, 270 = Abnehmend
+            // Phase berechnen
+            const phaseAngle = (angleDeg / 360) * 2 * Math.PI;
+            const cosPhase = Math.cos(phaseAngle);
+            const waxing = angleDeg <= 180;
+            const termWidth = Math.max(radius * Math.abs(cosPhase), 0.5);
+
             earthCtx.save();
             earthCtx.beginPath();
-            earthCtx.arc(cx, cy, radius, 0, 2 * Math.PI);
-            earthCtx.clip();
 
-            earthCtx.fillStyle = '#f0f6fc'; // Beleuchteter Bereich
-
-            const rad = (angleDeg * Math.PI) / 180;
-            
-            // Mathematische Simulation der Mondscheibe aus Erdperspektive
-            earthCtx.beginPath();
-            if (angleDeg <= 180) {
-                // Zunehmende Phase (Beleuchtung kommt von rechts aus Sicht der Erde)
-                // Bei 0° (Neumond) -> alles dunkel
-                // Bei 90° (Halbmond) -> rechte Hälfte hell
-                // Bei 180° (Vollmond) -> alles hell
-                let factor = Math.cos(rad); // 1 bei Neumond, 0 bei Halbmond, -1 bei Vollmond
+            if (waxing) {
+                // Rechte Hälfte außen
                 earthCtx.arc(cx, cy, radius, -Math.PI/2, Math.PI/2, false);
-                earthCtx.ellipse(cx, cy, Math.abs(radius * factor), radius, 0, Math.PI/2, -Math.PI/2, factor > 0);
+                if (cosPhase >= 0) {
+                    // Sichel: Terminator wölbt nach rechts
+                    earthCtx.ellipse(cx, cy, termWidth, radius, 0, Math.PI/2, -Math.PI/2, true);
+                } else {
+                    // Buckelmond: Terminator wölbt nach links
+                    earthCtx.ellipse(cx, cy, termWidth, radius, 0, Math.PI/2, -Math.PI/2, false);
+                }
             } else {
-                // Abnehmende Phase (Beleuchtung zieht sich nach links zurück)
-                let factor = Math.cos(rad);
+                // Linke Hälfte außen
                 earthCtx.arc(cx, cy, radius, Math.PI/2, -Math.PI/2, false);
-                earthCtx.ellipse(cx, cy, Math.abs(radius * factor), radius, 0, -Math.PI/2, Math.PI/2, factor < 0);
+                if (cosPhase >= 0) {
+                    // Sichel: Terminator wölbt nach links
+                    earthCtx.ellipse(cx, cy, termWidth, radius, 0, -Math.PI/2, Math.PI/2, true);
+                } else {
+                    // Buckelmond: Terminator wölbt nach rechts
+                    earthCtx.ellipse(cx, cy, termWidth, radius, 0, -Math.PI/2, Math.PI/2, false);
+                }
             }
+            earthCtx.closePath();
+            earthCtx.fillStyle = '#e8e8d8';
             earthCtx.fill();
+
+            // Krater nur auf beleuchtetem Bereich
+            earthCtx.clip();
+            drawCraters(earthCtx, cx, cy, radius);
             earthCtx.restore();
+
+            // Umriss
+            earthCtx.beginPath();
+            earthCtx.arc(cx, cy, radius, 0, 2 * Math.PI);
+            earthCtx.strokeStyle = 'rgba(200, 200, 180, 0.15)';
+            earthCtx.lineWidth = 1.5;
+            earthCtx.stroke();
+
+            // Beobachter-Silhouette
+            const observerX = earthCanvas.width * 0.85;
+            const observerY = groundY + 5 - Math.sin(observerX * 0.015) * 8 - Math.sin(observerX * 0.05) * 3;
+            earthCtx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+            earthCtx.beginPath();
+            earthCtx.arc(observerX, observerY - 12, 3, 0, 2 * Math.PI);
+            earthCtx.fill();
+            earthCtx.beginPath();
+            earthCtx.moveTo(observerX - 3, observerY);
+            earthCtx.lineTo(observerX - 2, observerY - 9);
+            earthCtx.lineTo(observerX + 2, observerY - 9);
+            earthCtx.lineTo(observerX + 3, observerY);
+            earthCtx.closePath();
+            earthCtx.fill();
         }
 
+        // ---------- ERKLÄRUNGSTEXT ----------
         function updateExplanation(angle) {
             let name = "";
             let text = "";
-
-            // Normalisierung auf 0-360
-            angle = angle % 360;
-            if (angle < 0) angle += 360;
+            angle = ((angle % 360) + 360) % 360;
 
             if (angle < 15 || angle > 345) {
                 name = "Neumond";
-                text = "<strong>Beobachtung:</strong> Am Himmel ist kein Mond zu sehen.<br><strong>Modell-Erklärung:</strong> Der Mond steht genau zwischen Erde und Sonne. Seine unbeleuchtete Rückseite zeigt zur Erde.";
+                text = "<strong>Beobachtung:</strong> Am Nachthimmel ist kein Mond zu sehen.<br><strong>Modell-Erklärung:</strong> Der Mond steht zwischen Erde und Sonne. Seine beleuchtete Hälfte zeigt von der Erde weg – wir sehen nur die dunkle Rückseite.";
+            } else if (angle < 75) {
+                name = "Zunehmende Sichel";
+                text = "<strong>Beobachtung:</strong> Eine schmale, helle Sichel ist rechts am Abendhimmel sichtbar.<br><strong>Modell-Erklärung:</strong> Wir blicken schräg auf die beleuchtete Hälfte des Mondes – nur ein kleiner Teil ist von der Erde aus sichtbar.";
+            } else if (angle <= 105) {
+                name = "Zunehmender Halbmond (Erstes Viertel)";
+                text = "<strong>Beobachtung:</strong> Die rechte Hälfte des Mondes leuchtet hell.<br><strong>Modell-Erklärung:</strong> Der Mond steht im 90°-Winkel zur Sonne (von der Erde aus gesehen). Wir sehen genau die Hälfte der beleuchteten Seite.";
             } else if (angle < 165) {
-                if (angle < 75) {
-                    name = "Zunehmende Sichel";
-                    text = "<strong>Beobachtung:</strong> Eine schmale Sichel rechts ist am Abendhimmel sichtbar.<br><strong>Modell-Erklärung:</strong> Wir blicken schräg auf die beleuchtete Hälfte des Mondes.";
-                } else if (angle <= 105) {
-                    name = "Zunehmender Halbmond (Erstes Viertel)";
-                    text = "<strong>Beobachtung:</strong> Die rechte Hälfte des Mondes leuchtet hell.<br><strong>Modell-Erklärung:</strong> Der Mond steht im 90-Grad-Winkel zur Sonne von der Erde aus gesehen.";
-                } else {
-                    name = "Zunehmender Mond (Fast Vollmond)";
-                    text = "<strong>Beobachtung:</strong> Mehr als die Hälfte des Mondes ist von rechts her beleuchtet (Buckelmond).";
-                }
+                name = "Zunehmender Mond (Buckelmond)";
+                text = "<strong>Beobachtung:</strong> Mehr als die Hälfte des Mondes ist von rechts her beleuchtet.<br><strong>Modell-Erklärung:</strong> Die beleuchtete Seite dreht sich zunehmend zur Erde – wir sehen einen Großteil der hellen Hälfte.";
             } else if (angle <= 195) {
                 name = "Vollmond";
-                text = "<strong>Beobachtung:</strong> Eine vollständige, helle Mondscheibe leuchtet die ganze Nacht.<br><strong>Modell-Erklärung:</strong> Die Erde steht zwischen Sonne und Mond. Wir blicken direkt auf die voll beleuchtete Vorderseite.";
+                text = "<strong>Beobachtung:</strong> Eine vollständige, helle Mondscheibe leuchtet die ganze Nacht.<br><strong>Modell-Erklärung:</strong> Die Erde steht zwischen Sonne und Mond. Wir blicken direkt auf die voll beleuchtete Seite des Mondes.";
+            } else if (angle < 255) {
+                name = "Abnehmender Mond (Buckelmond)";
+                text = "<strong>Beobachtung:</strong> Der Mond wird von links nach rechts kleiner.<br><strong>Modell-Erklärung:</strong> Der Mond hat die Vollmondposition überschritten – die beleuchtete Seite dreht sich wieder von der Erde weg.";
+            } else if (angle <= 285) {
+                name = "Abnehmender Halbmond (Letztes Viertel)";
+                text = "<strong>Beobachtung:</strong> Die linke Hälfte des Mondes leuchtet (in den Morgenstunden sichtbar).<br><strong>Modell-Erklärung:</strong> Der Mond steht wieder im 90°-Winkel zur Sonne – wir sehen die linke Hälfte der beleuchteten Seite.";
             } else {
-                if (angle < 255) {
-                    name = "Abnehmender Mond";
-                    text = "<strong>Beobachtung:</strong> Der Mond wird von links nach rechts kleiner (abnehmender Buckelmond).";
-                } else if (angle <= 285) {
-                    name = "Abnehmender Halbmond (Letztes Viertel)";
-                    text = "<strong>Beobachtung:</strong> Die linke Hälfte des Mondes leuchtet.<br><strong>Modell-Erklärung:</strong> Der Mond hat drei Viertel seiner Umlaufbahn absolviert.";
-                } else {
-                    name = "Abnehmende Sichel";
-                    text = "<strong>Beobachtung:</strong> Eine schmale Sichel ist in den Morgenstunden am Osthimmel sichtbar.<br><strong>Modell-Erklärung:</strong> Der Mond nähert sich wieder seiner Position zwischen Erde und Sonne.";
-                }
+                name = "Abnehmende Sichel";
+                text = "<strong>Beobachtung:</strong> Eine schmale Sichel ist links in den Morgenstunden am Osthimmel sichtbar.<br><strong>Modell-Erklärung:</strong> Der Mond nähert sich wieder seiner Position zwischen Erde und Sonne.";
             }
 
             phaseNameEl.innerText = name;
+            explanationText.innerHTML = text;
         }
 
-        // Initialisierung beim Laden
         orbitSlider.addEventListener('input', updateSimulation);
         updateSimulation();
     </script>
