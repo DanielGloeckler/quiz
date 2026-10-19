@@ -190,8 +190,8 @@
   /* ------------------------------------------------------------------ */
   function initParticles() {
     particles = [];
-    const startX = W * 0.15;
-    const endX = W * 0.85; // Ohr ist bei 0.85
+    const startX = W * 0.18; // Etwas weiter rechts, da die Box mehr Platz braucht
+    const endX = W * 0.85; 
     const startY = H * 0.15;
     const endY = H * 0.70;
 
@@ -226,7 +226,7 @@
     microView.w = W * 0.8;
     microView.h = H * 0.18;
 
-    musicBoxX = W * 0.08;
+    musicBoxX = W * 0.09;
     earX = W * 0.88;
   }
 
@@ -273,41 +273,70 @@
   /*  Zeichnen                                                           */
   /* ------------------------------------------------------------------ */
   
-  // Musikbox zeichnen
+  // Musikbox zeichnen (mit Vibration und Schallwellen)
   function drawMusicBox() {
-    const lx = musicBoxX;
+    const baseLx = musicBoxX;
     const ly = H * 0.45; 
-    const size = 45;
+    const size = 50;
 
-    // Box-Gehäuse
+    // 1. Vibration des gesamten Gehäuses (leichtes Zittern)
+    // Wir nehmen eine hochfrequente Sinuswelle, die aber für das Auge sichtbar bleibt.
+    const vibrate = Math.sin(time * 50) * 1.5;
+    const lx = baseLx + vibrate;
+
+    // 2. Schallwellen-Ringe (die von der Box ausgehen)
+    ctx.save();
+    for (let i = 0; i < 3; i++) {
+      const ringPhase = (time * 2 + i * 0.5) % 3; // 0 bis 3
+      const ringRadius = ringPhase * 40; // Radius wächst
+      const opacity = 1 - (ringPhase / 3); // Verblasst
+      
+      if (opacity > 0) {
+        ctx.beginPath();
+        ctx.arc(lx + size/2, ly, ringRadius, -Math.PI/3, Math.PI/3);
+        ctx.strokeStyle = `rgba(255, 209, 102, ${opacity * 0.4})`;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+
+    // 3. Box-Gehäuse
     ctx.fillStyle = '#1e293b';
     ctx.strokeStyle = '#334155';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(lx - size/2, ly - size, size, size*2, 6);
+    ctx.roundRect(lx - size/2, ly - size, size, size*2, 8);
     ctx.fill();
     ctx.stroke();
 
-    // Schalltrichter / Membran
-    const pulse = Math.sin(frequency / 100 * time) * 8; // Stärkere Bewegung
+    // 4. Membran / Schalltrichter (schwingt vor und zurück)
+    // Die Membran bewegt sich relativ zur Box.
+    const pulse = Math.sin(frequency / 100 * time) * 12; // Stärkerer Ausschlag
+    
     ctx.fillStyle = '#475569';
     ctx.beginPath();
-    ctx.ellipse(lx + size/2, ly + pulse, 10, size * 0.7, 0, 0, Math.PI * 2);
+    // Eine Art Kegel, der sich vor und zurück bewegt
+    ctx.moveTo(lx + size/2, ly - size * 0.8);
+    ctx.quadraticCurveTo(lx + size/2 + pulse, ly, lx + size/2, ly + size * 0.8);
+    ctx.lineTo(lx + size/2 - 5, ly + size * 0.8);
+    ctx.quadraticCurveTo(lx + size/2 + pulse - 5, ly, lx + size/2 - 5, ly - size * 0.8);
+    ctx.closePath();
     ctx.fill();
     ctx.strokeStyle = '#64748b';
     ctx.stroke();
 
-    // Noten / Dekoration
+    // 5. Noten / Dekoration
     ctx.fillStyle = '#ffd166';
-    ctx.font = '14px sans-serif';
+    ctx.font = '16px sans-serif';
     ctx.fillText('♪', lx - 15, ly - 10);
     ctx.fillText('♫', lx + 5, ly + 15);
 
-    // Beschriftung
+    // 6. Beschriftung
     ctx.fillStyle = '#a9bcd4';
     ctx.font = 'bold 11px system-ui, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Musikbox', lx, ly - size - 10);
+    ctx.fillText('Musikbox', lx, ly - size - 15);
   }
 
   // Ohr zeichnen
@@ -335,9 +364,8 @@
     // Trommelfell (schwingt basierend auf der Welle am Ohr)
     const k = (frequency / 100) * 0.5;
     const omega = k * waveSpeed;
-    // Druck am Ohr berechnen
     const pressureAtEar = Math.cos(k * earX - omega * time);
-    const drumDisplacement = pressureAtEar * 4; // Ausschlag
+    const drumDisplacement = pressureAtEar * 5; // Ausschlag
 
     ctx.fillStyle = '#94a3b8';
     ctx.beginPath();
@@ -363,9 +391,6 @@
     ctx.strokeStyle = 'rgba(255, 170, 40, 0.4)';
     ctx.lineWidth = 1.5;
     
-    // Wir zeichnen nur Linien zwischen Partikeln, die in X-Richtung nahe beieinander liegen
-    // und sich in einem Verdichtungsbereich befinden.
-    // Der Einfachheit halber verbinden wir Partikel, die im gleichen "Cluster" sind.
     const k = (frequency / 100) * 0.5;
     const omega = k * waveSpeed;
 
@@ -374,12 +399,10 @@
         const p1 = particles[i];
         const p2 = particles[j];
 
-        // Nur Partikel in der gleichen Reihe vergleichen
         if (Math.abs(p1.baseY - p2.baseY) > 5) continue;
 
         const dist = Math.abs(p1.x - p2.x);
         if (dist < GRID_SPACING * 0.9) {
-           // Prüfen ob wir in einer Verdichtung sind
            const density = -Math.cos(k * p1.baseX - omega * time);
            if (density > 0.5) {
              ctx.beginPath();
@@ -481,7 +504,6 @@
         ctx.fillStyle = p.color;
         ctx.fill();
         
-        // Glow
         if (showColors && p.color.includes('255')) {
           ctx.beginPath();
           ctx.arc(mx, my, 9, 0, Math.PI * 2);
@@ -496,7 +518,6 @@
   function draw() {
     ctx.clearRect(0, 0, W, H);
     
-    // Hintergrund
     const bg = ctx.createLinearGradient(0, 0, 0, H);
     bg.addColorStop(0, '#0b111a');
     bg.addColorStop(1, '#131c2b');
@@ -521,10 +542,10 @@
     drawMusicBox();
     drawEar();
 
-    // Kettenreaktion (Hauptansicht)
+    // Kettenreaktion
     drawChainReaction();
 
-    // Partikel (Hauptansicht)
+    // Partikel
     for (const p of particles) {
       ctx.beginPath();
       ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
@@ -546,7 +567,7 @@
     if (speedFactor < 0.15) {
       tip = 'Extreme Zeitlupe: Sieh dir im Mikroskop an, wie die Moleküle bei Rot zusammenrücken und sich gegenseitig anstoßen (Kettenreaktion).';
     } else if (speedFactor < 0.5) {
-      tip = 'Zeitlupe: Die Musikbox schwingt. Die Verdichtungen (rot) wandern zum Ohr. Das Trommelfell beginnt zu schwingen.';
+      tip = 'Zeitlupe: Die Musikbox schwingt sichtbar. Die Verdichtungen (rot) wandern zum Ohr. Das Trommelfell beginnt zu schwingen.';
     } else {
       tip = 'Normale Geschwindigkeit: Der Schall breitet sich schnell aus und erreicht das Ohr.';
     }
