@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optische Phänomene im Weltall</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0d1117; color: #c9d1d9; margin: 0; padding: 20px;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        h1 { color: #58a6ff; margin: 0 0 5px 0; font-size: 1.8rem; text-align: center; }
+        .subtitle { font-size: 1rem; color: #8b949e; margin-bottom: 20px; text-align: center; }
+        .mode-tabs {
+            display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center;
+        }
+        .mode-btn {
+            background-color: #21262d; color: #c9d1d9;
+            border: 1px solid #30363d; padding: 10px 18px;
+            border-radius: 6px; cursor: pointer; font-weight: 600;
+            font-size: 0.95rem; transition: all 0.2s;
+        }
+        .mode-btn:hover { background-color: #30363d; color: #58a6ff; }
+        .mode-btn.active {
+            background-color: #1f6feb; color: #fff; border-color: #58a6ff;
+            box-shadow: 0 0 10px rgba(88, 166, 255, 0.4);
+        }
+        .container {
+            display: flex; flex-wrap: wrap; gap: 20px;
+            justify-content: center; max-width: 1100px; width: 100%;
+        }
+        .card {
+            background-color: #161b22; border: 1px solid #30363d;
+            border-radius: 8px; padding: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .card h3 { margin: 0 0 10px 0; color: #c9d1d9; font-size: 1rem; }
+        canvas { background-color: #010409; border-radius: 6px; border: 1px solid #30363d; display: block; }
+        .controls {
+            margin-top: 20px; width: 100%; max-width: 800px;
+            background-color: #161b22; border: 1px solid #30363d;
+            padding: 18px; border-radius: 8px;
+            display: flex; flex-direction: column; gap: 15px;
+        }
+        .slider-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-weight: bold; color: #58a6ff; font-size: 0.95rem; }
+        input[type=range] { width: 100%; accent-color: #58a6ff; }
+        .slider-hint { font-size: 0.8rem; color: #8b949e; }
+        #tiltGroup { display: none; }
+        .info-box {
+            background-color: #1f242c; border-left: 4px solid #58a6ff;
+            padding: 12px; border-radius: 0 6px 6px 0;
+            font-size: 0.95rem; line-height: 1.5;
+        }
+        .status-line {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 1.1rem; font-weight: bold; padding: 8px 12px;
+            background: #0d1117; border-radius: 6px;
+            border: 1px solid #30363d;
+        }
+        .status-dot {
+            width: 12px; height: 12px; border-radius: 50%;
+            background: #484f58; flex-shrink: 0;
+        }
+        .status-dot.eclipse { background: #f85149; box-shadow: 0 0 8px #f85149; }
+        .status-dot.aligned { background: #3fb950; box-shadow: 0 0 8px #3fb950; }
+    </style>
+</head>
+<body>
+
+    <h1>Optische Phänomene im Weltall</h1>
+    <div class="subtitle">Mondphasen · Sonnenfinsternis · Mondfinsternis</div>
+
+    <div class="mode-tabs">
+        <button class="mode-btn active" data-mode="phases">🌙 Mondphasen</button>
+        <button class="mode-btn" data-mode="solar">☀️ Sonnenfinsternis</button>
+        <button class="mode-btn" data-mode="lunar">🔴 Mondfinsternis</button>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h3>Modellebene (Weltraum)</h3>
+            <canvas id="spaceCanvas" width="600" height="400"></canvas>
+        </div>
+        <div class="card">
+            <h3>Beobachtungsebene (Erde)</h3>
+            <canvas id="earthCanvas" width="400" height="400"></canvas>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="status-line">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="phaseName">Neumond</span>
+        </div>
+
+        <div class="slider-group">
+            <label for="angleSlider">Mondposition auf der Umlaufbahn: <span id="angleVal">0°</span></label>
+            <input type="range" id="angleSlider" min="0" max="360" value="0" step="1">
+        </div>
+
+        <div class="slider-group" id="tiltGroup">
+            <label for="tiltSlider">Bahnneigung des Mondes: <span id="tiltVal">0°</span></label>
+            <input type="range" id="tiltSlider" min="0" max="15" value="0" step="0.5">
+            <span class="slider-hint">0° = perfekt ausgerichtet (Finsternis möglich) · &gt; 5° = Finsternis unmöglich (Realität: ca. 5°)</span>
+        </div>
+
+        <div class="info-box" id="infoBox"></div>
+    </div>
+
+    <script>
+        const spaceCanvas = document.getElementById('spaceCanvas');
+        const spaceCtx = spaceCanvas.getContext('2d');
+        const earthCanvas = document.getElementById('earthCanvas');
+        const earthCtx = earthCanvas.getContext('2d');
+        const angleSlider = document.getElementById('angleSlider');
+        const tiltSlider = document.getElementById('tiltSlider');
+        const angleVal = document.getElementById('angleVal');
+        const tiltVal = document.getElementById('tiltVal');
+        const infoBox = document.getElementById('infoBox');
+        const phaseNameEl = document.getElementById('phaseName');
+        const statusDot = document.getElementById('statusDot');
+
+        const state = { mode: 'phases', angle: 0, tilt: 0 };
+
+        const ORBIT_R = 120;
+        const EARTH_R = 22;
+        const MOON_R = 14;
+        const CX = 350, CY = 200;  // Earth center in space canvas
+
+        const starsSpace = generateStars(600, 400, 150);
+        const starsEarth = generateStars(400, 400, 120);
+
+        function generateStars(w, h, n) {
+            const arr = [];
+            for (let i = 0; i < n; i++) arr.push({
+                x: Math.random() * w, y: Math.random() * h,
+                size: Math.random() * 1.2 + 0.3,
+                alpha: Math.random() * 0.6 + 0.3
+            });
+            return arr;
+        }
+        function drawStars(ctx, stars) {
+            stars.forEach(s => {
+                ctx.globalAlpha = s.alpha;
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+        }
+
+        // Oblique projection (x=Sun-Earth axis, y=depth, z=up)
+        function proj(x, y, z) {
+            return { sx: CX + x + 0.35 * y, sy: CY - z - 0.22 * y };
+        }
+
+        function drawSun(ctx, cx, cy, r) {
+            const glow = ctx.createRadialGradient(cx, cy, r * 0.8, cx, cy, r * 2.8);
+            glow.addColorStop(0, 'rgba(255,220,100,0.5)');
+            glow.addColorStop(0.5, 'rgba(255,160,40,0.2)');
+            glow.addColorStop(1, 'rgba(255,160,40,0)');
+            ctx.beginPath(); ctx.arc(cx, cy, r * 2.8, 0, 2 * Math.PI);
+            ctx.fillStyle = glow; ctx.fill();
+            const disk = ctx.createRadialGradient(cx - r*0.3, cy - r*0.3, r*0.1, cx, cy, r);
+            disk.addColorStop(0, '#fffde0'); disk.addColorStop(0.5, '#ffdd55');
+            disk.addColorStop(1, '#ff9800');
+            ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+            ctx.fillStyle = disk; ctx.fill();
+        }
+
+        function drawEarth(ctx, cx, cy, r) {
+            const grad = ctx.createRadialGradient(cx - r*0.3, cy - r*0.3, r*0.1, cx, cy, r);
+            grad.addColorStop(0, '#5ab0ff'); grad.addColorStop(1, '#0d3d6b');
+            ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+            ctx.fillStyle = grad; ctx.fill();
+            ctx.save();
+            ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.clip();
+            ctx.fillStyle = '#2d6e2d';
+            ctx.beginPath(); ctx.ellipse(cx + r*0.05, cy - r*0.05, r*0.35, r*0.45, 0.2, 0, 2*Math.PI); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(cx - r*0.5, cy + r*0.15, r*0.22, r*0.45, -0.3, 0, 2*Math.PI); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(cx + r*0.55, cy - r*0.25, r*0.28, r*0.28, 0.3, 0, 2*Math.PI); ctx.fill();
+            ctx.restore();
+            const atmo = ctx.createRadialGradient(cx, cy, r*0.95, cx, cy, r*1.2);
+            atmo.addColorStop(0, 'rgba(100,180,255,0.4)');
+            atmo.addColorStop(1, 'rgba(100,180,255,0)');
+            ctx.beginPath(); ctx.arc(cx, cy, r*1.2, 0, 2 * Math.PI);
+            ctx.fillStyle = atmo; ctx.fill();
+        }
+
+        function drawCraters(ctx, cx, cy, r) {
+            const craters = [
+                { x: -0.40, y: -0.30, size: 0.08 }, { x:  0.20, y: -0.40, size: 0.05 },
+                { x:  0.50, y:  0.10, size: 0.10 }, { x: -0.20, y:  0.30, size: 0.07 },
+                { x:  0.15, y:  0.50, size: 0.06 }, { x: -0.55, y:  0.20, size: 0.04 },
+                { x:  0.35, y: -0.15, size: 0.045 }, { x: -0.15, y: -0.15, size: 0.03 },
+                { x: -0.30, y: -0.50, size: 0.055 }, { x:  0.25, y:  0.40, size: 0.04 }
+            ];
+            craters.forEach(c => {
+                const px = cx + c.x * r, py = cy + c.y * r, pr = c.size * r;
+                ctx.beginPath(); ctx.arc(px, py, pr, 0, 2 * Math.PI);
+                ctx.fillStyle = 'rgba(120,120,110,0.5)'; ctx.fill();
+                ctx.beginPath(); ctx.arc(px - pr*0.15, py - pr*0.15, pr*0.65, 0, 2 * Math.PI);
+                ctx.fillStyle = 'rgba(240,240,230,0.2)'; ctx.fill();
+            });
+        }
+
+        function drawMoonInSpace(ctx, mx, my, mr) {
+            ctx.beginPath(); ctx.arc(mx, my, mr, 0, 2 * Math.PI);
+            ctx.fillStyle = '#2a2a35'; ctx.fill();
+            ctx.save();
+            ctx.beginPath(); ctx.arc(mx, my, mr, Math.PI/2, 3*Math.PI/2, false); ctx.clip();
+            ctx.beginPath(); ctx.arc(mx, my, mr, 0, 2 * Math.PI);
+            ctx.fillStyle = '#e8e8d8'; ctx.fill();
+            drawCraters(ctx, mx, my, mr);
+            ctx.restore();
+            ctx.beginPath(); ctx.arc(mx, my, mr, 0, 2 * Math.PI);
+            ctx.strokeStyle = 'rgba(180,180,180,0.3)'; ctx.lineWidth = 1; ctx.stroke();
+        }
+
+        function drawObserver(ctx, earthX, earthY, earthR, targetX, targetY) {
+            const dx = targetX - earthX, dy = targetY - earthY;
+            const len = Math.sqrt(dx*dx + dy*dy) || 1;
+            const obsX = earthX + (dx/len) * (earthR + 1);
+            const obsY = earthY + (dy/len) * (earthR + 1);
+            const angle = Math.atan2(dy, dx);
+            ctx.beginPath(); ctx.setLineDash([4, 4]);
+            ctx.moveTo(obsX, obsY); ctx.lineTo(targetX, targetY);
+            ctx.strokeStyle = 'rgba(255,220,80,0.5)'; ctx.lineWidth = 1.5;
+            ctx.stroke(); ctx.setLineDash([]);
+            ctx.save();
+            ctx.translate(obsX, obsY); ctx.rotate(angle);
+            ctx.beginPath(); ctx.ellipse(0, 0, 7, 5, 0, 0, 2 * Math.PI);
+            ctx.fillStyle = '#fff'; ctx.fill();
+            ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
+            ctx.beginPath(); ctx.arc(2.5, 0, 2.8, 0, 2 * Math.PI);
+            ctx.fillStyle = '#1f6feb'; ctx.fill();
+            ctx.beginPath(); ctx.arc(2.5, 0, 1.2, 0, 2 * Math.PI);
+            ctx.fillStyle = '#000'; ctx.fill();
+            ctx.restore();
+        }
+
+        function drawEarthShadowCone(ctx) {
+            const len = 280;
+            ctx.beginPath();
+            ctx.moveTo(CX, CY - EARTH_R); ctx.lineTo(CX + len, CY - 40);
+            ctx.lineTo(CX + len, CY + 40); ctx.lineTo(CX, CY + EARTH_R);
+            ctx.closePath(); ctx.fillStyle = 'rgba(80,80,110,0.15)'; ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(CX, CY - EARTH_R * 0.9); ctx.lineTo(CX + len, CY - 12);
+            ctx.lineTo(CX + len, CY + 12); ctx.lineTo(CX, CY + EARTH_R * 0.9);
+            ctx.closePath(); ctx.fillStyle = 'rgba(30,30,55,0.42)'; ctx.fill();
+        }
+
+        function drawMoonShadowCone(ctx, mx, my) {
+            const len = 200;
+            ctx.beginPath();
+            ctx.moveTo(mx, my - MOON_R); ctx.lineTo(mx + len, my - 25);
+            ctx.lineTo(mx + len, my + 25); ctx.lineTo(mx, my + MOON_R);
+            ctx.closePath(); ctx.fillStyle = 'rgba(80,80,110,0.18)'; ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(mx, my - MOON_R * 0.9); ctx.lineTo(mx + len, my - 6);
+            ctx.lineTo(mx + len, my + 6); ctx.lineTo(mx, my + MOON_R * 0.9);
+            ctx.closePath(); ctx.fillStyle = 'rgba(30,30,55,0.5)'; ctx.fill();
+        }
+
+        // ---- Space view ----
+        function drawSpaceView() {
+            const phi = state.angle * Math.PI / 180;
+            const tiltRad = state.tilt * Math.PI / 180;
+            const cosTilt = Math.cos(tiltRad), sinTilt = Math.sin(tiltRad);
+
+            spaceCtx.clearRect(0, 0, 600, 400);
+            drawStars(spaceCtx, starsSpace);
+
+            drawSun(spaceCtx, 40, CY, 70);
+
+            // ecliptic line
+            spaceCtx.beginPath();
+            spaceCtx.moveTo(0, CY); spaceCtx.lineTo(600, CY);
+            spaceCtx.strokeStyle = 'rgba(255,255,255,0.06)'; spaceCtx.lineWidth = 1;
+            spaceCtx.stroke();
+
+            const moonX3 = -ORBIT_R * cosTilt * Math.cos(phi);
+            const moonY3 = ORBIT_R * Math.sin(phi);
+            const moonZ3 = -ORBIT_R * sinTilt * Math.cos(phi);
+            const moonP = proj(moonX3, moonY3, moonZ3);
+
+            if (state.mode !== 'phases') {
+                drawEarthShadowCone(spaceCtx);
+                if (Math.cos(phi) > 0.3) drawMoonShadowCone(spaceCtx, moonP.sx, moonP.sy);
+            }
+
+            // orbit
+            spaceCtx.beginPath();
+            for (let a = 0; a <= 360; a += 5) {
+                const ap = a * Math.PI / 180;
+                const p = proj(-ORBIT_R * cosTilt * Math.cos(ap),
+                                ORBIT_R * Math.sin(ap),
+                               -ORBIT_R * sinTilt * Math.cos(ap));
+                if (a === 0) spaceCtx.moveTo(p.sx, p.sy);
+                else spaceCtx.lineTo(p.sx, p.sy);
+            }
+            spaceCtx.strokeStyle = 'rgba(88,166,255,0.3)';
+            spaceCtx.setLineDash([4, 4]); spaceCtx.lineWidth = 1;
+            spaceCtx.stroke(); spaceCtx.setLineDash([]);
+
+            drawEarth(spaceCtx, CX, CY, EARTH_R);
+            drawMoonInSpace(spaceCtx, moonP.sx, moonP.sy, MOON_R);
+            drawObserver(spaceCtx, CX, CY, EARTH_R, moonP.sx, moonP.sy);
+
+            spaceCtx.fillStyle = '#ffd54a';
+            spaceCtx.font = 'bold 12px sans-serif';
+            spaceCtx.fillText("☀️ Sonne", 12, CY - 90);
+            spaceCtx.fillStyle = '#58a6ff';
+            spaceCtx.font = '11px sans-serif';
+            spaceCtx.fillText("Erde", CX - 13, CY + 5);
+
+            if (state.mode !== 'phases') {
+                spaceCtx.fillStyle = 'rgba(255,220,80,0.75)';
+                spaceCtx.font = '10px sans-serif';
+                spaceCtx.fillText("← Licht", 90, CY - 6);
+            }
+        }
+
+        // ---- Earth view: phases ----
+        function drawPhaseView() {
+            const W = 400, H = 400, cx = 200, cy = 200, radius = 100;
+            earthCtx.clearRect(0, 0, W, H);
+            drawStars(earthCtx, starsEarth);
+
+            const groundY = H - 25;
+            const g = earthCtx.createLinearGradient(0, groundY - 20, 0, H);
+            g.addColorStop(0, 'rgba(15,25,15,0)'); g.addColorStop(1, 'rgba(8,15,8,0.95)');
+            earthCtx.fillStyle = g;
+            earthCtx.fillRect(0, groundY - 20, W, H - groundY + 20);
+            earthCtx.beginPath(); earthCtx.moveTo(0, groundY + 5);
+            for (let x = 0; x <= W; x += 10)
+                earthCtx.lineTo(x, groundY + 5 - Math.sin(x*0.015)*8 - Math.sin(x*0.05)*3);
+            earthCtx.lineTo(W, H); earthCtx.lineTo(0, H); earthCtx.closePath();
+            earthCtx.fillStyle = 'rgba(10,20,10,0.95)'; earthCtx.fill();
+
+            const glow = earthCtx.createRadialGradient(cx, cy, radius*0.9, cx, cy, radius*1.5);
+            glow.addColorStop(0, 'rgba(230,230,210,0.12)');
+            glow.addColorStop(1, 'rgba(230,230,210,0)');
+            earthCtx.fillStyle = glow;
+            earthCtx.beginPath(); earthCtx.arc(cx, cy, radius*1.5, 0, 2*Math.PI); earthCtx.fill();
+
+            earthCtx.beginPath(); earthCtx.arc(cx, cy, radius, 0, 2*Math.PI);
+            earthCtx.fillStyle = '#16161e'; earthCtx.fill();
+
+            const phaseAngle = (state.angle / 360) * 2 * Math.PI;
+            const cosPhase = Math.cos(phaseAngle);
+            const waxing = state.angle <= 180;
+            const tw = Math.max(radius * Math.abs(cosPhase), 0.5);
+
+            earthCtx.save();
+            earthCtx.beginPath();
+            if (waxing) {
+                earthCtx.arc(cx, cy, radius, -Math.PI/2, Math.PI/2, false);
+                if (cosPhase >= 0) earthCtx.ellipse(cx, cy, tw, radius, 0, Math.PI/2, -Math.PI/2, true);
+                else earthCtx.ellipse(cx, cy, tw, radius, 0, Math.PI/2, -Math.PI/2, false);
+            } else {
+                earthCtx.arc(cx, cy, radius, Math.PI/2, -Math.PI/2, false);
+                if (cosPhase >= 0) earthCtx.ellipse(cx, cy, tw, radius, 0, -Math.PI/2, Math.PI/2, true);
+                else earthCtx.ellipse(cx, cy, tw, radius, 0, -Math.PI/2, Math.PI/2, false);
+            }
+            earthCtx.closePath();
+            earthCtx.fillStyle = '#e8e8d8'; earthCtx.fill();
+            earthCtx.clip();
+            drawCraters(earthCtx, cx, cy, radius);
+            earthCtx.restore();
+
+            earthCtx.beginPath(); earthCtx.arc(cx, cy, radius, 0, 2*Math.PI);
+            earthCtx.strokeStyle = 'rgba(200,200,180,0.15)'; earthCtx.lineWidth = 1.5;
+            earthCtx.stroke();
+        }
+
+        // ---- Earth view: solar eclipse ----
+        function drawSolarEclipseView() {
+            const W = 400, H = 400, cx = 200, cy = 180;
+            const sunR = 85, moonR = sunR * 1.03;
+
+            earthCtx.clearRect(0, 0, W, H);
+            earthCtx.fillStyle = '#050510'; earthCtx.fillRect(0, 0, W, H);
+            drawStars(earthCtx, starsEarth);
+
+            let a = state.angle;
+            let angFromNew = a < 30 ? a : (a > 330 ? a - 360 : (a < 180 ? 30 : -30));
+            const moonX = cx + angFromNew * 12;
+            const moonY = cy + state.tilt * 18;
+
+            const sunGlow = earthCtx.createRadialGradient(cx, cy, sunR*0.8, cx, cy, sunR*2.5);
+            sunGlow.addColorStop(0, 'rgba(255,220,100,0.5)');
+            sunGlow.addColorStop(0.5, 'rgba(255,180,40,0.2)');
+            sunGlow.addColorStop(1, 'rgba(255,180,40,0)');
+            earthCtx.fillStyle = sunGlow;
+            earthCtx.beginPath(); earthCtx.arc(cx, cy, sunR*2.5, 0, 2*Math.PI); earthCtx.fill();
+
+            const sunDisk = earthCtx.createRadialGradient(cx-sunR*0.3, cy-sunR*0.3, sunR*0.1, cx, cy, sunR);
+            sunDisk.addColorStop(0, '#fffde0'); sunDisk.addColorStop(0.5, '#ffdd55');
+            sunDisk.addColorStop(1, '#ff9800');
+            earthCtx.fillStyle = sunDisk;
+            earthCtx.beginPath(); earthCtx.arc(cx, cy, sunR, 0, 2*Math.PI); earthCtx.fill();
+
+            const sep = Math.sqrt((moonX-cx)**2 + (moonY-cy)**2);
+            if (sep < 5) {
+                const cor = earthCtx.createRadialGradient(cx, cy, sunR, cx, cy, sunR*1.7);
+                cor.addColorStop(0, 'rgba(255,250,220,0.85)');
+                cor.addColorStop(1, 'rgba(255,250,220,0)');
+                earthCtx.fillStyle = cor;
+                earthCtx.beginPath(); earthCtx.arc(cx, cy, sunR*1.7, 0, 2*Math.PI); earthCtx.fill();
+            }
+
+            earthCtx.beginPath(); earthCtx.arc(moonX, moonY, moonR, 0, 2*Math.PI);
+            earthCtx.fillStyle = '#000'; earthCtx.fill();
+
+            // horizon
+            const gy = H - 25;
+            earthCtx.fillStyle = 'rgba(10,20,10,0.95)';
+            earthCtx.beginPath(); earthCtx.moveTo(0, gy + 5);
+            for (let x = 0; x <= W; x += 10)
+                earthCtx.lineTo(x, gy + 5 - Math.sin(x*0.015)*8 - Math.sin(x*0.05)*3);
+            earthCtx.lineTo(W, H); earthCtx.lineTo(0, H); earthCtx.closePath(); earthCtx.fill();
+        }
+
+        // ---- Earth view: lunar eclipse ----
+        function drawLunarEclipseView() {
+            const W = 400, H = 400, cx = 200, cy = 180;
+            const moonR = 85, shadowR = 110;
+
+            earthCtx.clearRect(0, 0, W, H);
+            earthCtx.fillStyle = '#050510'; earthCtx.fillRect(0, 0, W, H);
+            drawStars(earthCtx, starsEarth);
+
+            let a = state.angle - 180;
+            if (a > 180) a -= 360; if (a < -180) a += 360;
+            if (Math.abs(a) > 30) a = Math.sign(a) * 30;
+            const shadowX = cx + a * 10;
+            const shadowY = cy + state.tilt * 15;
+
+            const glow = earthCtx.createRadialGradient(cx, cy, moonR*0.9, cx, cy, moonR*1.6);
+            glow.addColorStop(0, 'rgba(230,230,210,0.15)');
+            glow.addColorStop(1, 'rgba(230,230,210,0)');
+            earthCtx.fillStyle = glow;
+            earthCtx.beginPath(); earthCtx.arc(cx, cy, moonR*1.6, 0, 2*Math.PI); earthCtx.fill();
+
+            earthCtx.beginPath(); earthCtx.arc(cx, cy, moonR, 0, 2*Math.PI);
+            earthCtx.fillStyle = '#e8e8d8'; earthCtx.fill();
+            drawCraters(earthCtx, cx, cy, moonR);
+
+            earthCtx.save();
+            earthCtx.beginPath(); earthCtx.arc(shadowX, shadowY, shadowR, 0, 2*Math.PI); earthCtx.clip();
+            earthCtx.beginPath(); earthCtx.arc(cx, cy, moonR, 0, 2*Math.PI);
+            earthCtx.fillStyle = 'rgba(150,35,25,0.85)'; earthCtx.fill();
+            earthCtx.restore();
+
+            earthCtx.beginPath(); earthCtx.arc(cx, cy, moonR, 0, 2*Math.PI);
+            earthCtx.strokeStyle = 'rgba(200,200,180,0.2)'; earthCtx.lineWidth = 1.5;
+            earthCtx.stroke();
+
+            const gy = H - 25;
+            earthCtx.fillStyle = 'rgba(10,20,10,0.95)';
+            earthCtx.beginPath(); earthCtx.moveTo(0, gy + 5);
+            for (let x = 0; x <= W; x += 10)
+                earthCtx.lineTo(x, gy + 5 - Math.sin(x*0.015)*8 - Math.sin(x*0.05)*3);
+            earthCtx.lineTo(W, H); earthCtx.lineTo(0, H); earthCtx.closePath(); earthCtx.fill();
+        }
+
+        // ---- Explanation & status ----
+        function updateExplanation() {
+            let name = "", text = "", isEclipse = false, isAligned = false;
+            const a = state.angle;
+
+            if (state.mode === 'phases') {
+                if (a < 15 || a > 345) {
+                    name = "Neumond";
+                    text = "<strong>Beobachtung:</strong> Am Nachthimmel ist kein Mond zu sehen.<br><strong>Modell:</strong> Der Mond steht zwischen Erde und Sonne – seine beleuchtete Hälfte zeigt von uns weg.";
+                } else if (a < 75) {
+                    name = "Zunehmende Sichel";
+                    text = "<strong>Beobachtung:</strong> Schmale Sichel rechts am Abendhimmel.<br><strong>Modell:</strong> Wir blicken schräg auf die beleuchtete Hälfte des Mondes.";
+                } else if (a <= 105) {
+                    name = "Zunehmender Halbmond (Erstes Viertel)";
+                    text = "<strong>Beobachtung:</strong> Die rechte Hälfte des Mondes leuchtet.<br><strong>Modell:</strong> Der Mond steht im 90°-Winkel zur Sonne – wir sehen die Hälfte der beleuchteten Seite.";
+                } else if (a < 165) {
+                    name = "Zunehmender Mond (Buckelmond)";
+                    text = "<strong>Beobachtung:</strong> Mehr als die Hälfte ist beleuchtet (rechts).";
+                } else if (a <= 195) {
+                    name = "Vollmond";
+                    text = "<strong>Beobachtung:</strong> Eine vollständige Mondscheibe leuchtet.<br><strong>Modell:</strong> Die Erde steht zwischen Sonne und Mond – wir blicken auf die voll beleuchtete Seite.";
+                } else if (a < 255) {
+                    name = "Abnehmender Mond (Buckelmond)";
+                    text = "<strong>Beobachtung:</strong> Der Mond wird von links nach rechts kleiner.";
+                } else if (a <= 285) {
+                    name = "Abnehmender Halbmond (Letztes Viertel)";
+                    text = "<strong>Beobachtung:</strong> Die linke Hälfte leuchtet (morgens sichtbar).";
+                } else {
+                    name = "Abnehmende Sichel";
+                    text = "<strong>Beobachtung:</strong> Schmale Sichel links am Morgenhimmel.";
+                }
+                isAligned = false;
+            } else if (state.mode === 'solar') {
+                let an = a < 30 ? a : (a > 330 ? 360 - a : 30);
+                const sep = Math.sqrt(an * an * 144 + (state.tilt * 18) ** 2);
+                if (sep < 5) {
+                    name = "Totale Sonnenfinsternis";
+                    text = "<strong>Beobachtung:</strong> Der Mond bedeckt die Sonne vollständig – nur die Korona leuchtet herum.<br><strong>Erklärung:</strong> Sonne, Mond und Erde stehen exakt auf einer Linie. Der Kernschatten des Mondes trifft die Erde.";
+                    isEclipse = true; isAligned = true;
+                } else if (sep < 180) {
+                    name = "Partielle Sonnenfinsternis";
+                    text = "<strong>Beobachtung:</strong> Der Mond bedeckt nur einen Teil der Sonne.<br><strong>Erklärung:</strong> Fast perfekte Ausrichtung – der Mondschatten trifft die Erde nur teilweise.";
+                    isEclipse = true; isAligned = true;
+                } else {
+                    name = "Keine Sonnenfinsternis";
+                    text = "<strong>Beobachtung:</strong> Der Mond steht nicht vor der Sonne.<br><strong>Erklärung:</strong> Die Mondbahn ist um ca. 5° gegen die Ekliptik geneigt. Nur bei Neumond UND wenn der Mond die Ekliptik kreuzt, fällt sein Schatten auf die Erde. (Neigung hier übertrieben dargestellt.)";
+                    isAligned = state.tilt < 3 && (a < 5 || a > 355);
+                }
+            } else if (state.mode === 'lunar') {
+                let af = a - 180; if (af > 180) af -= 360; if (af < -180) af += 360;
+                const sep = Math.sqrt(af * af * 100 + (state.tilt * 15) ** 2);
+                if (sep < 20) {
+                    name = "Totale Mondfinsternis (Blutmond)";
+                    text = "<strong>Beobachtung:</strong> Der Vollmond erscheint dunkelrot.<br><strong>Erklärung:</strong> Die Erde steht zwischen Sonne und Mond. Ihr Kernschatten fällt auf den Mond. Das rötliche Licht entsteht durch Streuung in der Erdatmosphäre.";
+                    isEclipse = true; isAligned = true;
+                } else if (sep < 110) {
+                    name = "Partielle Mondfinsternis";
+                    text = "<strong>Beobachtung:</strong> Ein Teil des Mondes liegt im Erdschatten und erscheint dunkelrot.<br><strong>Erklärung:</strong> Fast-Ausrichtung – der Erdschatten trifft nur einen Teil des Mondes.";
+                    isEclipse = true; isAligned = true;
+                } else {
+                    name = "Keine Mondfinsternis";
+                    text = "<strong>Beobachtung:</strong> Der Mond leuchtet vollständig hell.<br><strong>Erklärung:</strong> Wegen der ~5°-Neigung der Mondbahn läuft der Mond meist ober- oder unterhalb des Erdschattens vorbei. Nur bei Vollmond nahe einem Bahnknoten kommt es zur Finsternis.";
+                    isAligned = state.tilt < 3 && Math.abs(a - 180) < 5;
+                }
+            }
+
+            phaseNameEl.innerText = name;
+            infoBox.innerHTML = text;
+            statusDot.className = 'status-dot';
+            if (isEclipse) statusDot.classList.add('eclipse');
+            else if (isAligned) statusDot.classList.add('aligned');
+        }
+
+        function update() {
+            angleVal.textContent = state.angle + '°';
+            tiltVal.textContent = state.tilt.toFixed(1) + '°';
+            drawSpaceView();
+            if (state.mode === 'phases') drawPhaseView();
+            else if (state.mode === 'solar') drawSolarEclipseView();
+            else drawLunarEclipseView();
+            updateExplanation();
+        }
+
+        // ---- Event handlers ----
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                state.mode = btn.dataset.mode;
+                if (state.mode === 'solar') { state.angle = 0; state.tilt = 0; }
+                else if (state.mode === 'lunar') { state.angle = 180; state.tilt = 0; }
+                angleSlider.value = state.angle;
+                tiltSlider.value = state.tilt;
+                document.getElementById('tiltGroup').style.display =
+                    (state.mode === 'phases') ? 'none' : 'flex';
+                update();
+            });
+        });
+
+        angleSlider.addEventListener('input', () => {
+            state.angle = parseFloat(angleSlider.value);
+            update();
+        });
+        tiltSlider.addEventListener('input', () => {
+            state.tilt = parseFloat(tiltSlider.value);
+            update();
+        });
+
+        update();
+    </script>
+</body>
+</html>
