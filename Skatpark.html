@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Energie-Skatepark – Standalone HTML</title>
+<style>
+  body { margin:0; font-family:system-ui,sans-serif; background:#0d1b2a;
+         color:#e8eef4; display:flex; flex-direction:column; align-items:center; }
+  h1 { font-size:1.05rem; font-weight:500; margin:14px 0 6px; }
+  canvas { display:block; border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,.5); }
+  .panel { margin:10px; display:flex; flex-wrap:wrap; gap:16px; align-items:center;
+           background:#152a3d; padding:10px 18px; border-radius:10px; font-size:.9rem; }
+  button { background:#2f6f9f; color:#fff; border:0; padding:6px 14px;
+           border-radius:6px; cursor:pointer; }
+  button:hover { background:#3a86bf; }
+  input[type=range] { width:120px; vertical-align:middle; }
+</style>
+</head>
+<body>
+<h1>Energie-Skatepark · Standalone-Demo</h1>
+<canvas id="cv" width="900" height="500"></canvas>
+<div class="panel">
+  <button id="reset">Reset</button>
+  <label>Reibung: <input id="friction" type="range" min="0" max="0.4" step="0.01" value="0"></label>
+  <label>Masse:   <input id="mass"     type="range" min="0.5" max="3"  step="0.1"  value="1"></label>
+  <span id="readout"></span>
+</div>
+
+<script>
+const cv  = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+// --- Welt-Parameter ---
+const W = 5, H = 3, g = 9.8;
+const pxPerM = Math.min(cv.width/(2.4*W), cv.height/(2.4*H));
+const originX = cv.width/2;
+const originY = 250;
+
+const trackY     = x => H*(x/W)*(x/W) - H;   // y ∈ [-H, 0]
+const trackSlope = x => 2*H*x/(W*W);         // dy/dx
+const toScreen   = (x,y) => [originX + x*pxPerM, originY - y*pxPerM];
+
+// --- Zustand ---
+let mass = 1, friction = 0;
+const startX = -0.92*W;
+const sk = { x: startX, v: 0 };
+
+document.getElementById('reset').onclick    = () => { sk.x = startX; sk.v = 0; };
+document.getElementById('friction').oninput = e => friction = +e.target.value;
+document.getElementById('mass').oninput     = e => mass     = +e.target.value;
+
+// --- Physik ---
+function energies() {
+  const y  = trackY(sk.x);
+  const PE = mass * g * (y + H);              // Nullpunkt am Bahntiefsten
+  const KE = 0.5 * mass * sk.v * sk.v;
+  return { PE, KE, total: PE + KE };
+}
+
+function step(dt) {
+  const s     = trackSlope(sk.x);
+  const denom = Math.sqrt(1 + s*s);
+  sk.v += (-g * s / denom) * dt;              // Tangentialbeschleunigung
+  if (friction > 0) sk.v *= Math.exp(-friction * dt);
+  sk.x += (sk.v / denom) * dt;
+  if (sk.x >  W) { sk.x =  W; sk.v = 0; }
+  if (sk.x < -W) { sk.x = -W; sk.v = 0; }
+}
+
+// --- Zeichnen ---
+function drawTrack() {
+  ctx.beginPath();
+  for (let i = 0; i <= 200; i++) {
+    const x  = -W + 2*W*i/200;
+    const [sx, sy] = toScreen(x, trackY(x));
+    i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy);
+  }
+  ctx.lineWidth = 9; ctx.strokeStyle = '#2c4a66';
+  ctx.lineCap = 'round'; ctx.stroke();
+  ctx.lineWidth = 3; ctx.strokeStyle = '#7fb8e0'; ctx.stroke();
+}
+
+function drawSkater() {
+  const [sx, sy] = toScreen(sk.x, trackY(sk.x));
+  ctx.save();
+  ctx.translate(sx, sy);
+  ctx.rotate(Math.atan(trackSlope(sk.x)));
+  ctx.fillStyle = '#8b3a1a';  ctx.fillRect(-18, -4, 36, 6);      // Board
+  ctx.fillStyle = '#ffcc44';  ctx.beginPath();
+  ctx.arc(0, -22, 10, 0, Math.PI*2); ctx.fill();                  // Körper
+  ctx.fillStyle = '#e8b04b';  ctx.beginPath();
+  ctx.arc(0, -38, 7, 0, Math.PI*2);  ctx.fill();                  // Kopf
+  ctx.restore();
+}
+
+function drawBars() {
+  const { PE, KE, total } = energies();
+  const maxE = mass * g * (2*H);
+  const bw = 26, bh = 240;
+  const baseX = cv.width - 170, baseY = cv.height - 60;
+
+  ctx.fillStyle = 'rgba(255,255,255,0.05)';
+  ctx.fillRect(baseX, baseY - bh, 2*bw + 10, bh);
+
+  const peH = Math.max(0, PE / maxE) * bh;
+  ctx.fillStyle = '#e05a5a';
+  ctx.fillRect(baseX, baseY - peH, bw, peH);
+
+  const keH = Math.max(0, KE / maxE) * bh;
+  ctx.fillStyle = '#4aa3e0';
+  ctx.fillRect(baseX + bw + 10, baseY - keH, bw, keH);
+
+  const totH = (total / maxE) * bh;
+  ctx.strokeStyle = '#ffe066'; ctx.lineWidth = 2;
+  ctx.setLineDash([6,4]);
+  ctx.beginPath();
+  ctx.moveTo(baseX - 8, baseY - totH);
+  ctx.lineTo(baseX + 2*bw + 18, baseY - totH);
+  ctx.stroke(); ctx.setLineDash([]);
+
+  ctx.fillStyle = '#ddd'; ctx.font = '12px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('PE', baseX + bw/2, baseY + 18);
+  ctx.fillText('KE', baseX + bw + 10 + bw/2, baseY + 18);
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#ffe066';
+  ctx.fillText('E gesamt', baseX + 2*bw + 22, baseY - totH + 4);
+}
+
+function draw() {
+  const g2 = ctx.createLinearGradient(0, 0, 0, cv.height);
+  g2.addColorStop(0, '#0e2c44'); g2.addColorStop(1, '#1d3a52');
+  ctx.fillStyle = g2; ctx.fillRect(0, 0, cv.width, cv.height);
+
+  drawTrack(); drawSkater(); drawBars();
+
+  const { PE, KE, total } = energies();
+  document.getElementById('readout').textContent =
+    `PE = ${PE.toFixed(1)} J  ·  KE = ${KE.toFixed(1)} J  ·  E = ${total.toFixed(1)} J`;
+}
+
+let last = performance.now();
+function loop(t) {
+  const dt = Math.min(0.05, (t - last)/1000);
+  last = t;
+  for (let i = 0; i < 6; i++) step(dt/6);
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
