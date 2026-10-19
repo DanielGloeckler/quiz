@@ -3,104 +3,103 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Schattenräume – Kernschatten &amp; Halbschatten</title>
+<title>3D Schattenräume – Kern- &amp; Halbschatten</title>
 <style>
-  *,*::before,*::after{box-sizing:border-box}
-  html,body{margin:0;height:100%}
-  body{
-    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-    background:#0e1520;color:#e6edf7;overflow:hidden;
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #0b111a; color: #e6edf7; overflow: hidden;
   }
-  .app{display:flex;height:100vh;height:100dvh}
+  .app { display: flex; height: 100vh; height: 100dvh; }
 
-  /* ---------- Bühne ---------- */
-  .stage{position:relative;flex:1;min-width:0;background:#0e1520}
-  #cv{
-    position:absolute;left:12px;top:12px;border-radius:16px;
-    box-shadow:0 10px 30px rgba(0,0,0,.45);
-    touch-action:none;cursor:default;
-  }
-
-  /* ---------- Panel ---------- */
-  .panel{
-    width:334px;flex:none;background:#131c2b;border-left:1px solid #22304a;
-    padding:20px 18px 28px;overflow-y:auto;
-  }
-  .panel h1{font-size:19px;margin:0 0 4px;letter-spacing:.2px}
-  .panel .sub{margin:0 0 20px;font-size:12.5px;color:#8fa3bf;line-height:1.45}
-
-  .group{margin-bottom:18px}
-
-  .label{
-    display:flex;justify-content:space-between;align-items:center;
-    font-size:12px;font-weight:700;color:#9db0ca;
-    text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;
-  }
-  .label output{
-    font-weight:700;color:#ffd166;text-transform:none;letter-spacing:0;font-size:13px;
+  /* Bühne */
+  .stage { position: relative; flex: 1; min-width: 0; background: #0b111a; }
+  #cv {
+    position: absolute; left: 12px; top: 12px; border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.6); touch-action: none;
   }
 
-  .segmented{
-    display:flex;gap:6px;background:#0e1622;border-radius:10px;padding:4px;
-    border:1px solid #22304a;
+  /* Panel */
+  .panel {
+    width: 340px; flex: none; background: #131c2b; border-left: 1px solid #22304a;
+    padding: 20px 18px 28px; overflow-y: auto;
   }
-  .segmented button{
-    flex:1;padding:8px 6px;border:0;border-radius:7px;background:transparent;
-    color:#9db0ca;font:inherit;font-size:13px;font-weight:600;cursor:pointer;
-    transition:background .15s,color .15s;
-  }
-  .segmented button.active{background:#2b6cff;color:#fff;box-shadow:0 2px 8px rgba(43,108,255,.45)}
-  .segmented button:not(.active):hover{background:#1a2637;color:#cfe0f5}
+  .panel h1 { font-size: 19px; margin: 0 0 4px; letter-spacing: .2px; }
+  .panel .sub { margin: 0 0 20px; font-size: 12.5px; color: #8fa3bf; line-height: 1.45; }
 
-  input[type=range]{
-    width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;
-    background:#22304a;outline:none;display:block;
-  }
-  input[type=range]::-webkit-slider-thumb{
-    -webkit-appearance:none;width:18px;height:18px;border-radius:50%;
-    background:#ffd166;border:2px solid #0e1622;cursor:pointer;
-    box-shadow:0 0 0 1px #ffd166;
-  }
-  input[type=range]::-moz-range-thumb{
-    width:16px;height:16px;border-radius:50%;background:#ffd166;
-    border:2px solid #0e1622;cursor:pointer;
-  }
-  input[type=range]:disabled{opacity:.3}
+  .group { margin-bottom: 18px; }
 
-  .check{
-    display:flex;align-items:center;gap:9px;font-size:13.5px;color:#c2d1e4;
-    padding:6px 0;cursor:pointer;user-select:none;
+  .label {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; font-weight: 700; color: #9db0ca;
+    text-transform: uppercase; letter-spacing: .7px; margin-bottom: 8px;
   }
-  .check input{width:16px;height:16px;accent-color:#2b6cff;cursor:pointer}
-
-  .readouts{background:#0e1622;border:1px solid #22304a;border-radius:12px;padding:12px 14px}
-  .ro{display:flex;align-items:center;gap:9px;font-size:13px;color:#a9bcd4;padding:4px 0}
-  .ro b{margin-left:auto;color:#fff;font-variant-numeric:tabular-nums;font-weight:700}
-  .dot{width:12px;height:12px;border-radius:3px;flex:none}
-  .dot.umbra{background:#141d2b;box-shadow:inset 0 0 0 1px #3a4b63}
-  .dot.penumbra{background:rgba(255,170,40,.55)}
-  .dot.total{background:rgba(120,140,170,.6)}
-
-  .tip{
-    font-size:13px;line-height:1.5;color:#a9bcd4;background:#0e1622;
-    border-left:3px solid #ffd166;border-radius:0 8px 8px 0;
-    padding:10px 12px;margin:0;min-height:44px;
+  .label output {
+    font-weight: 700; color: #ffd166; text-transform: none; letter-spacing: 0; font-size: 13px;
   }
 
-  .btn{
-    width:100%;padding:11px;border-radius:10px;border:1px solid #2b3d5a;
-    background:#1a2637;color:#cfe0f5;font:inherit;font-weight:600;font-size:13.5px;
-    cursor:pointer;transition:background .15s;
+  .segmented {
+    display: flex; gap: 6px; background: #0e1622; border-radius: 10px; padding: 4px;
+    border: 1px solid #22304a;
   }
-  .btn:hover{background:#22304a}
+  .segmented button {
+    flex: 1; padding: 8px 6px; border: 0; border-radius: 7px; background: transparent;
+    color: #9db0ca; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  .segmented button.active { background: #2b6cff; color: #fff; box-shadow: 0 2px 8px rgba(43,108,255,.45); }
+  .segmented button:not(.active):hover { background: #1a2637; color: #cfe0f5; }
 
-  .hint{font-size:12px;color:#6f83a0;line-height:1.5;margin:16px 0 0}
+  input[type=range] {
+    width: 100%; -webkit-appearance: none; appearance: none; height: 6px; border-radius: 3px;
+    background: #22304a; outline: none; display: block;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+    background: #ffd166; border: 2px solid #0e1622; cursor: pointer;
+    box-shadow: 0 0 0 1px #ffd166;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%; background: #ffd166;
+    border: 2px solid #0e1622; cursor: pointer;
+  }
+  input[type=range]:disabled { opacity: .3; }
 
-  @media (max-width:880px){
-    body{overflow:auto}
-    .app{flex-direction:column;height:auto;min-height:100dvh}
-    .stage{height:58vh;min-height:320px}
-    .panel{width:auto;border-left:0;border-top:1px solid #22304a}
+  .check {
+    display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: #c2d1e4;
+    padding: 6px 0; cursor: pointer; user-select: none;
+  }
+  .check input { width: 16px; height: 16px; accent-color: #2b6cff; cursor: pointer; }
+
+  .readouts { background: #0e1622; border: 1px solid #22304a; border-radius: 12px; padding: 12px 14px; }
+  .ro { display: flex; align-items: center; gap: 9px; font-size: 13px; color: #a9bcd4; padding: 4px 0; }
+  .ro b { margin-left: auto; color: #fff; font-variant-numeric: tabular-nums; font-weight: 700; }
+  .dot { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+  .dot.umbra { background: #141d2b; box-shadow: inset 0 0 0 1px #3a4b63; }
+  .dot.penumbra { background: rgba(255,170,40,.55); }
+  .dot.total { background: rgba(120,140,170,.6); }
+
+  .tip {
+    font-size: 13px; line-height: 1.5; color: #a9bcd4; background: #0e1622;
+    border-left: 3px solid #ffd166; border-radius: 0 8px 8px 0;
+    padding: 10px 12px; margin: 0; min-height: 44px;
+  }
+
+  .btn {
+    width: 100%; padding: 11px; border-radius: 10px; border: 1px solid #2b3d5a;
+    background: #1a2637; color: #cfe0f5; font: inherit; font-weight: 600; font-size: 13.5px;
+    cursor: pointer; transition: background .15s;
+  }
+  .btn:hover { background: #22304a; }
+
+  .hint { font-size: 12px; color: #6f83a0; line-height: 1.5; margin: 16px 0 0; }
+
+  @media (max-width: 880px) {
+    body { overflow: auto; }
+    .app { flex-direction: column; height: auto; min-height: 100dvh; }
+    .stage { height: 58vh; min-height: 320px; }
+    .panel { width: auto; border-left: 0; border-top: 1px solid #22304a; }
   }
 </style>
 </head>
@@ -112,8 +111,8 @@
   </div>
 
   <aside class="panel">
-    <h1>Schattenräume</h1>
-    <p class="sub">Kernschatten &amp; Halbschatten im Lichtstrahlmodell – mit Punktlichtquelle und ausgedehnter Lichtquelle.</p>
+    <h1>Schattenräume 3D</h1>
+    <p class="sub">Interaktive Simulation von Kern- und Halbschatten. Bewege die Lampen und den Gegenstand.</p>
 
     <section class="group">
       <div class="label">Lichtquelle</div>
@@ -124,18 +123,26 @@
     </section>
 
     <section class="group">
-      <label class="label" for="sizeRange">Größe der Lampe <output id="sizeVal">10,0 cm</output></label>
-      <input type="range" id="sizeRange" min="0" max="30" step="0.5" value="10">
+      <div class="label">Gegenstand</div>
+      <div class="segmented">
+        <button type="button" data-obj="sphere" class="active">Kugel</button>
+        <button type="button" data-obj="cylinder">Zylinder</button>
+        <button type="button" data-obj="box">Quader</button>
+      </div>
     </section>
 
     <section class="group">
-      <label class="label" for="heightRange">Höhe des Gegenstands <output id="heightVal">8,0 cm</output></label>
-      <input type="range" id="heightRange" min="1" max="30" step="0.5" value="8">
+      <label class="label" for="sizeRange">Größe des Gegenstands <output id="sizeVal">10 cm</output></label>
+      <input type="range" id="sizeRange" min="5" max="30" step="1" value="10">
     </section>
 
     <section class="group">
-      <label class="check"><input type="checkbox" id="chkRays" checked> Randstrahlen zeigen</label>
-      <label class="check"><input type="checkbox" id="chkRegions" checked> Schattenräume färben</label>
+      <label class="label" for="lightSizeRange">Größe der Lampe <output id="lightSizeVal">10 cm</output></label>
+      <input type="range" id="lightSizeRange" min="0" max="30" step="1" value="10">
+    </section>
+
+    <section class="group">
+      <label class="check"><input type="checkbox" id="chkTwoLights" checked> Zweite Lampe</label>
     </section>
 
     <section class="group readouts">
@@ -152,7 +159,7 @@
       <button type="button" class="btn" id="reset">Zurücksetzen</button>
     </section>
 
-    <p class="hint">Lampe, Gegenstand und Schirm lassen sich mit Maus oder Finger ziehen. Der Schirm zeigt das Schattenbild.</p>
+    <p class="hint">Tipp: Ziehe die Lampen oder den Gegenstand mit der Maus bzw. dem Finger. Der Schirm zeigt das Schattenbild.</p>
   </aside>
 </div>
 
@@ -161,423 +168,542 @@
   'use strict';
 
   const stage = document.getElementById('stage');
-  const cv    = document.getElementById('cv');
-  const ctx   = cv.getContext('2d');
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
 
-  /* ---------- Welt: 100 cm Breite, Höhe ergibt sich aus dem Seitenverhältnis ---------- */
-  let W = 800, H = 500, PX = 8;     // PX = Pixel pro Zentimeter
+  let W = 800, H = 500, PX = 8; // PX = Pixel pro Zentimeter
 
+  // Standardwerte
   const DEFAULT = {
-    lightXf: 0.13, lightYf: 0.50,
-    objXf:   0.46, objYf:   0.50,
-    screenXf:0.87,
-    sourceSize: 10,     // cm (Durchmesser der Lampe)
-    objHeight:  8,      // cm
+    light1: { x: -30, y: 20, z: 20 },
+    light2: { x: 30, y: 20, z: 20 },
+    obj: { type: 'sphere', cx: 0, cy: 50, cz: 20, r: 10, w: 10, h: 10, d: 10 },
     extended: true,
-    showRays: true,
-    showRegions: true
+    twoLights: true,
+    lightSize: 10
   };
-  const state = Object.assign({}, DEFAULT);
+
+  const state = {
+    extended: DEFAULT.extended,
+    twoLights: DEFAULT.twoLights,
+    lightSize: DEFAULT.lightSize
+  };
+  const light1 = { ...DEFAULT.light1 };
+  const light2 = { ...DEFAULT.light2 };
+  const obj = { ...DEFAULT.obj };
 
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const fmt   = v => (Math.round(v * 10) / 10).toFixed(1).replace('.', ',');
-  const toCm  = px => px / PX;
+  const fmt = v => (Math.round(v * 10) / 10).toFixed(1).replace('.', ',');
 
   /* ------------------------------------------------------------------ */
-  /*  Geometrie                                                          */
+  /*  3D-Projektion (Perspektive)                                        */
   /* ------------------------------------------------------------------ */
-  function geo() {
-    const lx = state.lightXf * W, ly = state.lightYf * H;
-    const S  = state.extended ? (state.sourceSize * PX) / 2 : 0;   // halbe Lampenausdehnung
-    const ox = state.objXf * W,  oy = state.objYf * H;
-    const hh = Math.max((state.objHeight * PX) / 2, 3);            // halbe Gegenstandshöhe
-    const sx = state.screenXf * W;
+  function project(x, y, z) {
+    const scale = 1 - y * 0.003;
+    const cx = W / 2 + x * PX * scale;
+    const cy = H - 100 - y * PX * 0.3 - z * PX * 0.5 * scale;
+    return { x: cx, y: cy };
+  }
 
-    const R = (sx - lx) / Math.max(ox - lx, 1);                    // Streckfaktor Gegenstand → Schirm
+  function unprojectFloor(cx, cy) {
+    const y = (H - 100 - cy) / (PX * 0.3);
+    const scale = 1 - y * 0.003;
+    const x = (cx - W / 2) / (PX * scale);
+    return { x, y };
+  }
 
-    const ysMin = ly - S, ysMax = ly + S;                          // unterer / oberer Rand der Lampe
-    // Projektion eines Objektrands (oy±hh) von einem Lampenpunkt ys auf die Ebene r
-    const A = (ys, r) => ys * (1 - r) + (oy - hh) * r;             // obere Objektkante
-    const B = (ys, r) => ys * (1 - r) + (oy + hh) * r;             // untere Objektkante
+  /* ------------------------------------------------------------------ */
+  /*  Geometrie & Schattenberechnung                                     */
+  /* ------------------------------------------------------------------ */
+  const spherePoints = [];
+  for (let i = 0; i <= 16; i++) {
+    const phi = i * Math.PI / 16;
+    for (let j = 0; j < 16; j++) {
+      const theta = j * 2 * Math.PI / 16;
+      spherePoints.push({
+        x: Math.sin(phi) * Math.cos(theta),
+        y: Math.sin(phi) * Math.sin(theta),
+        z: Math.cos(phi)
+      });
+    }
+  }
 
-    const uT = A(ysMin, R);      // Kernschatten oben  (oberer Lampenpunkt → obere Kante)
-    const uB = B(ysMax, R);      // Kernschatten unten
-    const aT = A(ysMax, R);      // Gesamtschatten oben (äußerer Randstrahl)
-    const aB = B(ysMin, R);      // Gesamtschatten unten
+  function getObjectPoints() {
+    const pts = [];
+    if (obj.type === 'sphere') {
+      for (const p of spherePoints) {
+        pts.push({
+          x: obj.cx + p.x * obj.r,
+          y: obj.cy + p.y * obj.r,
+          z: obj.cz + p.z * obj.r
+        });
+      }
+    } else if (obj.type === 'cylinder') {
+      const N = 16;
+      for (let i = 0; i < N; i++) {
+        const a = i * 2 * Math.PI / N;
+        const x = obj.cx + obj.r * Math.cos(a);
+        const y = obj.cy + obj.r * Math.sin(a);
+        pts.push({ x, y, z: obj.cz });
+        pts.push({ x, y, z: obj.cz + obj.h });
+      }
+    } else if (obj.type === 'box') {
+      const hw = obj.w / 2, hd = obj.d / 2;
+      pts.push(
+        { x: obj.cx - hw, y: obj.cy - hd, z: obj.cz },
+        { x: obj.cx + hw, y: obj.cy - hd, z: obj.cz },
+        { x: obj.cx + hw, y: obj.cy + hd, z: obj.cz },
+        { x: obj.cx - hw, y: obj.cy + hd, z: obj.cz },
+        { x: obj.cx - hw, y: obj.cy - hd, z: obj.cz + obj.h },
+        { x: obj.cx + hw, y: obj.cy - hd, z: obj.cz + obj.h },
+        { x: obj.cx + hw, y: obj.cy + hd, z: obj.cz + obj.h },
+        { x: obj.cx - hw, y: obj.cy + hd, z: obj.cz + obj.h }
+      );
+    }
+    return pts;
+  }
 
-    // Kernschatten endet, wenn Lampe breiter als der Gegenstand ist
-    const rEnd = (S > hh + 1e-6) ? S / (S - hh) : Infinity;
-    const umbraOnScreen = rEnd >= R;
+  function getShadowPolygon(lx, ly, lz) {
+    const objPts = getObjectPoints();
+    const shadowPts = [];
 
-    return { lx, ly, S, ox, oy, hh, sx, R, ysMin, ysMax, A, B,
-             uT, uB, aT, aB, rEnd, umbraOnScreen };
+    for (const p of objPts) {
+      const dx = p.x - lx, dy = p.y - ly, dz = p.z - lz;
+      const tFloor = (lz !== p.z) ? (0 - lz) / (p.z - lz) : Infinity;
+      const tWall = (100 - ly) / (p.y - ly);
+
+      if (tFloor > 0 && tFloor < tWall) {
+        const x = lx + tFloor * dx;
+        const y = ly + tFloor * dy;
+        if (x >= -50 && x <= 50 && y >= 0 && y <= 100) {
+          shadowPts.push(project(x, y, 0));
+        }
+      } else if (tWall > 0 && tWall < tFloor) {
+        const x = lx + tWall * dx;
+        const z = lz + tWall * dz;
+        if (x >= -50 && x <= 50 && z >= 0 && z <= 100) {
+          shadowPts.push(project(x, 100, z));
+        }
+      }
+    }
+
+    if (shadowPts.length < 3) return [];
+    // Konvexe Hülle in 2D
+    shadowPts.sort((a, b) => a.x - b.x || a.y - b.y);
+    const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+    const lower = [];
+    for (let i = 0; i < shadowPts.length; i++) {
+      while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], shadowPts[i]) <= 0) lower.pop();
+      lower.push(shadowPts[i]);
+    }
+    const upper = [];
+    for (let i = shadowPts.length - 1; i >= 0; i--) {
+      while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], shadowPts[i]) <= 0) upper.pop();
+      upper.push(shadowPts[i]);
+    }
+    upper.pop(); lower.pop();
+    return lower.concat(upper);
   }
 
   /* ------------------------------------------------------------------ */
   /*  Zeichnen                                                           */
   /* ------------------------------------------------------------------ */
-  function roundRect(c, x, y, w, h, r) {
-    r = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
-    c.beginPath();
-    c.moveTo(x + r, y);
-    c.arcTo(x + w, y, x + w, y + h, r);
-    c.arcTo(x + w, y + h, x, y + h, r);
-    c.arcTo(x, y + h, x, y, r);
-    c.arcTo(x, y, x + w, y, r);
-    c.closePath();
-  }
-
-  function label(text, x, y) {
-    ctx.font = '600 12px system-ui,-apple-system,"Segoe UI",sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'alphabetic';
-    ctx.lineWidth = 3.5;
-    ctx.strokeStyle = 'rgba(255,255,255,.9)';
-    ctx.strokeText(text, x, y);
-    ctx.fillStyle = '#4b5c74';
-    ctx.fillText(text, x, y);
-  }
-
-  function drawLight(lx, ly, S) {
-    ctx.save();
-    const glowR = Math.max(70, S * 2.8);
-    const g = ctx.createRadialGradient(lx, ly, 0, lx, ly, glowR);
-    g.addColorStop(0,    'rgba(255,214,102,.60)');
-    g.addColorStop(0.40, 'rgba(255,196,64,.20)');
-    g.addColorStop(1,    'rgba(255,196,64,0)');
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(lx, ly, glowR, 0, Math.PI * 2); ctx.fill();
-
-    if (S > 2) {
-      // ausgedehnte Lichtquelle → senkrechter Leuchtbalken
-      const w = 10;
-      const grd = ctx.createLinearGradient(lx - w / 2, 0, lx + w / 2, 0);
-      grd.addColorStop(0,   '#ffb703');
-      grd.addColorStop(0.5, '#fff8cc');
-      grd.addColorStop(1,   '#ffb703');
-      ctx.fillStyle = grd;
-      roundRect(ctx, lx - w / 2, ly - S, w, 2 * S, w / 2);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(190,120,0,.65)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    } else {
-      // Punktlichtquelle
-      ctx.beginPath(); ctx.arc(lx, ly, 7.5, 0, Math.PI * 2);
-      const grd = ctx.createRadialGradient(lx - 2.5, ly - 2.5, 1, lx, ly, 8.5);
-      grd.addColorStop(0, '#fffde7');
-      grd.addColorStop(1, '#ffb703');
-      ctx.fillStyle = grd;
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(190,120,0,.75)';
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  function drawObject(ox, oy, hh) {
-    const w = 12;
-    ctx.save();
-    ctx.fillStyle = '#2c3a52';
-    roundRect(ctx, ox - w / 2, oy - hh, w, 2 * hh, 4);
+  function drawPolygon(pts, fill) {
+    if (pts.length < 3) return;
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = '#16202f';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.restore();
   }
 
-  function drawScreen(sx, aT, aB, uT, uB, umbraOnScreen) {
-    const w = 14, top = 14, bot = H - 14;
-    ctx.save();
-
-    ctx.fillStyle = '#ffffff';
-    ctx.strokeStyle = '#b7c5d8';
-    ctx.lineWidth = 1.5;
-    roundRect(ctx, sx, top, w, bot - top, 5);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.save();
-    roundRect(ctx, sx, top, w, bot - top, 5);
-    ctx.clip();
-
-    // Halbschatten auf dem Schirm
-    ctx.fillStyle = 'rgba(120,140,170,.62)';
-    ctx.fillRect(sx, aT, w, Math.max(0, aB - aT));
-
-    // Kernschatten auf dem Schirm
-    if (umbraOnScreen) {
-      ctx.fillStyle = '#141d2b';
-      ctx.fillRect(sx, uT, w, Math.max(0, uB - uT));
-    }
-    ctx.restore();
-    ctx.restore();
-  }
-
-  function draw() {
-    const G = geo();
-    const { lx, ly, S, ox, oy, hh, sx, R, ysMin, ysMax, uT, uB, aT, aB,
-            rEnd, umbraOnScreen } = G;
-
-    /* ---- Hintergrund ---- */
+  function drawBackground() {
     ctx.clearRect(0, 0, W, H);
+
+    // Sky
     const bg = ctx.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, '#f9fcff');
-    bg.addColorStop(1, '#e5edf7');
+    bg.addColorStop(0, '#1a2637');
+    bg.addColorStop(1, '#0b111a');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
-    /* ---- Raster (5 cm) ---- */
-    ctx.save();
-    ctx.strokeStyle = 'rgba(150,175,205,.25)';
-    ctx.lineWidth = 1;
-    const gp = 5 * PX;
+    // Floor
+    const fl = [
+      project(-50, 100, 0),
+      project(50, 100, 0),
+      project(50, 0, 0),
+      project(-50, 0, 0)
+    ];
+    ctx.fillStyle = '#2a3b52';
     ctx.beginPath();
-    for (let x = gp; x < W; x += gp) { ctx.moveTo(Math.round(x) + .5, 0); ctx.lineTo(Math.round(x) + .5, H); }
-    for (let y = gp; y < H; y += gp) { ctx.moveTo(0, Math.round(y) + .5); ctx.lineTo(W, Math.round(y) + .5); }
+    ctx.moveTo(fl[0].x, fl[0].y);
+    for (let i = 1; i < fl.length; i++) ctx.lineTo(fl[i].x, fl[i].y);
+    ctx.closePath();
+    ctx.fill();
+
+    // Wall
+    const wl = [
+      project(-50, 100, 100),
+      project(50, 100, 100),
+      project(50, 100, 0),
+      project(-50, 100, 0)
+    ];
+    ctx.fillStyle = '#1e2c40';
+    ctx.beginPath();
+    ctx.moveTo(wl[0].x, wl[0].y);
+    for (let i = 1; i < wl.length; i++) ctx.lineTo(wl[i].x, wl[i].y);
+    ctx.closePath();
+    ctx.fill();
+
+    // Grid
+    ctx.strokeStyle = 'rgba(100, 140, 190, 0.15)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = -50; i <= 50; i += 10) {
+      const p1 = project(i, 0, 0);
+      const p2 = project(i, 100, 0);
+      ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+    }
+    for (let i = 0; i <= 100; i += 10) {
+      const p1 = project(-50, i, 0);
+      const p2 = project(50, i, 0);
+      ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+    }
+    // Wall grid
+    for (let i = -50; i <= 50; i += 10) {
+      const p1 = project(i, 100, 0);
+      const p2 = project(i, 100, 100);
+      ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+    }
+    for (let i = 0; i <= 100; i += 10) {
+      const p1 = project(-50, 100, i);
+      const p2 = project(50, 100, i);
+      ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+    }
     ctx.stroke();
-    ctx.restore();
-
-    /* ---- Schattenräume ---- */
-    if (state.showRegions) {
-      // Halbschatten / Gesamtschatten (äußerer Bereich)
-      ctx.beginPath();
-      ctx.moveTo(ox, oy - hh);
-      ctx.lineTo(sx, aT);
-      ctx.lineTo(sx, aB);
-      ctx.lineTo(ox, oy + hh);
-      ctx.closePath();
-      ctx.fillStyle = 'rgba(255,168,40,.26)';
-      ctx.fill();
-
-      // Kernschatten
-      ctx.beginPath();
-      ctx.moveTo(ox, oy - hh);
-      if (umbraOnScreen) {
-        ctx.lineTo(sx, uT);
-        ctx.lineTo(sx, uB);
-      } else {
-        ctx.lineTo(lx + rEnd * (ox - lx), G.A(ysMin, rEnd));
-      }
-      ctx.lineTo(ox, oy + hh);
-      ctx.closePath();
-      ctx.fillStyle = 'rgba(26,38,60,.62)';
-      ctx.fill();
-    }
-
-    /* ---- Schirm ---- */
-    drawScreen(sx, aT, aB, uT, uB, umbraOnScreen);
-
-    /* ---- Randstrahlen ---- */
-    if (state.showRays) {
-      ctx.save();
-      ctx.strokeStyle = 'rgba(240,150,20,.85)';
-      ctx.lineWidth = 1.3;
-      const rays = [
-        [ysMin, oy - hh], [ysMax, oy - hh],
-        [ysMin, oy + hh], [ysMax, oy + hh]
-      ];
-      for (const [y0, y1] of rays) {
-        const yEnd = y0 + (y1 - y0) * R;
-        ctx.beginPath();
-        ctx.moveTo(lx, y0);
-        ctx.lineTo(ox, y1);
-        ctx.lineTo(sx, yEnd);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-
-    /* ---- Lampe & Gegenstand ---- */
-    drawLight(lx, ly, S);
-    drawObject(ox, oy, hh);
-
-    /* ---- Beschriftung ---- */
-    label('Lichtquelle', lx, Math.max(16, ly - Math.max(S, 10) - 16));
-    label('Gegenstand',  ox, Math.max(16, oy - hh - 14));
-    label('Schirm',      sx + 7, 32);
-
-    /* ---- Messwerte ---- */
-    const totalPx  = Math.max(0, aB - aT);
-    const umbraPx  = umbraOnScreen ? Math.max(0, uB - uT) : 0;
-    const penPx    = Math.max(0, totalPx - umbraPx);
-
-    document.getElementById('roUmbra').textContent    = fmt(toCm(umbraPx)) + ' cm';
-    document.getElementById('roPenumbra').textContent = fmt(toCm(penPx))   + ' cm';
-    document.getElementById('roTotal').textContent    = fmt(toCm(totalPx)) + ' cm';
-
-    /* ---- Tipp ---- */
-    let tip;
-    if (!state.extended || state.sourceSize < 0.5) {
-      tip = 'Eine Punktlichtquelle erzeugt nur einen Kernschatten – einen Halbschatten gibt es nicht.';
-    } else if (S > hh) {
-      const xe = lx + rEnd * (ox - lx);
-      tip = 'Die Lampe ist höher als der Gegenstand: Der Kernschatten endet ' +
-            fmt(toCm(xe - ox)) + ' cm hinter dem Gegenstand.';
-      if (rEnd < R) tip += ' Auf dem Schirm ist nur noch Halbschatten zu sehen.';
-    } else {
-      tip = 'Die Lampe ist schmaler als der Gegenstand: Der Kernschatten reicht bis zum Schirm.';
-    }
-    document.getElementById('tip').textContent = tip;
   }
+
+  function drawShadows(lights) {
+    ctx.save();
+    for (const l of lights) {
+      if (state.extended && state.lightSize > 0) {
+        const grid = 5;
+        const rad = state.lightSize / 2;
+        for (let i = 0; i < grid; i++) {
+          for (let j = 0; j < grid; j++) {
+            const lx = l.x + (i / (grid - 1) - 0.5) * rad * 2;
+            const lz = l.z + (j / (grid - 1) - 0.5) * rad * 2;
+            const poly = getShadowPolygon(lx, l.y, lz);
+            drawPolygon(poly, 'rgba(0,0,0,0.18)');
+          }
+        }
+      } else {
+        const poly = getShadowPolygon(l.x, l.y, l.z);
+        drawPolygon(poly, 'rgba(0,0,0,0.8)');
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawObject() {
+    if (obj.type === 'sphere') {
+      const p = project(obj.cx, obj.cy, obj.cz);
+      const r = obj.r * PX * (1 - obj.cy * 0.003);
+      const grad = ctx.createRadialGradient(p.x - r * 0.3, p.y - r * 0.3, r * 0.1, p.x, p.y, r);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(1, '#888888');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Football-Muster
+      ctx.fillStyle = '#333';
+      for (let i = 0; i < 5; i++) {
+        const a = i * Math.PI * 2 / 5 - Math.PI / 2;
+        const x = p.x + Math.cos(a) * r * 0.6;
+        const y = p.y + Math.sin(a) * r * 0.6;
+        ctx.beginPath();
+        for (let j = 0; j < 5; j++) {
+          const b = j * Math.PI * 2 / 5 + Math.PI / 2;
+          const px = x + Math.cos(b) * r * 0.2;
+          const py = y + Math.sin(b) * r * 0.2;
+          if (j === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+      }
+    } else if (obj.type === 'cylinder') {
+      const pTop = project(obj.cx, obj.cy, obj.cz + obj.h);
+      const pBot = project(obj.cx, obj.cy, obj.cz);
+      const r = obj.r * PX * (1 - obj.cy * 0.003);
+
+      // Body
+      ctx.fillStyle = '#cccccc';
+      ctx.beginPath();
+      ctx.moveTo(pTop.x - r, pTop.y);
+      ctx.lineTo(pBot.x - r, pBot.y);
+      ctx.lineTo(pBot.x + r, pBot.y);
+      ctx.lineTo(pTop.x + r, pTop.y);
+      ctx.closePath();
+      ctx.fill();
+
+      // Top
+      ctx.fillStyle = '#eeeeee';
+      ctx.beginPath();
+      ctx.ellipse(pTop.x, pTop.y, r, r * 0.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Bottom
+      ctx.fillStyle = '#aaaaaa';
+      ctx.beginPath();
+      ctx.ellipse(pBot.x, pBot.y, r, r * 0.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (obj.type === 'box') {
+      const hw = obj.w / 2, hd = obj.d / 2;
+      const p1 = project(obj.cx - hw, obj.cy - hd, obj.cz);
+      const p2 = project(obj.cx + hw, obj.cy - hd, obj.cz);
+      const p3 = project(obj.cx + hw, obj.cy + hd, obj.cz);
+      const p4 = project(obj.cx - hw, obj.cy + hd, obj.cz);
+      const p5 = project(obj.cx - hw, obj.cy - hd, obj.cz + obj.h);
+      const p6 = project(obj.cx + hw, obj.cy - hd, obj.cz + obj.h);
+      const p7 = project(obj.cx + hw, obj.cy + hd, obj.cz + obj.h);
+      const p8 = project(obj.cx - hw, obj.cy + hd, obj.cz + obj.h);
+
+      // Top
+      ctx.fillStyle = '#e0e0e0';
+      ctx.beginPath();
+      ctx.moveTo(p5.x, p5.y); ctx.lineTo(p6.x, p6.y);
+      ctx.lineTo(p7.x, p7.y); ctx.lineTo(p8.x, p8.y);
+      ctx.closePath(); ctx.fill();
+
+      // Front
+      ctx.fillStyle = '#cccccc';
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+      ctx.lineTo(p6.x, p6.y); ctx.lineTo(p5.x, p5.y);
+      ctx.closePath(); ctx.fill();
+
+      // Right
+      ctx.fillStyle = '#999999';
+      ctx.beginPath();
+      ctx.moveTo(p2.x, p2.y); ctx.lineTo(p3.x, p3.y);
+      ctx.lineTo(p7.x, p7.y); ctx.lineTo(p6.x, p6.y);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+
+  function drawLight(l) {
+    const p = project(l.x, l.y, l.z);
+
+    // Glow
+    const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 40);
+    grad.addColorStop(0, 'rgba(255, 200, 0, 0.8)');
+    grad.addColorStop(1, 'rgba(255, 200, 0, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 40, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Center
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Red casing (Flashlight)
+    ctx.fillStyle = '#cc0000';
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y + 5, 8, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function updateReadouts() {
+    // Schattenbreiten auf dem Schirm (y=100) grob abschätzen
+    const lights = [{ x: light1.x, y: light1.y, z: light1.z }];
+    if (state.twoLights) lights.push({ x: light2.x, y: light2.y, z: light2.z });
+
+    let minU = Infinity, maxU = -Infinity, minP = Infinity, maxP = -Infinity;
+    for (const l of lights) {
+      const poly = getShadowPolygon(l.x, l.y, l.z);
+      for (const p of poly) {
+        if (p.y < minP) minP = p.y;
+        if (p.y > maxP) maxP = p.y;
+      }
+    }
+    if (minP !== Infinity) {
+      const total = (maxP - minP) / PX;
+      document.getElementById('roTotal').textContent = fmt(total) + ' cm';
+      
+      // Sehr grobe Schätzung für Kern-/Halbschatten
+      const umbra = state.extended ? total * 0.4 : total;
+      const penumbra = total - umbra;
+      document.getElementById('roUmbra').textContent = fmt(umbra) + ' cm';
+      document.getElementById('roPenumbra').textContent = fmt(penumbra) + ' cm';
+    } else {
+      document.getElementById('roTotal').textContent = '–';
+      document.getElementById('roUmbra').textContent = '–';
+      document.getElementById('roPenumbra').textContent = '–';
+    }
+
+    // Tipp
+    const tipEl = document.getElementById('tip');
+    if (!state.extended || state.lightSize < 1) {
+      tipEl.textContent = 'Eine Punktlichtquelle erzeugt nur einen Kernschatten – einen Halbschatten gibt es nicht.';
+    } else if (state.twoLights) {
+      tipEl.textContent = 'Zwei ausgedehnte Lichtquellen erzeugen überlappende Schatten. Im Kreuzungsbereich entsteht ein tiefer Kernschatten.';
+    } else {
+      tipEl.textContent = 'Eine ausgedehnte Lichtquelle erzeugt einen Kernschatten (dunkel) und einen Halbschatten (hell).';
+    }
+  }
+
+  function draw() {
+    drawBackground();
+
+    const lights = [{ x: light1.x, y: light1.y, z: light1.z }];
+    if (state.twoLights) lights.push({ x: light2.x, y: light2.y, z: light2.z });
+
+    drawShadows(lights);
+    drawObject();
+    for (const l of lights) drawLight(l);
+
+    updateReadouts();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /*  Interaktion (Drag & Drop)                                          */
+  /* ------------------------------------------------------------------ */
+  let dragTarget = null;
+
+  cv.addEventListener('pointerdown', e => {
+    const rect = cv.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+
+    const p1 = project(light1.x, light1.y, light1.z);
+    if (Math.hypot(cx - p1.x, cy - p1.y) < 25) { dragTarget = 'light1'; return; }
+
+    if (state.twoLights) {
+      const p2 = project(light2.x, light2.y, light2.z);
+      if (Math.hypot(cx - p2.x, cy - p2.y) < 25) { dragTarget = 'light2'; return; }
+    }
+
+    const po = project(obj.cx, obj.cy, obj.cz);
+    if (Math.hypot(cx - po.x, cy - po.y) < 35) { dragTarget = 'object'; return; }
+  });
+
+  cv.addEventListener('pointermove', e => {
+    if (!dragTarget) return;
+    const rect = cv.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+
+    const pos = unprojectFloor(cx, cy);
+    if (dragTarget === 'light1') {
+      light1.x = clamp(pos.x, -50, 50);
+      light1.y = clamp(pos.y, 0, 100);
+    } else if (dragTarget === 'light2') {
+      light2.x = clamp(pos.x, -50, 50);
+      light2.y = clamp(pos.y, 0, 100);
+    } else if (dragTarget === 'object') {
+      obj.cx = clamp(pos.x, -50, 50);
+      obj.cy = clamp(pos.y, 0, 100);
+    }
+    draw();
+  });
+
+  cv.addEventListener('pointerup', () => dragTarget = null);
+  cv.addEventListener('pointercancel', () => dragTarget = null);
+
+  /* ------------------------------------------------------------------ */
+  /*  UI-Elemente                                                        */
+  /* ------------------------------------------------------------------ */
+  document.querySelectorAll('[data-mode]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-mode]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.extended = btn.dataset.mode === 'extended';
+      document.getElementById('lightSizeRange').disabled = !state.extended;
+      draw();
+    });
+  });
+
+  document.querySelectorAll('[data-obj]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-obj]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      obj.type = btn.dataset.obj;
+      draw();
+    });
+  });
+
+  document.getElementById('chkTwoLights').addEventListener('change', e => {
+    state.twoLights = e.target.checked;
+    draw();
+  });
+
+  document.getElementById('sizeRange').addEventListener('input', e => {
+    const val = parseInt(e.target.value);
+    document.getElementById('sizeVal').textContent = val + ' cm';
+    obj.r = val; obj.w = val; obj.h = val; obj.d = val;
+    draw();
+  });
+
+  document.getElementById('lightSizeRange').addEventListener('input', e => {
+    const val = parseInt(e.target.value);
+    document.getElementById('lightSizeVal').textContent = val + ' cm';
+    state.lightSize = val;
+    draw();
+  });
+
+  document.getElementById('reset').addEventListener('click', () => {
+    light1.x = DEFAULT.light1.x; light1.y = DEFAULT.light1.y; light1.z = DEFAULT.light1.z;
+    light2.x = DEFAULT.light2.x; light2.y = DEFAULT.light2.y; light2.z = DEFAULT.light2.z;
+    obj.type = DEFAULT.obj.type;
+    obj.cx = DEFAULT.obj.cx; obj.cy = DEFAULT.obj.cy; obj.cz = DEFAULT.obj.cz;
+    obj.r = DEFAULT.obj.r; obj.w = DEFAULT.obj.w; obj.h = DEFAULT.obj.h; obj.d = DEFAULT.obj.d;
+    state.extended = DEFAULT.extended;
+    state.twoLights = DEFAULT.twoLights;
+    state.lightSize = DEFAULT.lightSize;
+
+    document.getElementById('sizeRange').value = DEFAULT.obj.r;
+    document.getElementById('sizeVal').textContent = DEFAULT.obj.r + ' cm';
+    document.getElementById('lightSizeRange').value = DEFAULT.lightSize;
+    document.getElementById('lightSizeVal').textContent = DEFAULT.lightSize + ' cm';
+    document.getElementById('chkTwoLights').checked = DEFAULT.twoLights;
+    document.getElementById('lightSizeRange').disabled = !DEFAULT.extended;
+
+    document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('active', (b.dataset.mode === 'extended') === DEFAULT.extended));
+    document.querySelectorAll('[data-obj]').forEach(b => b.classList.toggle('active', b.dataset.obj === DEFAULT.obj.type));
+
+    draw();
+  });
 
   /* ------------------------------------------------------------------ */
   /*  Größe / Layout                                                     */
   /* ------------------------------------------------------------------ */
   function resize() {
-    const w = stage.clientWidth  - 24;
+    const w = stage.clientWidth - 24;
     const h = stage.clientHeight - 24;
-    W = Math.max(300, w);
-    H = Math.max(240, h);
+    W = Math.max(400, w);
+    H = Math.max(300, h);
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    cv.width  = Math.round(W * dpr);
+    cv.width = Math.round(W * dpr);
     cv.height = Math.round(H * dpr);
-    cv.style.width  = W + 'px';
+    cv.style.width = W + 'px';
     cv.style.height = H + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    PX = W / 100;                       // 100 cm Bildbreite
-    clampState();
+    PX = W / 100;
     draw();
   }
 
-  function clampState() {
-    state.lightXf  = clamp(state.lightXf,  0.02, state.objXf - 0.06);
-    state.objXf    = clamp(state.objXf,    state.lightXf + 0.06, state.screenXf - 0.05);
-    state.screenXf = clamp(state.screenXf, state.objXf + 0.05, 0.955);
-    state.lightYf  = clamp(state.lightYf,  0.06, 0.94);
-    state.objYf    = clamp(state.objYf,    0.06, 0.94);
-  }
-
-  /* ------------------------------------------------------------------ */
-  /*  Maus- / Touch-Interaktion                                          */
-  /* ------------------------------------------------------------------ */
-  let drag = null;
-
-  function localPos(e) {
-    const r = cv.getBoundingClientRect();
-    return { x: e.clientX - r.left, y: e.clientY - r.top };
-  }
-
-  function hitTest(x, y) {
-    const lx = state.lightXf * W, ly = state.lightYf * H;
-    const ox = state.objXf * W,   oy = state.objYf * H;
-    const hh = Math.max(state.objHeight * PX / 2, 3);
-    const sx = state.screenXf * W;
-    const S  = state.extended ? (state.sourceSize * PX) / 2 : 0;
-
-    if (Math.abs(x - sx) < 11) return 'screen';
-    if (Math.abs(x - ox) < 16 && Math.abs(y - oy) < hh + 12) return 'object';
-    if (Math.abs(x - lx) < 22 && Math.abs(y - ly) < Math.max(S, 12) + 16) return 'light';
-    return null;
-  }
-
-  cv.addEventListener('pointerdown', e => {
-    const { x, y } = localPos(e);
-    const hit = hitTest(x, y);
-    if (!hit) return;
-    drag = hit;
-    cv.setPointerCapture(e.pointerId);
-    cv.style.cursor = 'grabbing';
-    e.preventDefault();
-  });
-
-  cv.addEventListener('pointermove', e => {
-    const { x, y } = localPos(e);
-
-    if (!drag) {
-      const hit = hitTest(x, y);
-      cv.style.cursor = hit === 'screen' ? 'ew-resize'
-                      : hit ? 'grab' : 'default';
-      return;
-    }
-
-    if (drag === 'light') {
-      state.lightXf = clamp(x / W, 0.02, state.objXf - 0.06);
-      state.lightYf = clamp(y / H, 0.06, 0.94);
-    } else if (drag === 'object') {
-      state.objXf = clamp(x / W, state.lightXf + 0.06, state.screenXf - 0.05);
-      state.objYf = clamp(y / H, 0.06, 0.94);
-    } else if (drag === 'screen') {
-      state.screenXf = clamp(x / W, state.objXf + 0.05, 0.955);
-    }
-    draw();
-  });
-
-  function endDrag(e) {
-    if (!drag) return;
-    drag = null;
-    cv.style.cursor = 'default';
-    if (e && e.pointerId !== undefined && cv.hasPointerCapture(e.pointerId)) {
-      cv.releasePointerCapture(e.pointerId);
-    }
-  }
-  cv.addEventListener('pointerup', endDrag);
-  cv.addEventListener('pointercancel', endDrag);
-
-  /* ------------------------------------------------------------------ */
-  /*  Bedienelemente                                                     */
-  /* ------------------------------------------------------------------ */
-  const sizeRange   = document.getElementById('sizeRange');
-  const heightRange = document.getElementById('heightRange');
-  const chkRays     = document.getElementById('chkRays');
-  const chkRegions  = document.getElementById('chkRegions');
-
-  function syncUI() {
-    document.querySelectorAll('[data-mode]').forEach(b => {
-      b.classList.toggle('active', (b.dataset.mode === 'extended') === state.extended);
-    });
-    sizeRange.disabled = !state.extended;
-    document.getElementById('sizeVal').textContent =
-      state.extended ? fmt(state.sourceSize) + ' cm' : 'Punkt';
-    document.getElementById('heightVal').textContent = fmt(state.objHeight) + ' cm';
-    chkRays.checked    = state.showRays;
-    chkRegions.checked = state.showRegions;
-  }
-
-  document.querySelectorAll('[data-mode]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      state.extended = btn.dataset.mode === 'extended';
-      syncUI();
-      draw();
-    });
-  });
-
-  sizeRange.addEventListener('input', () => {
-    state.sourceSize = parseFloat(sizeRange.value);
-    syncUI(); draw();
-  });
-
-  heightRange.addEventListener('input', () => {
-    state.objHeight = parseFloat(heightRange.value);
-    syncUI(); draw();
-  });
-
-  chkRays.addEventListener('change', () => {
-    state.showRays = chkRays.checked; draw();
-  });
-
-  chkRegions.addEventListener('change', () => {
-    state.showRegions = chkRegions.checked; draw();
-  });
-
-  document.getElementById('reset').addEventListener('click', () => {
-    Object.assign(state, DEFAULT);
-    sizeRange.value   = DEFAULT.sourceSize;
-    heightRange.value = DEFAULT.objHeight;
-    syncUI();
-    clampState();
-    draw();
-  });
-
-  /* ------------------------------------------------------------------ */
-  /*  Start                                                              */
-  /* ------------------------------------------------------------------ */
   const ro = new ResizeObserver(() => resize());
   ro.observe(stage);
 
-  syncUI();
+  // Initialisierung
+  document.getElementById('lightSizeRange').disabled = !DEFAULT.extended;
   resize();
 })();
 </script>
