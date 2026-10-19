@@ -13,12 +13,14 @@
   }
   .app { display: flex; height: 100vh; height: 100dvh; }
 
+  /* ---------- Bühne ---------- */
   .stage { position: relative; flex: 1; min-width: 0; background: #0b111a; }
   #cv {
     position: absolute; left: 12px; top: 12px; border-radius: 16px;
     box-shadow: 0 10px 30px rgba(0,0,0,.6); touch-action: none;
   }
 
+  /* ---------- Panel ---------- */
   .panel {
     width: 340px; flex: none; background: #131c2b; border-left: 1px solid #22304a;
     padding: 20px 18px 28px; overflow-y: auto;
@@ -42,18 +44,6 @@
   .label output {
     font-weight: 700; color: #ffd166; text-transform: none; letter-spacing: 0; font-size: 13px;
   }
-
-  .segmented {
-    display: flex; gap: 6px; background: #0e1622; border-radius: 10px; padding: 4px;
-    border: 1px solid #22304a;
-  }
-  .segmented button {
-    flex: 1; padding: 8px 6px; border: 0; border-radius: 7px; background: transparent;
-    color: #9db0ca; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
-    transition: background .15s, color .15s;
-  }
-  .segmented button.active { background: #2b6cff; color: #fff; box-shadow: 0 2px 8px rgba(43,108,255,.45); }
-  .segmented button:not(.active):hover { background: #1a2637; color: #cfe0f5; }
 
   input[type=range] {
     width: 100%; -webkit-appearance: none; appearance: none; height: 6px; border-radius: 3px;
@@ -108,26 +98,19 @@
   </div>
 
   <aside class="panel">
-    <h1>Schallquellen im Vergleich</h1>
+    <h1>Von der Musikbox zum Ohr</h1>
     <p class="sub">Interaktive Simulation der Schallausbreitung im Teilchenmodell.</p>
 
     <div class="why-box">
       <strong>Die Reise des Schalls:</strong><br>
-      Wähle eine Quelle und beobachte, wie sich die Welle im Raum ausbreitet. Die Moleküle geben den Stoß weiter (<strong>Kettenreaktion</strong>).
+      1. Die <strong>Musikbox</strong> schwingt und drückt die Luft zusammen.<br>
+      2. Die Moleküle geben den Stoß weiter (<strong>Kettenreaktion</strong>).<br>
+      3. Die Welle erreicht das <strong>Ohr</strong> und bringt das Trommelfell zum Schwingen.
     </div>
 
     <section class="group">
-      <div class="label">Schallquelle</div>
-      <div class="segmented">
-        <button type="button" data-source="box" class="active">Musikbox</button>
-        <button type="button" data-source="plane">Fläche</button>
-        <button type="button" data-source="point">Punkt</button>
-      </div>
-    </section>
-
-    <section class="group">
-      <label class="label" for="speedRange">Zeitlupe <output id="speedVal">0,05x</output></label>
-      <input type="range" id="speedRange" min="0.05" max="1.0" step="0.05" value="0.05">
+      <label class="label" for="speedRange">Zeitlupe <output id="speedVal">0,20x</output></label>
+      <input type="range" id="speedRange" min="0.05" max="1.0" step="0.05" value="0.2">
     </section>
 
     <section class="group">
@@ -144,7 +127,6 @@
       <label class="check"><input type="checkbox" id="chkColor" checked> Dichte farblich hervorheben</label>
       <label class="check"><input type="checkbox" id="chkChain" checked> Kettenreaktion (Stöße) zeigen</label>
       <label class="check"><input type="checkbox" id="chkRest" checked> Ruhelage markieren</label>
-      <label class="check"><input type="checkbox" id="chkPropagation"> Wellenfronten (Ausbreitung) zeigen</label>
       <label class="check"><input type="checkbox" id="chkZoom" checked> Mikroskop-Ansicht anzeigen</label>
     </section>
 
@@ -157,7 +139,7 @@
       <p class="tip" id="tip"></p>
     </section>
 
-    <p class="hint">💡 <strong>Ausprobieren:</strong> Klicke auf ein Molekül, um seine Schwingung im s-t-Diagramm zu verfolgen.</p>
+    <p class="hint">💡 <strong>Ausprobieren:</strong> Klicke auf ein Molekül, um seine Schwingung im s-t-Diagramm zu verfolgen. Das gestrichelte Rechteck lässt sich verschieben (Zoom-Bereich).</p>
   </aside>
 </div>
 
@@ -178,14 +160,11 @@
   // Parameter
   let frequency = 440;
   let amplitude = 50;
-  let speedFactor = 0.05;
+  let speedFactor = 0.2;
   let showColors = true;
   let showChain = true;
   let showRest = true;
-  let showPropagation = false;
   let showZoom = true;
-  
-  let sourceType = 'box'; // 'box', 'plane', 'point'
 
   const waveSpeed = 250; 
 
@@ -204,16 +183,14 @@
   // Mikroskop-Bereich
   let microView = { x: 0, y: 0, w: 0, h: 0 };
 
-  // Positionen
+  // Positionen der Musikbox und des Ohrs
   let musicBoxX = 0;
   let earX = 0;
-  let sourceX = 0;
-  let sourceY = 0;
 
   // Ausgewähltes Teilchen (s-t-Diagramm)
   let selectedParticleIdx = -1;
-  let selectedHistory = [];
-  const HISTORY_WINDOW = 2.5;
+  let selectedHistory = []; // {t, disp}
+  const HISTORY_WINDOW = 2.5; // Sekunden Simulationszeit
 
   /* ------------------------------------------------------------------ */
   /*  Initialisierung                                                    */
@@ -256,54 +233,30 @@
 
     musicBoxX = W * 0.09;
     earX = W * 0.88;
-    sourceX = musicBoxX;
-    sourceY = H * 0.45;
 
+    // Auswahl zurücksetzen
     selectedParticleIdx = -1;
     selectedHistory = [];
-  }
-
-  /* ------------------------------------------------------------------ */
-  /*  Hilfsfunktion: Phase / Dichte für ein Teilchen berechnen           */
-  /* ------------------------------------------------------------------ */
-  function getPhase(p) {
-    const k = (frequency / 100) * 0.5;
-    const omega = k * waveSpeed;
-    
-    if (sourceType === 'point') {
-      const dist = Math.hypot(p.baseX - sourceX, p.baseY - sourceY);
-      return k * dist - omega * time + p.phaseOffset;
-    } else {
-      // 'box' und 'plane' nutzen eine 1D-Ausbreitung (ebene Welle)
-      return k * p.baseX - omega * time + p.phaseOffset;
-    }
   }
 
   /* ------------------------------------------------------------------ */
   /*  Physik-Update                                                      */
   /* ------------------------------------------------------------------ */
   function updateParticles() {
+    const visualFreq = frequency / 100; 
+    const k = visualFreq * 0.5; 
+    const omega = k * waveSpeed;
+
     for (let i = 0; i < particles.length; i++) {
       const p = particles[i];
-      const phase = getPhase(p);
       
-      const displacement = (amplitude / 100) * GRID_SPACING * 1.8 * Math.sin(phase);
+      const displacement = (amplitude / 100) * GRID_SPACING * 1.8 * 
+                           Math.sin(k * p.baseX - omega * time + p.phaseOffset);
       
-      // Bei Punktquelle bewegen sich die Teilchen radial (vereinfacht: nur X-Auslenkung für den sichtbaren Effekt)
-      if (sourceType === 'point') {
-        const dx = p.baseX - sourceX;
-        const dy = p.baseY - sourceY;
-        const dist = Math.hypot(dx, dy) || 1;
-        // Auslenkung entlang des Abstandsvektors (radial)
-        p.x = p.baseX + displacement * (dx / dist);
-        p.y = p.baseY + displacement * (dy / dist);
-      } else {
-        p.x = p.baseX + displacement;
-        p.y = p.baseY;
-      }
+      p.x = p.baseX + displacement;
 
       if (showColors) {
-        const density = -Math.cos(phase);
+        const density = -Math.cos(k * p.baseX - omega * time + p.phaseOffset);
         if (density > 0) {
           const r = 255;
           const g = Math.floor(100 + density * 100);
@@ -320,15 +273,15 @@
       }
     }
 
+    // Verlauf für s-t-Diagramm aufzeichnen
     trackHistory();
   }
 
   function trackHistory() {
     if (selectedParticleIdx < 0 || selectedParticleIdx >= particles.length) return;
     const p = particles[selectedParticleIdx];
-    // Für das s-t Diagramm nehmen wir die X-Auslenkung (bei Punktquelle die radiale Hauptkomponente)
-    const disp = Math.hypot(p.x - p.baseX, p.y - p.baseY);
-    selectedHistory.push({ t: time, disp: disp });
+    selectedHistory.push({ t: time, disp: p.x - p.baseX });
+    // Alte Einträge jenseits des Fensters verwerfen
     while (selectedHistory.length > 0 && selectedHistory[0].t < time - HISTORY_WINDOW) {
       selectedHistory.shift();
     }
@@ -337,207 +290,64 @@
   /* ------------------------------------------------------------------ */
   /*  Zeichnen                                                           */
   /* ------------------------------------------------------------------ */
-  function drawSource() {
+  function drawMusicBox() {
+    const baseLx = musicBoxX;
     const ly = H * 0.45; 
     const size = 50;
 
-    if (sourceType === 'box') {
-      const baseLx = musicBoxX;
-      const vibrate = Math.sin(time * 50) * 1.5;
-      const lx = baseLx + vibrate;
+    const vibrate = Math.sin(time * 50) * 1.5;
+    const lx = baseLx + vibrate;
 
-      ctx.fillStyle = '#1e293b';
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.roundRect(lx - size/2, ly - size, size, size*2, 8);
-      ctx.fill();
-      ctx.stroke();
-
-      const pulse = Math.sin(frequency / 100 * time) * 12;
-      ctx.fillStyle = '#475569';
-      ctx.beginPath();
-      ctx.moveTo(lx + size/2, ly - size * 0.8);
-      ctx.quadraticCurveTo(lx + size/2 + pulse, ly, lx + size/2, ly + size * 0.8);
-      ctx.lineTo(lx + size/2 - 5, ly + size * 0.8);
-      ctx.quadraticCurveTo(lx + size/2 + pulse - 5, ly, lx + size/2 - 5, ly - size * 0.8);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = '#64748b';
-      ctx.stroke();
-
-      ctx.fillStyle = '#ffd166';
-      ctx.font = '16px sans-serif';
-      ctx.fillText('♪', lx - 15, ly - 10);
-      ctx.fillText('♫', lx + 5, ly + 15);
-
-      ctx.fillStyle = '#a9bcd4';
-      ctx.font = 'bold 11px system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Musikbox', lx, ly - size - 15);
-
-    } else if (sourceType === 'plane') {
-      // Flache Fläche (ebene Welle)
-      const lx = musicBoxX + 10;
-      const startY = H * 0.15;
-      const endY = H * 0.70;
-
-      // Vibrierende Wand
-      const pulse = Math.sin(frequency / 100 * time) * 8;
-      
-      ctx.fillStyle = '#1e293b';
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.roundRect(lx - 10, startY, 20, endY - startY, 4);
-      ctx.fill();
-      ctx.stroke();
-
-      // Schwingende Membran
-      ctx.fillStyle = '#475569';
-      ctx.beginPath();
-      ctx.moveTo(lx, startY);
-      for (let y = startY; y <= endY; y += 10) {
-        const waveY = y + Math.sin((y - startY) * 0.1 + time * 10) * pulse;
-        ctx.lineTo(lx + 5 + pulse, waveY);
-      }
-      ctx.lineTo(lx, endY);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = '#64748b';
-      ctx.stroke();
-
-      ctx.fillStyle = '#a9bcd4';
-      ctx.font = 'bold 11px system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Fläche', lx, startY - 10);
-
-    } else if (sourceType === 'point') {
-      // Punktquelle
-      const lx = sourceX;
-      const pulse = Math.sin(frequency / 100 * time) * 4;
-
-      // Glow
-      const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, 20 + pulse * 2);
-      grad.addColorStop(0, 'rgba(255, 209, 102, 0.8)');
-      grad.addColorStop(1, 'rgba(255, 209, 102, 0)');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(lx, ly, 20 + pulse * 2, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Kern
-      ctx.fillStyle = '#ffd166';
-      ctx.beginPath();
-      ctx.arc(lx, ly, 6 + pulse, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#b45309';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      ctx.fillStyle = '#a9bcd4';
-      ctx.font = 'bold 11px system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Punkt', lx, ly - 25);
-    }
-  }
-
-  function drawPropagation() {
-    if (!showPropagation) return;
-    
-    const k = (frequency / 100) * 0.5;
-    const omega = k * waveSpeed;
-    // Wir zeichnen Wellenfronten (Bereiche maximaler Verdichtung)
-    // Dazu berechnen wir die Phase und zeichnen Linien/Kreise bei phase = 0, 2PI, 4PI...
-    
+    // Schallwellen-Ringe
     ctx.save();
-    ctx.strokeStyle = 'rgba(255, 209, 102, 0.25)';
-    ctx.lineWidth = 2;
-
-    if (sourceType === 'point') {
-      // Kreise um die Punktquelle
-      const maxDist = Math.hypot(W, H);
-      for (let phaseVal = 0; phaseVal < maxDist * k; phaseVal += Math.PI * 2) {
-        const currentPhase = phaseVal - omega * time;
-        // Wir zeichnen nur Fronten, die gerade im sichtbaren Bereich sind
-        // Die Wellenfront bewegt sich nach außen
-        const radius = (phaseVal + omega * time) / k; // Umgestellt nach Distanz
-        // Das ist zu komplex, einfacher: Wir zeichnen Kreise für feste Phasen
-        
-        // Besser: Wir zeichnen Linien für jeden Winkel und prüfen die Phase? Nein, zu viele.
-        // Einfacher: Wir nehmen 20 Kreise und animieren sie.
-      }
+    for (let i = 0; i < 3; i++) {
+      const ringPhase = (time * 2 + i * 0.5) % 3;
+      const ringRadius = ringPhase * 40;
+      const opacity = 1 - (ringPhase / 3);
       
-      // Einfacher Ansatz: Animierte Kreise
-      const numRings = 8;
-      for (let i = 0; i < numRings; i++) {
-        const ringPhase = (time * 2 + i * 0.8) % (numRings * 0.8);
-        const ringRadius = (ringPhase / 0.8) * 50; // Radius wächst mit der Zeit
-        // Phase = k * r - omega * t = 0 -> r = (omega/k) * t
-        // Das ist die Ausbreitungsgeschwindigkeit.
-        
-        const opacity = 1 - (ringPhase / (numRings * 0.8));
-        if (opacity > 0) {
-          ctx.strokeStyle = `rgba(255, 209, 102, ${opacity * 0.3})`;
-          ctx.beginPath();
-          ctx.arc(sourceX, sourceY, ringRadius, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-      }
-    } else {
-      // Parallele Linien für Fläche / Box
-      const startY = H * 0.15;
-      const endY = H * 0.70;
-      const startX = W * 0.18;
-      const endX = W * 0.85;
-      const wavelength = (Math.PI * 2) / k;
-      
-      // Wir zeichnen vertikale Linien im Abstand der Wellenlänge
-      // Die Wellenfront bewegt sich nach rechts: x_front = v * t
-      // Phase = k*x - omega*t = 0 -> x = (omega/k)*t = v*t
-      const v = waveSpeed;
-      
-      // Wir zeichnen Fronten für verschiedene Phasen
-      for (let offset = -wavelength; offset < endX - startX + wavelength; offset += wavelength) {
-        // Position der Front bei t=0 wäre offset. Sie bewegt sich mit v*t nach rechts.
-        // Wir wollen die Fronten, die gerade im sichtbaren Bereich sind.
-        // Bedingung: startX <= offset + v*t <= endX
-        // offset = n * wavelength
-        // n * wavelength + v*t = x -> n = (x - v*t) / wavelength
-        
-        // Einfacher: Wir zeichnen Linien basierend auf der Phase.
-        // Wir iterieren über x und zeichnen dort eine Linie, wo die Phase ein Vielfaches von 2PI ist.
-        // Da wir nur endlich viele Pixel haben, machen wir das diskret.
-        // Noch einfacher: Wir zeichnen die Linien an den Positionen, wo cos(phase) == 1.
-        
-        // Da wir die Welle mit omega und k berechnen:
-        // phase(x,t) = k*x - omega*t
-        // Wellenfront bei phase = 2*PI*n
-        // k*x - omega*t = 2*PI*n
-        // x = (2*PI*n + omega*t) / k
-        // x = n * wavelength + v*t
-      }
-      
-      // Wir zeichnen einfach 10 Linien, die sich mit v bewegen
-      const numLines = 10;
-      const totalW = endX - startX;
-      const lineSpacing = wavelength;
-      
-      for (let i = 0; i < numLines; i++) {
-        // Position der i-ten Linie zum Zeitpunkt t
-        // Wir starten bei x = startX + i * lineSpacing und addieren v*t
-        let x = startX + i * lineSpacing + (waveSpeed * time) % totalW;
-        // Wenn x > endX, modulo anwenden
-        x = startX + ((x - startX) % totalW + totalW) % totalW;
-        
-        ctx.strokeStyle = 'rgba(255, 209, 102, 0.2)';
+      if (opacity > 0) {
         ctx.beginPath();
-        ctx.moveTo(x, startY);
-        ctx.lineTo(x, endY);
+        ctx.arc(lx + size/2, ly, ringRadius, -Math.PI/3, Math.PI/3);
+        ctx.strokeStyle = `rgba(255, 209, 102, ${opacity * 0.4})`;
+        ctx.lineWidth = 3;
         ctx.stroke();
       }
     }
     ctx.restore();
+
+    // Gehäuse
+    ctx.fillStyle = '#1e293b';
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(lx - size/2, ly - size, size, size*2, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    // Membran
+    const pulse = Math.sin(frequency / 100 * time) * 12;
+    ctx.fillStyle = '#475569';
+    ctx.beginPath();
+    ctx.moveTo(lx + size/2, ly - size * 0.8);
+    ctx.quadraticCurveTo(lx + size/2 + pulse, ly, lx + size/2, ly + size * 0.8);
+    ctx.lineTo(lx + size/2 - 5, ly + size * 0.8);
+    ctx.quadraticCurveTo(lx + size/2 + pulse - 5, ly, lx + size/2 - 5, ly - size * 0.8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#64748b';
+    ctx.stroke();
+
+    // Noten
+    ctx.fillStyle = '#ffd166';
+    ctx.font = '16px sans-serif';
+    ctx.fillText('♪', lx - 15, ly - 10);
+    ctx.fillText('♫', lx + 5, ly + 15);
+
+    // Beschriftung
+    ctx.fillStyle = '#a9bcd4';
+    ctx.font = 'bold 11px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Musikbox', lx, ly - size - 15);
   }
 
   function drawEar() {
@@ -584,6 +394,7 @@
     const startY = H * 0.15;
     const endY = H * 0.70;
 
+    // Alle Spalten-Ruhelagen als zarte gestrichelte Linien
     ctx.save();
     ctx.strokeStyle = 'rgba(148, 163, 184, 0.18)';
     ctx.lineWidth = 1;
@@ -600,6 +411,7 @@
     }
     ctx.restore();
 
+    // Ruhelage des ausgewählten Teilchens hervorheben
     if (selectedParticleIdx >= 0 && selectedParticleIdx < particles.length) {
       const p = particles[selectedParticleIdx];
       ctx.save();
@@ -611,6 +423,7 @@
       ctx.lineTo(p.baseX, endY);
       ctx.stroke();
 
+      // Kleine "Häkchen" (Ticks) am oberen und unteren Rand
       ctx.setLineDash([]);
       ctx.lineWidth = 2.5;
       ctx.beginPath();
@@ -629,21 +442,20 @@
     ctx.save();
     ctx.strokeStyle = 'rgba(255, 170, 40, 0.4)';
     ctx.lineWidth = 1.5;
+    
+    const k = (frequency / 100) * 0.5;
+    const omega = k * waveSpeed;
 
     for (let i = 0; i < particles.length; i++) {
       for (let j = i + 1; j < particles.length; j++) {
         const p1 = particles[i];
         const p2 = particles[j];
 
-        // Bei Punktquelle verbinden wir auch leicht diagonale Nachbarn
-        const maxDist = sourceType === 'point' ? GRID_SPACING * 1.2 : 5;
-        if (Math.abs(p1.baseY - p2.baseY) > maxDist) continue;
-        if (Math.abs(p1.baseX - p2.baseX) > maxDist) continue;
+        if (Math.abs(p1.baseY - p2.baseY) > 5) continue;
 
-        const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+        const dist = Math.abs(p1.x - p2.x);
         if (dist < GRID_SPACING * 0.9) {
-           const phase1 = getPhase(p1);
-           const density = -Math.cos(phase1);
+           const density = -Math.cos(k * p1.baseX - omega * time);
            if (density > 0.5) {
              ctx.beginPath();
              ctx.moveTo(p1.x, p1.y);
@@ -660,11 +472,13 @@
     if (selectedParticleIdx < 0 || selectedParticleIdx >= particles.length) return;
     const p = particles[selectedParticleIdx];
     ctx.save();
+    // Äußerer Puls-Ring
     ctx.beginPath();
     ctx.arc(p.x, p.y, 8 + Math.sin(time * 6) * 1.5, 0, Math.PI * 2);
     ctx.strokeStyle = 'rgba(255, 209, 102, 0.6)';
     ctx.lineWidth = 1.5;
     ctx.stroke();
+    // Innerer Ring
     ctx.beginPath();
     ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
     ctx.strokeStyle = '#ffd166';
@@ -717,10 +531,7 @@
       for (let j = i + 1; j < particles.length; j++) {
         const p1 = particles[i];
         const p2 = particles[j];
-        
-        const maxDist = sourceType === 'point' ? GRID_SPACING * 1.2 : 5;
-        if (Math.abs(p1.baseY - p2.baseY) > maxDist) continue;
-        if (Math.abs(p1.baseX - p2.baseX) > maxDist) continue;
+        if (Math.abs(p1.baseY - p2.baseY) > 5) continue;
         
         const inBox1 = p1.baseX >= zoomBox.x && p1.baseX <= zoomBox.x + zoomBox.w &&
                        p1.baseY >= zoomBox.y && p1.baseY <= zoomBox.y + zoomBox.h;
@@ -728,10 +539,11 @@
                        p2.baseY >= zoomBox.y && p2.baseY <= zoomBox.y + zoomBox.h;
 
         if (inBox1 && inBox2) {
-          const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+          const dist = Math.abs(p1.x - p2.x);
           if (dist < GRID_SPACING * 0.9) {
-             const phase1 = getPhase(p1);
-             const density = -Math.cos(phase1);
+             const k = (frequency / 100) * 0.5;
+             const omega = k * waveSpeed;
+             const density = -Math.cos(k * p1.baseX - omega * time);
              if (density > 0.5 && showChain) {
                const mx1 = microView.x + (p1.x - zoomBox.x) * scaleX;
                const my1 = microView.y + (p1.y - zoomBox.y) * scaleY;
@@ -770,6 +582,7 @@
     ctx.restore();
   }
 
+  /* ---------- s-t-Diagramm (Auslenkung über Zeit) ---------- */
   function drawSTGraph() {
     if (selectedParticleIdx < 0) return;
 
@@ -778,6 +591,7 @@
 
     ctx.save();
 
+    // Hintergrund
     ctx.fillStyle = 'rgba(14, 22, 34, 0.94)';
     ctx.strokeStyle = 'rgba(255, 209, 102, 0.6)';
     ctx.lineWidth = 1.5;
@@ -786,22 +600,26 @@
     ctx.fill();
     ctx.stroke();
 
+    // Titel
     ctx.fillStyle = '#ffd166';
     ctx.font = 'bold 11px system-ui, sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText('s-t-Diagramm (Auslenkung über Zeit)', gx + 12, gy + 18);
 
+    // Kleiner Hinweis "Klick auf Molekül"
     ctx.fillStyle = '#8fa3bf';
     ctx.font = '9px system-ui, sans-serif';
     ctx.textAlign = 'right';
     ctx.fillText('Auswahl: gelber Ring', gx + gw - 12, gy + 18);
 
+    // Plot-Bereich
     const padL = 30, padR = 14, padT = 30, padB = 20;
     const plotX = gx + padL;
     const plotY = gy + padT;
     const plotW = gw - padL - padR;
     const plotH = gh - padT - padB;
 
+    // Nulllinie
     const zeroY = plotY + plotH / 2;
     ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
     ctx.lineWidth = 1;
@@ -812,29 +630,34 @@
     ctx.stroke();
     ctx.setLineDash([]);
 
+    // Y-Achse
     ctx.beginPath();
     ctx.moveTo(plotX, plotY);
     ctx.lineTo(plotX, plotY + plotH);
     ctx.strokeStyle = 'rgba(148, 163, 184, 0.7)';
     ctx.stroke();
 
+    // X-Achse
     ctx.beginPath();
     ctx.moveTo(plotX, plotY + plotH);
     ctx.lineTo(plotX + plotW, plotY + plotH);
     ctx.stroke();
 
+    // Achsenbeschriftung
     ctx.fillStyle = '#8fa3bf';
     ctx.font = '10px system-ui, sans-serif';
     ctx.textAlign = 'right';
     ctx.fillText('s', plotX - 6, plotY + 8);
+    ctx.textAlign = 'right';
     ctx.fillText('0', plotX - 6, zeroY + 3);
     ctx.textAlign = 'left';
     ctx.fillText('t', plotX + plotW + 2, plotY + plotH + 3);
 
+    // Kurve zeichnen
     if (selectedHistory.length > 1) {
       const maxDisp = Math.max(
         ...selectedHistory.map(h => Math.abs(h.disp)),
-        1
+        1 // Minimum, um Division durch 0 zu vermeiden
       );
       const tEnd = selectedHistory[selectedHistory.length - 1].t;
       const tStart = Math.max(tEnd - HISTORY_WINDOW, selectedHistory[0].t);
@@ -854,6 +677,7 @@
       }
       ctx.stroke();
 
+      // Aktueller Punkt (rechts)
       const last = selectedHistory[selectedHistory.length - 1];
       if (last.t >= tStart) {
         const x = plotX + ((last.t - tStart) / timeSpan) * plotW;
@@ -869,6 +693,7 @@
         ctx.stroke();
       }
     } else {
+      // Noch keine Daten
       ctx.fillStyle = '#6f83a0';
       ctx.font = 'italic 11px system-ui, sans-serif';
       ctx.textAlign = 'center';
@@ -887,6 +712,7 @@
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
+    // Raster
     ctx.strokeStyle = 'rgba(45, 60, 85, 0.3)';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -900,12 +726,17 @@
     }
     ctx.stroke();
 
+    // Ruhelage (vor den Partikeln, damit Partikel darüber liegen)
     drawRestPositions();
-    drawPropagation();
-    drawSource();
+
+    // Musikbox & Ohr
+    drawMusicBox();
     drawEar();
+
+    // Kettenreaktion
     drawChainReaction();
 
+    // Partikel
     for (const p of particles) {
       ctx.beginPath();
       ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
@@ -913,9 +744,14 @@
       ctx.fill();
     }
 
+    // Markierung des ausgewählten Teilchens
     drawSelectedParticleMarker();
+
+    // Zoom-Box und Mikroskop
     drawZoomBox();
     drawMicroscope();
+
+    // s-t-Diagramm (ganz oben, damit es gut sichtbar ist)
     drawSTGraph();
 
     updateTip();
@@ -927,15 +763,15 @@
 
     if (selectedParticleIdx >= 0) {
       const p = particles[selectedParticleIdx];
-      const disp = Math.hypot(p.x - p.baseX, p.y - p.baseY);
-      tip = `Ausgewähltes Molekül: Auslenkung gerade ${disp.toFixed(1)} px. `;
+      const disp = p.x - p.baseX;
+      tip = `Ausgewähltes Molekül: Auslenkung gerade ${disp.toFixed(1)} px aus der Ruhelage. `;
       tip += 'Im s-t-Diagramm (oben rechts) siehst du seine Schwingung.';
-    } else if (sourceType === 'point') {
-      tip = 'Punktquelle: Die Welle breitet sich kreisförmig aus. Die Teilchen schwingen radial von der Quelle weg und zu ihr hin.';
-    } else if (sourceType === 'plane') {
-      tip = 'Flächenquelle: Die Welle breitet sich als ebene Welle (gerade Linien) nach rechts aus.';
+    } else if (speedFactor < 0.15) {
+      tip = 'Extreme Zeitlupe: Klicke auf ein Molekül, um seine Schwingung im s-t-Diagramm zu beobachten. Die gestrichelten Linien zeigen die Ruhelage.';
+    } else if (speedFactor < 0.5) {
+      tip = 'Zeitlupe: Die Musikbox schwingt sichtbar. Klicke auf ein Molekül, um seine Bewegung zu verfolgen.';
     } else {
-      tip = 'Musikbox: Die schwingende Membran erzeugt Verdichtungen und Verdünnungen, die sich nach rechts ausbreiten.';
+      tip = 'Normale Geschwindigkeit: Der Schall breitet sich schnell aus. Klicke auf ein Molekül für das s-t-Diagramm.';
     }
 
     tipEl.textContent = tip;
@@ -986,6 +822,7 @@
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
+    // 1) Zoom-Box? → Zoom verschieben
     if (showZoom && x >= zoomBox.x && x <= zoomBox.x + zoomBox.w &&
         y >= zoomBox.y && y <= zoomBox.y + zoomBox.h) {
       isDraggingZoom = true;
@@ -996,6 +833,7 @@
       return;
     }
 
+    // 2) Teilchen in der Nähe? → Auswählen
     let bestIdx = -1, bestDist = 12;
     for (let i = 0; i < particles.length; i++) {
       const d = Math.hypot(particles[i].x - x, particles[i].y - y);
@@ -1003,6 +841,7 @@
     }
     if (bestIdx >= 0) {
       if (selectedParticleIdx === bestIdx) {
+        // Erneuter Klick auf dasselbe Teilchen → abwählen
         selectedParticleIdx = -1;
         selectedHistory = [];
       } else {
@@ -1012,6 +851,7 @@
       return;
     }
 
+    // 3) Sonst: ins Leere geklickt → Auswahl aufheben
     selectedParticleIdx = -1;
     selectedHistory = [];
   });
@@ -1029,6 +869,7 @@
       return;
     }
 
+    // Cursor-Feedback
     let onZoom = showZoom && x >= zoomBox.x && x <= zoomBox.x + zoomBox.w &&
                  y >= zoomBox.y && y <= zoomBox.y + zoomBox.h;
     if (onZoom) {
@@ -1059,21 +900,8 @@
   const chkColor = document.getElementById('chkColor');
   const chkChain = document.getElementById('chkChain');
   const chkRest = document.getElementById('chkRest');
-  const chkPropagation = document.getElementById('chkPropagation');
   const chkZoom = document.getElementById('chkZoom');
   const btnPlay = document.getElementById('btnPlay');
-
-  // Schallquellen-Auswahl
-  document.querySelectorAll('[data-source]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('[data-source]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      sourceType = btn.dataset.source;
-      // Bei Punktquelle müssen wir die Auslenkung neu berechnen
-      updateParticles();
-      draw();
-    });
-  });
 
   speedRange.addEventListener('input', (e) => {
     speedFactor = parseFloat(e.target.value);
@@ -1093,7 +921,6 @@
   chkColor.addEventListener('change', (e) => { showColors = e.target.checked; });
   chkChain.addEventListener('change', (e) => { showChain = e.target.checked; });
   chkRest.addEventListener('change', (e) => { showRest = e.target.checked; });
-  chkPropagation.addEventListener('change', (e) => { showPropagation = e.target.checked; });
   chkZoom.addEventListener('change', (e) => { showZoom = e.target.checked; });
 
   btnPlay.addEventListener('click', () => {
@@ -1106,8 +933,7 @@
     time = 0;
     frequency = 440;
     amplitude = 50;
-    speedFactor = 0.05;
-    sourceType = 'box';
+    speedFactor = 0.2;
     
     speedRange.value = speedFactor;
     freqRange.value = frequency;
@@ -1116,9 +942,6 @@
     document.getElementById('speedVal').textContent = speedFactor.toFixed(2).replace('.', ',') + 'x';
     document.getElementById('freqVal').textContent = frequency + ' Hz';
     document.getElementById('ampVal').textContent = amplitude;
-    
-    document.querySelectorAll('[data-source]').forEach(b => b.classList.remove('active'));
-    document.querySelector('[data-source="box"]').classList.add('active');
     
     initParticles();
     updateParticles();
