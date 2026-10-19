@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Schallausbreitung – Teilchenmodell</title>
+<title>Schallausbreitung – Teilchenmodell (Zeitlupe)</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
@@ -103,8 +103,13 @@
 
     <div class="why-box">
       <strong>Warum simulieren?</strong><br>
-      Die Bewegung von Luftmolekülen bei einer Schallwelle ist mikroskopisch und nicht sichtbar. Diese Simulation macht das Unsichtbare sichtbar: Du siehst, wie sich die Moleküle verdichten (Verdichtung) und auseinanderziehen (Verdünnung).
+      Die Bewegung von Luftmolekülen bei einer Schallwelle ist mikroskopisch und nicht sichtbar. Diese Simulation macht das Unsichtbare sichtbar – in extremer Zeitlupe!
     </div>
+
+    <section class="group">
+      <label class="label" for="speedRange">Zeitlupe (Geschwindigkeit) <output id="speedVal">0,20x</output></label>
+      <input type="range" id="speedRange" min="0.05" max="1.0" step="0.05" value="0.2">
+    </section>
 
     <section class="group">
       <label class="label" for="freqRange">Frequenz (Tonhöhe) <output id="freqVal">440 Hz</output></label>
@@ -130,8 +135,6 @@
     <section class="group">
       <p class="tip" id="tip"></p>
     </section>
-
-    <p class="hint">Tipp: Bewege die Maus über die Bühne, um die Moleküle zu "stören" (optional). Die Farben zeigen die lokale Dichte der Luft an.</p>
   </aside>
 </div>
 
@@ -152,6 +155,7 @@
   // Parameter
   let frequency = 440; // Hz
   let amplitude = 50;  // 0-100
+  let speedFactor = 0.2; // Zeitlupen-Faktor (0.05 bis 1.0)
   let showColors = true;
   let showWave = false;
   let showTrails = false;
@@ -170,7 +174,6 @@
   /* ------------------------------------------------------------------ */
   function initParticles() {
     particles = [];
-    // Wir berechnen die Startpositionen relativ zur Canvas-Größe
     const startX = W * 0.15;
     const endX = W * 0.95;
     const startY = H * 0.15;
@@ -189,7 +192,7 @@
           baseY: baseY,
           x: baseX,
           y: baseY,
-          phaseOffset: (Math.random() - 0.5) * 0.5, // Kleiner zufälliger Versatz für natürlicheren Look
+          phaseOffset: (Math.random() - 0.5) * 0.5,
           color: '#60a5fa'
         });
       }
@@ -200,13 +203,8 @@
   /*  Physik-Update (Wellengleichung)                                    */
   /* ------------------------------------------------------------------ */
   function updateParticles() {
-    // Wellenzahl k = 2 * PI / Wellenlänge
-    // Da die Frequenz hoch ist, müssen wir das visuell skalieren.
-    // Wir mappen 440 Hz auf eine sichtbare Wellenlänge.
     const visualFreq = frequency / 100; 
     const k = visualFreq * 0.5; 
-    
-    // Winkelgeschwindigkeit omega = k * v
     const omega = k * waveSpeed;
 
     for (let i = 0; i < particles.length; i++) {
@@ -214,16 +212,15 @@
       
       // Auslenkung: A * sin(k * x0 - omega * t + phi)
       // Die Partikel bewegen sich in X-Richtung (longitudinal)
-      const displacement = (amplitude / 100) * GRID_SPACING * 0.8 * 
+      // Wir erhöhen den visuellen Ausschlag etwas, damit man die Bewegung besser sieht
+      const displacement = (amplitude / 100) * GRID_SPACING * 1.2 * 
                            Math.sin(k * p.baseX - omega * time + p.phaseOffset);
       
       p.x = p.baseX + displacement;
 
-      // Lokale Dichte berechnen für die Farbe (Ableitung der Auslenkung)
-      // Dichte ~ -cos(k * x - omega * t)
+      // Lokale Dichte berechnen für die Farbe
       if (showColors) {
         const density = -Math.cos(k * p.baseX - omega * time + p.phaseOffset);
-        // Farbe von Blau (Verdünnung) zu Rot (Verdichtung)
         if (density > 0) {
           // Verdichtung (Rot/Orange)
           const r = 255;
@@ -261,7 +258,7 @@
     ctx.stroke();
 
     // Membran (pulsierend)
-    const pulse = Math.sin(frequency / 100 * time) * 5;
+    const pulse = Math.sin(frequency / 100 * time) * 4;
     ctx.fillStyle = '#475569';
     ctx.beginPath();
     ctx.ellipse(lx + size/2 + pulse, ly, 8, size * 0.8, 0, 0, Math.PI * 2);
@@ -290,14 +287,12 @@
     const graphHeight = 30;
 
     ctx.save();
-    // Hintergrund für den Graphen
     ctx.fillStyle = 'rgba(15, 23, 42, 0.6)';
     ctx.fillRect(startX, graphY - graphHeight/2, endX - startX, graphHeight);
     ctx.strokeStyle = 'rgba(100, 116, 139, 0.3)';
     ctx.lineWidth = 1;
     ctx.strokeRect(startX, graphY - graphHeight/2, endX - startX, graphHeight);
 
-    // Null-Linie
     ctx.beginPath();
     ctx.moveTo(startX, graphY);
     ctx.lineTo(endX, graphY);
@@ -306,7 +301,6 @@
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Wellenkurve (Druckwelle)
     ctx.beginPath();
     const visualFreq = frequency / 100;
     const k = visualFreq * 0.5;
@@ -322,11 +316,10 @@
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Beschriftung
     ctx.fillStyle = '#a9bcd4';
     ctx.font = '11px system-ui, sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText('Druckwelle (Verdichtung = hoch, Verdünnung = tief)', startX, graphY - graphHeight/2 - 6);
+    ctx.fillText('Druckwelle (hoch = Verdichtung, tief = Verdünnung)', startX, graphY - graphHeight/2 - 6);
     ctx.restore();
   }
 
@@ -371,7 +364,7 @@
     // Lautsprecher
     drawSpeaker();
 
-    // Trails (Molekülbahnen)
+    // Trails
     drawTrails();
 
     // Partikel zeichnen
@@ -381,7 +374,6 @@
       ctx.fillStyle = p.color;
       ctx.fill();
       
-      // Leichter Glow-Effekt für verdichtete Bereiche
       if (showColors && p.color.includes('255')) {
         ctx.beginPath();
         ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
@@ -404,18 +396,18 @@
     const tipEl = document.getElementById('tip');
     let tip = '';
 
-    if (frequency > 600) {
-      tip = 'Hohe Frequenz: Die Wellenberge (Verdichtungen) liegen näher zusammen. Das entspricht einem hohen Ton.';
-    } else if (frequency < 250) {
-      tip = 'Niedrige Frequenz: Die Wellenberge sind weiter auseinander. Das entspricht einem tiefen Ton.';
+    if (speedFactor < 0.15) {
+      tip = 'Extreme Zeitlupe: Du siehst, wie sich die Moleküle nur um ihre Ruhelage bewegen. Die Welle selbst wandert nach rechts.';
+    } else if (speedFactor < 0.5) {
+      tip = 'Zeitlupe: Die Verdichtungen (rot) und Verdünnungen (blau) wandern durch den Raum.';
     } else {
-      tip = 'Mittlere Frequenz: Die Schallwelle breitet sich mit einer konstanten Geschwindigkeit aus. Die Moleküle schwingen nur um ihre Ruhelage.';
+      tip = 'Normale Geschwindigkeit: Die Schallwelle breitet sich schnell aus.';
     }
 
-    if (amplitude > 80) {
-      tip += ' Die hohe Amplitude (Lautstärke) führt zu einer starken Verdichtung und Verdünnung.';
-    } else if (amplitude < 30) {
-      tip += ' Die geringe Amplitude (Lautstärke) zeigt sich in einer schwachen Verdichtung.';
+    if (frequency > 600) {
+      tip += ' Hohe Frequenz: Die Wellenberge liegen näher zusammen (hoher Ton).';
+    } else if (frequency < 250) {
+      tip += ' Niedrige Frequenz: Die Wellenberge sind weiter auseinander (tiefer Ton).';
     }
 
     tipEl.textContent = tip;
@@ -430,7 +422,8 @@
     lastTime = timestamp;
 
     if (isPlaying) {
-      time += dt;
+      // Zeit wird mit dem speedFactor multipliziert (Zeitlupe)
+      time += dt * speedFactor;
       updateParticles();
     }
 
@@ -454,21 +447,25 @@
     cv.style.height = H + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     
-    // Partikel neu initialisieren, wenn sich die Größe ändert
     initParticles();
-    // Einmaliges Update, damit sie sofort an der richtigen Position sind
     updateParticles();
   }
 
   /* ------------------------------------------------------------------ */
   /*  Bedienelemente                                                     */
   /* ------------------------------------------------------------------ */
+  const speedRange = document.getElementById('speedRange');
   const freqRange = document.getElementById('freqRange');
   const ampRange = document.getElementById('ampRange');
   const chkColor = document.getElementById('chkColor');
   const chkWave = document.getElementById('chkWave');
   const chkTrails = document.getElementById('chkTrails');
   const btnPlay = document.getElementById('btnPlay');
+
+  speedRange.addEventListener('input', (e) => {
+    speedFactor = parseFloat(e.target.value);
+    document.getElementById('speedVal').textContent = speedFactor.toFixed(2).replace('.', ',') + 'x';
+  });
 
   freqRange.addEventListener('input', (e) => {
     frequency = parseFloat(e.target.value);
@@ -496,7 +493,7 @@
     isPlaying = !isPlaying;
     btnPlay.textContent = isPlaying ? 'Pause' : 'Abspielen';
     if (isPlaying) {
-      lastTime = 0; // Reset für flüssige Fortsetzung
+      lastTime = 0;
     }
   });
 
@@ -504,10 +501,16 @@
     time = 0;
     frequency = 440;
     amplitude = 50;
+    speedFactor = 0.2;
+    
+    speedRange.value = speedFactor;
     freqRange.value = frequency;
     ampRange.value = amplitude;
+    
+    document.getElementById('speedVal').textContent = speedFactor.toFixed(2).replace('.', ',') + 'x';
     document.getElementById('freqVal').textContent = frequency + ' Hz';
     document.getElementById('ampVal').textContent = amplitude;
+    
     updateParticles();
     draw();
   });
@@ -518,11 +521,10 @@
   const ro = new ResizeObserver(() => resize());
   ro.observe(stage);
 
-  // Initialisierung
   resize();
   requestAnimationFrame(animate);
 
-  // Polyfill für roundRect (falls älterer Browser)
+  // Polyfill für roundRect
   if (!CanvasRenderingContext2D.prototype.roundRect) {
     CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
       if (w < 2 * r) r = w / 2;
