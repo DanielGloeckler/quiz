@@ -173,15 +173,14 @@
   const cv    = document.getElementById('cv');
   const ctx   = cv.getContext('2d');
 
-  /* ---------- Welt: 100 cm Breite, Höhe ergibt sich aus dem Seitenverhältnis ---------- */
-  let W = 800, H = 500, PX = 8;     // PX = Pixel pro Zentimeter
+  let W = 800, H = 500, PX = 8;
 
   const DEFAULT = {
     lightXf: 0.15, lightYf: 0.50,
     objXf:   0.45, objYf:   0.50,
     screenXf:0.87,
-    sourceSize: 10,     // cm (Durchmesser der Lampe)
-    objHeight:  8,      // cm
+    sourceSize: 10,
+    objHeight:  8,
     extended: true,
     objType: 'sphere',
     showRays: true,
@@ -246,180 +245,240 @@
     ctx.fillText(text, x, y);
   }
 
+  /* ------------------------------------------------------------------ */
+  /*  Taschenlampe zeichnen                                              */
+  /* ------------------------------------------------------------------ */
   function drawLight(lx, ly, S) {
     ctx.save();
-    
-    // Leuchtkegel (Glow)
-    const glowR = Math.max(80, S * 2.5);
+
+    // 1. Weicher Lichtkegel (Glow)
+    const glowR = Math.max(120, S * 4);
     const g = ctx.createRadialGradient(lx, ly, 0, lx, ly, glowR);
-    g.addColorStop(0,    'rgba(255,214,102,.45)');
-    g.addColorStop(0.40, 'rgba(255,196,64,.15)');
-    g.addColorStop(1,    'rgba(255,196,64,0)');
+    g.addColorStop(0,    'rgba(255,220,100,.35)');
+    g.addColorStop(0.3,  'rgba(255,200,80,.12)');
+    g.addColorStop(1,    'rgba(255,200,80,0)');
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(lx, ly, glowR, 0, Math.PI * 2); ctx.fill();
 
-    // Taschenlampe zeichnen (Korpus)
-    const bodyW = 30;
-    const bodyH = S > 0 ? Math.max(S * 2 + 12, 20) : 16;
-    const bodyX = lx - bodyW;
+    // 2. Taschenlampen-Gehäuse (Korpus)
+    const bodyW = 36;
+    const bodyH = S > 0 ? Math.max(S * 2 + 8, 24) : 20;
+    const bodyX = lx - bodyW - 8;
     const bodyY = ly - bodyH / 2;
-    
-    ctx.fillStyle = '#2c3a52';
+
+    // Korpus-Hintergrund
+    const bodyGrad = ctx.createLinearGradient(bodyX, bodyY, bodyX, bodyY + bodyH);
+    bodyGrad.addColorStop(0, '#475569');
+    bodyGrad.addColorStop(0.5, '#1e293b');
+    bodyGrad.addColorStop(1, '#0f172a');
+    ctx.fillStyle = bodyGrad;
     roundRect(ctx, bodyX, bodyY, bodyW, bodyH, 4);
     ctx.fill();
-    ctx.strokeStyle = '#16202f';
+    ctx.strokeStyle = '#0f172a';
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // Griff der Taschenlampe (Riffelung)
-    ctx.fillStyle = '#1a2637';
-    for(let i=0; i<4; i++) {
-      ctx.fillRect(bodyX + 4 + i*6, bodyY + 4, 3, bodyH - 8);
+    // Riffelung am Griff
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    for(let i=0; i<5; i++) {
+      ctx.fillRect(bodyX + 6 + i*5, bodyY + 4, 2, bodyH - 8);
     }
 
-    // Lampenkopf (Vorderseite)
-    const headW = 8;
-    const headH = S > 0 ? S * 2 + 4 : 10;
-    const headX = lx - headW / 2;
+    // 3. Lampenkopf (Vorderseite)
+    const headW = 12;
+    const headH = S > 0 ? S * 2 + 6 : 14;
+    const headX = lx - headW;
     const headY = ly - headH / 2;
 
-    ctx.fillStyle = '#3e5270';
+    const headGrad = ctx.createLinearGradient(headX, headY, headX, headY + headH);
+    headGrad.addColorStop(0, '#64748b');
+    headGrad.addColorStop(0.5, '#334155');
+    headGrad.addColorStop(1, '#1e293b');
+    ctx.fillStyle = headGrad;
     roundRect(ctx, headX, headY, headW, headH, 3);
     ctx.fill();
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // Leuchtendes Element (Linse / Glühbirne)
+    // 4. Leuchtendes Element (Linse)
     if (S > 2) {
       // Ausgedehnte Quelle (länglicher Leuchtstab)
-      const grd = ctx.createLinearGradient(lx - 3, 0, lx + 3, 0);
-      grd.addColorStop(0,   '#ffb703');
-      grd.addColorStop(0.5, '#fff8cc');
-      grd.addColorStop(1,   '#ffb703');
-      ctx.fillStyle = grd;
-      roundRect(ctx, lx - 3, ly - S, 6, 2 * S, 3);
+      const lensGrad = ctx.createLinearGradient(lx - 4, 0, lx + 4, 0);
+      lensGrad.addColorStop(0,   '#f59e0b');
+      lensGrad.addColorStop(0.5, '#fef08a');
+      lensGrad.addColorStop(1,   '#f59e0b');
+      ctx.fillStyle = lensGrad;
+      roundRect(ctx, lx - 4, ly - S, 8, 2 * S, 4);
       ctx.fill();
-      ctx.strokeStyle = 'rgba(190,120,0,.65)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
+      
+      // Glanzstreifen auf der Linse
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      roundRect(ctx, lx - 2, ly - S + 2, 2, 2 * S - 4, 1);
+      ctx.fill();
     } else {
       // Punktquelle (kleiner heller Punkt)
-      ctx.beginPath(); ctx.arc(lx, ly, 6, 0, Math.PI * 2);
-      const grd = ctx.createRadialGradient(lx - 2, ly - 2, 1, lx, ly, 7);
-      grd.addColorStop(0, '#fffde7');
-      grd.addColorStop(1, '#ffb703');
-      ctx.fillStyle = grd;
+      ctx.beginPath(); ctx.arc(lx, ly, 8, 0, Math.PI * 2);
+      const lensGrad = ctx.createRadialGradient(lx - 2, ly - 2, 1, lx, ly, 9);
+      lensGrad.addColorStop(0, '#ffffff');
+      lensGrad.addColorStop(0.4, '#fef08a');
+      lensGrad.addColorStop(1, '#f59e0b');
+      ctx.fillStyle = lensGrad;
       ctx.fill();
-      ctx.strokeStyle = 'rgba(190,120,0,.75)';
-      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = 'rgba(245,158,11,.8)';
+      ctx.lineWidth = 1.5;
       ctx.stroke();
     }
     ctx.restore();
   }
 
+  /* ------------------------------------------------------------------ */
+  /*  Gegenstände zeichnen (mit 3D-Effekt)                               */
+  /* ------------------------------------------------------------------ */
   function drawObject(ox, oy, hh) {
     ctx.save();
-    const w = 16; // Breite des Gegenstands
-    
+    const w = 20; // Breite des Gegenstands
+
+    // Boden-Schlagschatten (weich)
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath();
+    ctx.ellipse(ox, oy + hh - 2, w * 0.8, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
     if (state.objType === 'sphere') {
-      // Kugel
       const r = hh;
-      const grad = ctx.createRadialGradient(ox - r*0.3, oy - r*0.3, r*0.1, ox, oy, r);
-      grad.addColorStop(0, '#e2e8f0');
-      grad.addColorStop(1, '#64748b');
+      
+      // Kugel-Hauptkörper mit 3D-Radialverlauf
+      const grad = ctx.createRadialGradient(ox - r*0.4, oy - r*0.4, r*0.1, ox, oy, r);
+      grad.addColorStop(0, '#f8fafc');
+      grad.addColorStop(0.2, '#e2e8f0');
+      grad.addColorStop(0.7, '#94a3b8');
+      grad.addColorStop(1, '#475569');
       ctx.fillStyle = grad;
       ctx.beginPath();
       ctx.arc(ox, oy, r, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
       
-      // Fussball-Muster (Andeutung)
-      ctx.fillStyle = '#1e293b';
-      for(let i=0; i<5; i++){
-        const a = i * (Math.PI*2/5) - Math.PI/2;
-        const px = ox + Math.cos(a) * r * 0.5;
-        const py = oy + Math.sin(a) * r * 0.5;
+      // Glanzlicht (Specular Highlight)
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.beginPath();
+      ctx.ellipse(ox - r*0.4, oy - r*0.4, r*0.15, r*0.1, -Math.PI/4, 0, Math.PI*2);
+      ctx.fill();
+
+      // Fussball-Muster (dezente dunkle Flecken)
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.7)';
+      for(let i=0; i<6; i++){
+        const a = i * (Math.PI*2/6) - Math.PI/2;
+        const px = ox + Math.cos(a) * r * 0.55;
+        const py = oy + Math.sin(a) * r * 0.55;
         ctx.beginPath();
-        ctx.arc(px, py, r*0.15, 0, Math.PI*2);
+        ctx.arc(px, py, r*0.12, 0, Math.PI*2);
         ctx.fill();
       }
       
     } else if (state.objType === 'cylinder') {
-      // Zylinder
+      // Zylinder-Hauptkörper
       const grad = ctx.createLinearGradient(ox - w/2, 0, ox + w/2, 0);
-      grad.addColorStop(0, '#94a3b8');
-      grad.addColorStop(0.3, '#e2e8f0');
-      grad.addColorStop(1, '#64748b');
+      grad.addColorStop(0, '#475569');
+      grad.addColorStop(0.25, '#cbd5e1');
+      grad.addColorStop(0.6, '#94a3b8');
+      grad.addColorStop(1, '#1e293b');
       ctx.fillStyle = grad;
       roundRect(ctx, ox - w/2, oy - hh, w, 2*hh, 2);
       ctx.fill();
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
       
-      // Deckel oben
-      ctx.fillStyle = '#cbd5e1';
+      // Deckel oben (Ellipse)
+      const topGrad = ctx.createLinearGradient(ox - w/2, 0, ox + w/2, 0);
+      topGrad.addColorStop(0, '#94a3b8');
+      topGrad.addColorStop(0.5, '#e2e8f0');
+      topGrad.addColorStop(1, '#64748b');
+      ctx.fillStyle = topGrad;
       ctx.beginPath();
-      ctx.ellipse(ox, oy - hh, w/2, 3, 0, 0, Math.PI*2);
+      ctx.ellipse(ox, oy - hh, w/2, 4, 0, 0, Math.PI*2);
       ctx.fill();
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1;
       ctx.stroke();
       
-      // Boden unten
-      ctx.fillStyle = '#94a3b8';
+      // Boden unten (Ellipse)
+      ctx.fillStyle = '#334155';
       ctx.beginPath();
-      ctx.ellipse(ox, oy + hh, w/2, 3, 0, 0, Math.PI*2);
+      ctx.ellipse(ox, oy + hh, w/2, 4, 0, 0, Math.PI*2);
+      ctx.fill();
+
+    } else if (state.objType === 'box') {
+      // Quader mit 3D-Perspektive (Iso-Ansicht)
+      const dx = 6, dy = -6; // Tiefenversatz für 3D-Effekt
+
+      // Vorderseite
+      const frontGrad = ctx.createLinearGradient(ox - w/2, 0, ox + w/2, 0);
+      frontGrad.addColorStop(0, '#94a3b8');
+      frontGrad.addColorStop(0.4, '#e2e8f0');
+      frontGrad.addColorStop(1, '#64748b');
+      ctx.fillStyle = frontGrad;
+      roundRect(ctx, ox - w/2, oy - hh, w, 2*hh, 2);
+      ctx.fill();
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      // Oberseite (Parallelogramm)
+      ctx.fillStyle = '#f1f5f9';
+      ctx.beginPath();
+      ctx.moveTo(ox - w/2, oy - hh);
+      ctx.lineTo(ox - w/2 + dx, oy - hh + dy);
+      ctx.lineTo(ox + w/2 + dx, oy - hh + dy);
+      ctx.lineTo(ox + w/2, oy - hh);
+      ctx.closePath();
       ctx.fill();
       ctx.stroke();
 
-    } else if (state.objType === 'box') {
-      // Quader
-      const grad = ctx.createLinearGradient(ox - w/2, 0, ox + w/2, 0);
-      grad.addColorStop(0, '#94a3b8');
-      grad.addColorStop(0.3, '#e2e8f0');
-      grad.addColorStop(1, '#64748b');
-      ctx.fillStyle = grad;
-      roundRect(ctx, ox - w/2, oy - hh, w, 2*hh, 2);
+      // Rechte Seite (Parallelogramm)
+      ctx.fillStyle = '#475569';
+      ctx.beginPath();
+      ctx.moveTo(ox + w/2, oy - hh);
+      ctx.lineTo(ox + w/2 + dx, oy - hh + dy);
+      ctx.lineTo(ox + w/2 + dx, oy + hh + dy);
+      ctx.lineTo(ox + w/2, oy + hh);
+      ctx.closePath();
       ctx.fill();
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 1.5;
       ctx.stroke();
-      
-      // 3D-Andeutung (Innenkanten)
-      ctx.strokeStyle = 'rgba(51,65,85,0.4)';
+
+      // Kante zwischen Vorder- und Oberseite
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(ox - w/2, oy - hh);
       ctx.lineTo(ox + w/2, oy - hh);
-      ctx.moveTo(ox - w/2, oy + hh);
-      ctx.lineTo(ox + w/2, oy + hh);
       ctx.stroke();
     }
     ctx.restore();
   }
 
   function drawScreen(sx, aT, aB, uT, uB, umbraOnScreen) {
-    const w = 14, top = 14, bot = H - 14;
+    const w = 16, top = 10, bot = H - 10;
     ctx.save();
 
+    // Schirm-Hintergrund
     ctx.fillStyle = '#ffffff';
-    ctx.strokeStyle = '#b7c5d8';
-    ctx.lineWidth = 1.5;
-    roundRect(ctx, sx, top, w, bot - top, 5);
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 2;
+    roundRect(ctx, sx, top, w, bot - top, 4);
     ctx.fill();
     ctx.stroke();
 
+    // Schatten auf dem Schirm
     ctx.save();
-    roundRect(ctx, sx, top, w, bot - top, 5);
+    roundRect(ctx, sx, top, w, bot - top, 4);
     ctx.clip();
 
-    // Halbschatten auf dem Schirm
-    ctx.fillStyle = 'rgba(120,140,170,.62)';
+    // Halbschatten
+    ctx.fillStyle = 'rgba(100, 116, 139, 0.5)';
     ctx.fillRect(sx, aT, w, Math.max(0, aB - aT));
 
-    // Kernschatten auf dem Schirm
+    // Kernschatten
     if (umbraOnScreen) {
-      ctx.fillStyle = '#141d2b';
+      ctx.fillStyle = '#0f172a';
       ctx.fillRect(sx, uT, w, Math.max(0, uB - uT));
     }
     ctx.restore();
@@ -434,14 +493,14 @@
     /* ---- Hintergrund ---- */
     ctx.clearRect(0, 0, W, H);
     const bg = ctx.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, '#f9fcff');
-    bg.addColorStop(1, '#e5edf7');
+    bg.addColorStop(0, '#f8fafc');
+    bg.addColorStop(1, '#e2e8f0');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
     /* ---- Raster (5 cm) ---- */
     ctx.save();
-    ctx.strokeStyle = 'rgba(150,175,205,.25)';
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.2)';
     ctx.lineWidth = 1;
     const gp = 5 * PX;
     ctx.beginPath();
@@ -459,7 +518,7 @@
       ctx.lineTo(sx, aB);
       ctx.lineTo(ox, oy + hh);
       ctx.closePath();
-      ctx.fillStyle = 'rgba(255,168,40,.26)';
+      ctx.fillStyle = 'rgba(245, 158, 11, 0.2)';
       ctx.fill();
 
       // Kernschatten
@@ -473,18 +532,32 @@
       }
       ctx.lineTo(ox, oy + hh);
       ctx.closePath();
-      ctx.fillStyle = 'rgba(26,38,60,.62)';
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.6)';
       ctx.fill();
     }
 
     /* ---- Schirm ---- */
     drawScreen(sx, aT, aB, uT, uB, umbraOnScreen);
 
-    /* ---- Randstrahlen ---- */
+    /* ---- Lichtkegel & Randstrahlen ---- */
     if (state.showRays) {
       ctx.save();
-      ctx.strokeStyle = 'rgba(240,150,20,.85)';
-      ctx.lineWidth = 1.3;
+      
+      // Sanfter Lichtkegel (vom Objekt zum Schirm)
+      ctx.beginPath();
+      ctx.moveTo(ox, oy - hh);
+      ctx.lineTo(sx, aT);
+      ctx.lineTo(sx, aB);
+      ctx.lineTo(ox, oy + hh);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(255, 230, 150, 0.15)';
+      ctx.fill();
+
+      // Randstrahlen (Präzise Linien)
+      ctx.strokeStyle = 'rgba(234, 179, 8, 0.8)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]); // Gestrichelt für bessere Sichtbarkeit
+      
       const rays = [
         [ysMin, oy - hh], [ysMax, oy - hh],
         [ysMin, oy + hh], [ysMax, oy + hh]
@@ -505,9 +578,9 @@
     drawObject(ox, oy, hh);
 
     /* ---- Beschriftung ---- */
-    label('Lichtquelle', lx, Math.max(16, ly - Math.max(S, 10) - 22));
-    label('Gegenstand',  ox, Math.max(16, oy - hh - 16));
-    label('Schirm',      sx + 7, 32);
+    label('Lichtquelle', lx, Math.max(16, ly - Math.max(S, 12) - 24));
+    label('Gegenstand',  ox, Math.max(16, oy - hh - 18));
+    label('Schirm',      sx + 8, 28);
 
     /* ---- Messwerte ---- */
     const totalPx  = Math.max(0, aB - aT);
@@ -577,9 +650,11 @@
     const sx = state.screenXf * W;
     const S  = state.extended ? (state.sourceSize * PX) / 2 : 0;
 
-    if (Math.abs(x - sx) < 11) return 'screen';
+    if (Math.abs(x - sx) < 12) return 'screen';
     if (Math.abs(x - ox) < 20 && Math.abs(y - oy) < hh + 12) return 'object';
-    if (Math.abs(x - lx) < 32 && Math.abs(y - ly) < Math.max(S, 12) + 16) return 'light';
+    
+    // Taschenlampen-Hitbox (etwas breiter, da der Korpus nach links ragt)
+    if (x > lx - 60 && x < lx + 15 && Math.abs(y - ly) < Math.max(S, 12) + 16) return 'light';
     return null;
   }
 
