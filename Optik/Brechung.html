@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brechung &amp; optische Hebung – Interaktive Simulation</title>
+<style>
+  :root {
+    --bg: #0b1220;
+    --panel: #131d31;
+    --accent: #4fc3f7;
+    --accent2: #ffd54f;
+    --warm: #ff8a65;
+    --text: #e6eef8;
+    --muted: #8aa0bd;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: radial-gradient(circle at 20% 0%, #14233c, #070c16 70%);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+  }
+  header {
+    max-width: 1100px;
+    margin: 0 auto 28px;
+    text-align: center;
+  }
+  h1 { margin: 0 0 8px; font-size: clamp(1.4rem, 3vw, 2rem); letter-spacing: 0.3px; }
+  h1 span { color: var(--accent); }
+  .subtitle { color: var(--muted); font-size: 0.95rem; }
+  main { max-width: 1100px; margin: 0 auto; display: grid; gap: 24px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr; gap: 24px; }
+  @media (min-width: 960px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+  .card {
+    background: linear-gradient(180deg, rgba(30,45,70,0.92), rgba(18,28,45,0.92));
+    border: 1px solid rgba(79,195,247,0.18);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  .card h2 {
+    margin: 0 0 14px;
+    font-size: 1.1rem;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card h2 .num {
+    background: rgba(79,195,247,0.18);
+    border: 1px solid rgba(79,195,247,0.35);
+    border-radius: 8px;
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+  }
+  canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 12px;
+    background: #0a1524;
+    touch-action: none;
+    cursor: crosshair;
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: center;
+    margin-top: 14px;
+  }
+  .controls label {
+    font-size: 0.85rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .controls input[type="range"] {
+    flex: 1;
+    min-width: 120px;
+    accent-color: var(--accent);
+  }
+  .badge {
+    background: rgba(79,195,247,0.14);
+    border: 1px solid rgba(79,195,247,0.35);
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    min-width: 64px;
+    text-align: center;
+  }
+  .badge.warm {
+    background: rgba(255,138,101,0.14);
+    border-color: rgba(255,138,101,0.4);
+    color: var(--warm);
+  }
+  button {
+    background: rgba(79,195,247,0.15);
+    border: 1px solid rgba(79,195,247,0.4);
+    color: var(--accent);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 0.88rem;
+    font-family: inherit;
+  }
+  button:hover { background: rgba(79,195,247,0.28); }
+  button.active { background: var(--accent); color: #06121f; }
+  .info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .info-item {
+    background: rgba(10,20,35,0.7);
+    border: 1px solid rgba(79,195,247,0.15);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .info-item .k {
+    color: var(--muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .info-item .v {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-top: 3px;
+    font-variant-numeric: tabular-nums;
+  }
+  .info-item .v.gold { color: var(--accent2); }
+  .info-item .v.warm { color: var(--warm); }
+  .formula {
+    font-family: 'Cambria Math', 'STIX Two Math', Georgia, serif;
+    font-size: 1rem;
+    color: var(--accent2);
+    background: rgba(255,213,79,0.06);
+    border-left: 3px solid var(--accent2);
+    padding: 9px 14px;
+    border-radius: 6px;
+    margin-top: 12px;
+    text-align: center;
+  }
+  .hint {
+    color: var(--muted);
+    font-size: 0.83rem;
+    margin-top: 12px;
+    line-height: 1.55;
+  }
+  .tasks {
+    max-width: 1100px;
+    margin: 28px auto 0;
+    background: linear-gradient(180deg, rgba(30,45,70,0.92), rgba(18,28,45,0.92));
+    border: 1px solid rgba(79,195,247,0.18);
+    border-radius: 16px;
+    padding: 22px 26px;
+  }
+  .tasks h3 {
+    margin: 0 0 14px;
+    color: var(--accent2);
+    font-size: 1.1rem;
+  }
+  .tasks ol {
+    margin: 0;
+    padding-left: 22px;
+    line-height: 1.75;
+    color: #cddaeb;
+    font-size: 0.92rem;
+  }
+  .tasks li { margin-bottom: 6px; }
+  .tasks code {
+    background: rgba(79,195,247,0.12);
+    color: var(--accent);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔦 Brechung des Lichts &amp; <span>optische Hebung</span></h1>
+  <p class="subtitle">Interaktive Simulation – Snellius-Gesetz live erleben</p>
+</header>
+
+<main>
+  <div class="grid-2">
+
+    <!-- ============ KARTE 1: BRECHUNG ============ -->
+    <section class="card">
+      <h2><span class="num">1</span> Brechung an der Wasseroberfläche</h2>
+      <canvas id="sim1"></canvas>
+
+      <div class="controls">
+        <label for="angleSlider">Einfallswinkel θ₁</label>
+        <input type="range" id="angleSlider" min="0" max="85" value="35" step="0.5">
+        <span class="badge" id="angleBadge">35.0°</span>
+        <button id="waterBtn" class="active">Wasser an</button>
+      </div>
+
+      <div class="info">
+        <div class="info-item">
+          <div class="k">θ₁ in Luft</div>
+          <div class="v" id="t1v">35.0°</div>
+        </div>
+        <div class="info-item">
+          <div class="k">θ₂ im Wasser</div>
+          <div class="v warm" id="t2v">25.4°</div>
+        </div>
+        <div class="info-item">
+          <div class="k">Brechungsindex</div>
+          <div class="v" style="font-size:0.85rem" id="ninfo">n₁ = 1,00 · n₂ = 1,33</div>
+        </div>
+      </div>
+
+      <div class="formula" id="formula1">1,00 · sin(35,0°) = 1,33 · sin(25,4°)</div>
+
+      <p class="hint">
+        💡 Du kannst den Lichtstrahl auch direkt auf der Grafik mit der Maus
+        (oder dem Finger) ziehen. Der gebrochene Strahl wird live nach dem
+        Snellius-Gesetz berechnet.
+      </p>
+    </section>
+
+    <!-- ============ KARTE 2: OPTISCHE HEBUNG ============ -->
+    <section class="card">
+      <h2><span class="num">2</span> Optische Hebung – der „Speerjagd“-Effekt</h2>
+      <canvas id="sim2"></canvas>
+
+      <div class="controls">
+        <label for="depthSlider">Wassertiefe d</label>
+        <input type="range" id="depthSlider" min="60" max="200" value="140" step="1">
+        <span class="badge warm" id="depthBadge">140 px</span>
+      </div>
+
+      <div class="info">
+        <div class="info-item">
+          <div class="k">Echte Tiefe</div>
+          <div class="v" id="realDepthV">140 px</div>
+        </div>
+        <div class="info-item">
+          <div class="k">Scheinbare Tiefe</div>
+          <div class="v gold" id="appDepthV">96 px</div>
+        </div>
+        <div class="info-item">
+          <div class="k">Hebung</div>
+          <div class="v warm" id="liftV">44 px</div>
+        </div>
+      </div>
+
+      <div class="formula" id="formula2">
+        d′ / d ≈ 1 / n = 1 / 1,33 ≈ 0,75
+      </div>
+
+      <p class="hint">
+        💡 Der Fisch erscheint dem Auge <em>höher</em> als er wirklich ist,
+        weil die Lichtstrahlen an der Wasseroberfläche nach oben hin
+        „abgeknickt“ werden. Wer auf den <strong>scheinbaren</strong> Fisch
+        zielt, wirft deshalb <strong>zu hoch</strong> – der Speer muss tiefer
+        angesetzt werden!
+      </p>
+    </section>
+
+  </div>
+
+  <!-- ============ AUFGABEN ============ -->
+  <section class="tasks">
+    <h3>🧪 Aufgaben zum Entdecken</h3>
+    <ol>
+      <li>Verändere den Einfallswinkel θ₁. Wie verändert sich der Brechungswinkel θ₂? Wird der Strahl zum Lot hin oder vom Lot weg gebrochen?</li>
+      <li>Stelle θ₁ = 0° ein. Was beobachtest du? Warum?</li>
+      <li>Schalte das Wasser aus („Wasser an/aus“). Was passiert mit dem Lichtstrahl? Erkläre den Unterschied.</li>
+      <li>Bei welchem Winkel wird der Lichtstrahl im Wasser am stärksten „geknickt“? Begründe mithilfe des Snellius-Gesetzes.</li>
+      <li>Vergrößere die Wassertiefe im zweiten Experiment. Wie verändert sich die scheinbare Tiefe? Bleibt das Verhältnis d′/d gleich?</li>
+      <li>Warum erscheint der Fisch höher, als er wirklich ist? Zeichne zur Erklärung einen Strahlengang vom Fisch zum Auge.</li>
+    </ol>
+  </section>
+
+</main>
+
+<script>
+'use strict';
+
+/* ================================================================
+   HILFSFUNKTIONEN
+   ================================================================ */
+const D2R = d => d * Math.PI / 180;
+const R2D = r => r * 180 / Math.PI;
+const N_WATER = 1.33;
+const N_AIR   = 1.00;
+
+function drawRay(ctx, a, b, color, width, dash, glow) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  if (glow !== false) {
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 12;
+  }
+  if (dash) ctx.setLineDash(dash);
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function getCanvasPoint(canvas, e) {
+  const r = canvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - r.left) * (canvas.width  / r.width),
+    y: (e.clientY - r.top ) * (canvas.height / r.height)
+  };
+}
+
+/* ================================================================
+   SIMULATION 1  –  BRECHUNG AN DER WASSEROBERFLÄCHE
+   ================================================================ */
+const c1  = document.getElementById('sim1');
+const ctx1 = c1.getContext('2d');
+const W1 = 640, H1 = 420;
+c1.width = W1; c1.height = H1;
+
+const O1       = { x: W1 / 2, y: H1 / 2 };
+const RAY_LEN  = 195;
+let angle1     = 35;      // Einfallswinkel in Grad (0–85)
+let waterOn    = true;
+
+function render1() {
+  ctx1.clearRect(0, 0, W1, H1);
+
+  /* --- Hintergrund Luft --- */
+  const skyG = ctx1.createLinearGradient(0, 0, 0, O1.y);
+  skyG.addColorStop(0, '#0e1a2c');
+  skyG.addColorStop(1, '#0a1524');
+  ctx1.fillStyle = skyG;
+  ctx1.fillRect(0, 0, W1, O1.y);
+
+  /* --- Wasser --- */
+  if (waterOn) {
+    const wG = ctx1.createLinearGradient(0, O1.y, 0, H1);
+    wG.addColorStop(0, 'rgba(40, 130, 200, 0.48)');
+    wG.addColorStop(1, 'rgba(15, 60, 120, 0.68)');
+    ctx1.fillStyle = wG;
+    ctx1.fillRect(0, O1.y, W1, H1 - O1.y);
+
+    // Wellenlinie
+    ctx1.strokeStyle = 'rgba(79, 195, 247, 0.85)';
+    ctx1.lineWidth = 2.5;
+    ctx1.beginPath();
+    for (let x = 0; x <= W1; x += 4) {
+      const y = O1.y + Math.sin(x * 0.05) * 1.4;
+      if (x === 0) ctx1.moveTo(x, y); else ctx1.lineTo(x, y);
+    }
+    ctx1.stroke();
+  } else {
+    ctx1.strokeStyle = 'rgba(79, 195, 247, 0.3)';
+    ctx1.lineWidth = 1.5;
+    ctx1.setLineDash([8, 8]);
+    ctx1.beginPath();
+    ctx1.moveTo(0, O1.y);
+    ctx1.lineTo(W1, O1.y);
+    ctx1.stroke();
+    ctx1.setLineDash([]);
+  }
+
+  /* --- Normale --- */
+  ctx1.strokeStyle = 'rgba(160, 180, 210, 0.45)';
+  ctx1.lineWidth = 1.5;
+  ctx1.setLineDash([5, 5]);
+  ctx1.beginPath();
+  ctx1.moveTo(O1.x, O1.y - 185);
+  ctx1.lineTo(O1.x, O1.y + 185);
+  ctx1.stroke();
+  ctx1.setLineDash([]);
+
+  /* --- Winkel berechnen --- */
+  const t1    = D2R(angle1);
+  const sinT2 = waterOn ? Math.sin(t1) / N_WATER : Math.sin(t1);
+  const t2    = Math.asin(Math.min(1, sinT2));
+
+  /* --- Strahlen --- */
+  const S = { x: O1.x - RAY_LEN * Math.sin(t1),
+              y: O1.y - RAY_LEN * Math.cos(t1) };
+
+  // Einfallender Strahl (gelb)
+  drawRay(ctx1, S, O1, '#ffd54f', 3);
+
+  // Gebrochener Strahl (orange im Wasser, gelb ohne Wasser)
+  const E = { x: O1.x + RAY_LEN * Math.sin(t2),
+              y: O1.y + RAY_LEN * Math.cos(t2) };
+  drawRay(ctx1, O1, E, waterOn ? '#ff8a65' : '#ffd54f', 3);
+
+  // Reflektierter Anteil (schwach)
+  const R = { x: O1.x + RAY_LEN * Math.sin(t1),
+              y: O1.y - RAY_LEN * Math.cos(t1) };
+  drawRay(ctx1, O1, R, 'rgba(255, 213, 79, 0.30)', 2, [6, 6]);
+
+  /* --- Winkelbögen --- */
+  const arcR = 72;
+
+  ctx1.strokeStyle = '#4fc3f7';
+  ctx1.lineWidth = 2;
+  ctx1.beginPath();
+  ctx1.arc(O1.x, O1.y, arcR, -Math.PI/2 - t1, -Math.PI/2, false);
+  ctx1.stroke();
+
+  if (waterOn) {
+    ctx1.strokeStyle = '#ff8a65';
+    ctx1.beginPath();
+    ctx1.arc(O1.x, O1.y, arcR, Math.PI/2 - t2, Math.PI/2, false);
+    ctx1.stroke();
+  }
+
+  /* --- Beschriftungen --- */
+  ctx1.font = 'bold 14px "Segoe UI", sans-serif';
+
+  const mid1 = -Math.PI/2 - t1/2;
+  ctx1.fillStyle = '#4fc3f7';
+  ctx1.fillText(`θ₁ = ${angle1.toFixed(1)}°`,
+                O1.x + Math.cos(mid1) * (arcR + 6) - 56,
+                O1.y + Math.sin(mid1) * (arcR + 6));
+
+  if (waterOn) {
+    const mid2 = Math.PI/2 - t2/2;
+    ctx1.fillStyle = '#ff8a65';
+    ctx1.fillText(`θ₂ = ${R2D(t2).toFixed(1)}°`,
+                  O1.x + Math.cos(mid2) * (arcR + 6) + 6,
+                  O1.y + Math.sin(mid2) * (arcR + 6));
+  }
+
+  /* --- Lichtquelle --- */
+  ctx1.save();
+  ctx1.shadowColor = '#ffeb3b';
+  ctx1.shadowBlur = 22;
+  ctx1.fillStyle = '#ffeb3b';
+  ctx1.beginPath();
+  ctx1.arc(S.x, S.y, 8, 0, Math.PI * 2);
+  ctx1.fill();
+  ctx1.restore();
+
+  /* --- Punkt O --- */
+  ctx1.fillStyle = '#ffffff';
+  ctx1.beginPath();
+  ctx1.arc(O1.x, O1.y, 4.5, 0, Math.PI * 2);
+  ctx1.fill();
+
+  /* --- Bereichsbeschriftung --- */
+  ctx1.font = '600 12px "Segoe UI", sans-serif';
+  ctx1.fillStyle = 'rgba(160, 185, 215, 0.75)';
+  ctx1.fillText('LUFT   n₁ = 1,00', 14, 26);
+
+  if (waterOn) {
+    ctx1.fillStyle = 'rgba(170, 215, 250, 0.85)';
+    ctx1.fillText('WASSER   n₂ = 1,33', 14, O1.y + 26);
+  }
+
+  /* --- Dynamische Info im Canvas --- */
+  ctx1.font = '600 12px "Segoe UI", sans-serif';
+  ctx1.fillStyle = 'rgba(160, 185, 215, 0.6)';
+  ctx1.fillText('Ziehe den Strahl mit der Maus!', W1 - 205, 26);
+}
+
+/* --- Slider & Button --- */
+const slider1      = document.getElementById('angleSlider');
+const angleBadge   = document.getElementById('angleBadge');
+const waterBtn     = document.getElementById('waterBtn');
+const t1vEl        = document.getElementById('t1v');
+const t2vEl        = document.getElementById('t2v');
+const formula1El   = document.getElementById('formula1');
+const ninfoEl      = document.getElementById('ninfo');
+
+function update1UI() {
+  angleBadge.textContent = angle1.toFixed(1) + '°';
+  t1vEl.textContent      = angle1.toFixed(1) + '°';
+
+  let t2deg = angle1;
+  if (waterOn) {
+    const t2 = Math.asin(Math.min(1, Math.sin(D2R(angle1)) / N_WATER));
+    t2deg = R2D(t2);
+    t2vEl.textContent = t2deg.toFixed(1) + '°';
+    formula1El.textContent =
+      `1,00 · sin(${angle1.toFixed(1)}°) = 1,33 · sin(${t2deg.toFixed(1)}°)`;
+  } else {
+    t2vEl.textContent = angle1.toFixed(1) + '°';
+    formula1El.textContent =
+      `Keine Brechung: 1,00 · sin(${angle1.toFixed(1)}°) = 1,00 · sin(${angle1.toFixed(1)}°)`;
+  }
+  ninfoEl.textContent = waterOn
+    ? 'n₁ = 1,00 · n₂ = 1,33'
+    : 'n₁ = 1,00 · n₂ = 1,00';
+}
+
+function redraw1() { render1(); update1UI(); }
+
+slider1.addEventListener('input', () => {
+  angle1 = parseFloat(slider1.value);
+  redraw1();
+});
+
+waterBtn.addEventListener('click', () => {
+  waterOn = !waterOn;
+  waterBtn.classList.toggle('active', waterOn);
+  waterBtn.textContent = waterOn ? 'Wasser an' : 'Wasser aus';
+  redraw1();
+});
+
+/* --- Ziehen auf dem Canvas --- */
+let dragging1 = false;
+
+function setAngleFromPoint(p) {
+  const dx = Math.abs(p.x - O1.x);
+  const dy = O1.y - p.y;          // positiv, wenn oberhalb der Oberfläche
+  if (dy <= 4) return;
+  let a = Math.atan2(dx, dy) * 180 / Math.PI;
+  a = Math.max(0, Math.min(85, a));
+  angle1 = a;
+  slider1.value = a;
+  redraw1();
+}
+
+c1.addEventListener('pointerdown', e => {
+  const p = getCanvasPoint(c1, e);
+  if (p.y < O1.y - 5) {
+    dragging1 = true;
+    c1.setPointerCapture(e.pointerId);
+    setAngleFromPoint(p);
+  }
+});
+c1.addEventListener('pointermove', e => {
+  if (!dragging1) return;
+  setAngleFromPoint(getCanvasPoint(c1, e));
+});
+c1.addEventListener('pointerup', e => {
+  dragging1 = false;
+  try { c1.releasePointerCapture(e.pointerId); } catch (_) {}
+});
+c1.addEventListener('pointercancel', () => { dragging1 = false; });
+
+
+/* ================================================================
+   SIMULATION 2  –  OPTISCHE HEBUNG (FISCH & SPEER)
+   ================================================================ */
+const c2  = document.getElementById('sim2');
+const ctx2 = c2.getContext('2d');
+const W2 = 640, H2 = 420;
+c2.width = W2; c2.height = H2;
+
+const SURFACE_Y = 120;
+const FISH_X    = 280;
+let   depth2    = 140;
+
+// Zwei feste Strahlwinkel (vom Lot aus, im Wasser)
+const ANG_A = D2R(10);
+const ANG_B = D2R(20);
+
+function drawFish(ctx, x, y, color, ghost) {
+  ctx.save();
+  ctx.translate(x, y);
+
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 22, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(-19, 0);
+  ctx.lineTo(-32, -10);
+  ctx.lineTo(-32, 10);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = ghost ? 'rgba(255,255,255,0.6)' : '#0a1524';
+  ctx.beginPath();
+  ctx.arc(10, -2, 2.6, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function computeRay2(theta2, depth) {
+  const sinT1 = N_WATER * Math.sin(theta2);
+  if (sinT1 >= 1) return null;                 // Totalreflexion
+  const theta1 = Math.asin(sinT1);
+  return {
+    theta1,
+    theta2,
+    P: { x: FISH_X + depth * Math.tan(theta2), y: SURFACE_Y }
+  };
+}
+
+function intersectBack(rA, rB) {
+  const ax = -Math.sin(rA.theta1), ay = Math.cos(rA.theta1);
+  const bx = -Math.sin(rB.theta1), by = Math.cos(rB.theta1);
+  const dx = rB.P.x - rA.P.x;
+  const dy = rB.P.y - rA.P.y;
+  const D  = ax * (-by) - (-bx) * ay;
+  if (Math.abs(D) < 1e-9) return null;
+  const s = (dx * (-by) - (-bx) * dy) / D;
+  return { x: rA.P.x + s * ax, y: rA.P.y + s * ay };
+}
+
+function render2() {
+  ctx2.clearRect(0, 0, W2, H2);
+
+  /* --- Himmel --- */
+  const sky = ctx2.createLinearGradient(0, 0, 0, SURFACE_Y);
+  sky.addColorStop(0, '#1a2c45');
+  sky.addColorStop(1, '#0f1d30');
+  ctx2.fillStyle = sky;
+  ctx2.fillRect(0, 0, W2, SURFACE_Y);
+
+  /* --- Wasser --- */
+  const wat = ctx2.createLinearGradient(0, SURFACE_Y, 0, H2);
+  wat.addColorStop(0, 'rgba(40, 130, 200, 0.52)');
+  wat.addColorStop(1, 'rgba(12, 55, 110, 0.75)');
+  ctx2.fillStyle = wat;
+  ctx2.fillRect(0, SURFACE_Y, W2, H2 - SURFACE_Y);
+
+  /* --- Wasseroberfläche --- */
+  ctx2.strokeStyle = '#4fc3f7';
+  ctx2.lineWidth = 2.5;
+  ctx2.beginPath();
+  for (let x = 0; x <= W2; x += 4) {
+    const y = SURFACE_Y + Math.sin(x * 0.045) * 1.6;
+    if (x === 0) ctx2.moveTo(x, y); else ctx2.lineTo(x, y);
+  }
+  ctx2.stroke();
+
+  const fishY = SURFACE_Y + depth2;
+
+  /* --- Lot (gestrichelt) --- */
+  ctx2.strokeStyle = 'rgba(160,180,210,0.32)';
+  ctx2.lineWidth = 1.5;
+  ctx2.setLineDash([5, 5]);
+  ctx2.beginPath();
+  ctx2.moveTo(FISH_X, SURFACE_Y - 80);
+  ctx2.lineTo(FISH_X, Math.min(H2 - 10, fishY + 30));
+  ctx2.stroke();
+  ctx2.setLineDash([]);
+
+  /* --- Strahlen berechnen --- */
+  const rA = computeRay2(ANG_A, depth2);
+  const rB = computeRay2(ANG_B, depth2);
+
+  /* --- Strahlen im Wasser (Fisch → Oberfläche) --- */
+  for (const r of [rA, rB]) {
+    if (!r) continue;
+    drawRay(ctx2, { x: FISH_X, y: fishY }, r.P, '#ff8a65', 2.5);
+  }
+
+  /* --- Strahlen in Luft + rückwärtige Verlängerung --- */
+  const AIR_LEN  = 150;
+  const BACK_LEN = 260;
+
+  for (const r of [rA, rB]) {
+    if (!r) continue;
+    const end = {
+      x: r.P.x + AIR_LEN * Math.sin(r.theta1),
+      y: r.P.y - AIR_LEN * Math.cos(r.theta1)
+    };
+    drawRay(ctx2, r.P, end, '#ffd54f', 2.5);
+
+    const back = {
+      x: r.P.x - BACK_LEN * Math.sin(r.theta1),
+      y: r.P.y + BACK_LEN * Math.cos(r.theta1)
+    };
+    drawRay(ctx2, r.P, back, 'rgba(255,213,79,0.35)', 1.5, [5, 5]);
+  }
+
+  /* --- Scheinbarer Fisch (Schnittpunkt der Verlängerungen) --- */
+  let apparent = null;
+  if (rA && rB) {
+    apparent = intersectBack(rA, rB);
+  }
+
+  if (apparent && apparent.y > SURFACE_Y && apparent.y < H2) {
+    // Geister-Fisch
+    ctx2.save();
+    ctx2.globalAlpha = 0.55;
+    drawFish(ctx2, apparent.x, apparent.y, '#4fc3f7', true);
+    ctx2.restore();
+
+    // Hebungspfeil
+    ctx2.save();
+    ctx2.strokeStyle = 'rgba(79,195,247,0.8)';
+    ctx2.lineWidth = 2;
+    ctx2.setLineDash([4, 4]);
+    ctx2.beginPath();
+    ctx2.moveTo(apparent.x, apparent.y + 14);
+    ctx2.lineTo(FISH_X, fishY - 16);
+    ctx2.stroke();
+    ctx2.setLineDash([]);
+
+    // Pfeilspitze
+    const ang = Math.atan2(fishY - 16 - (apparent.y + 14), FISH_X - apparent.x);
+    ctx2.beginPath();
+    ctx2.moveTo(FISH_X, fishY - 16);
+    ctx2.lineTo(FISH_X - 9 * Math.cos(ang - 0.4),
+                fishY - 16 - 9 * Math.sin(ang - 0.4));
+    ctx2.lineTo(FISH_X - 9 * Math.cos(ang + 0.4),
+                fishY - 16 - 9 * Math.sin(ang + 0.4));
+    ctx2.closePath();
+    ctx2.fillStyle = 'rgba(79,195,247,0.8)';
+    ctx2.fill();
+    ctx2.restore();
+  }
+
+  /* --- Echter Fisch --- */
+  drawFish(ctx2, FISH_X, fishY, '#ff8a65', false);
+
+  /* --- Beschriftungen --- */
+  ctx2.font = '600 12.5px "Segoe UI", sans-serif';
+
+  ctx2.fillStyle = '#ff8a65';
+  ctx2.fillText('Echter Fisch', FISH_X - 42, fishY + 40);
+
+  if (apparent && apparent.y > SURFACE_Y) {
+    ctx2.fillStyle = '#4fc3f7';
+    ctx2.fillText('Scheinbarer Fisch', apparent.x - 55, apparent.y - 26);
+  }
+
+  ctx2.font = '600 12px "Segoe UI", sans-serif';
+  ctx2.fillStyle = 'rgba(160,185,215,0.7)';
+  ctx2.fillText('LUFT', 14, 26);
+  ctx2.fillStyle = 'rgba(170,215,250,0.85)';
+  ctx2.fillText('WASSER', 14, SURFACE_Y + 26);
+
+  /* --- Tiefenmarkierung rechts --- */
+  const mx = W2 - 34;
+  ctx2.strokeStyle = 'rgba(160,185,215,0.5)';
+  ctx2.lineWidth = 1.5;
+  ctx2.setLineDash([3, 4]);
+  ctx2.beginPath();
+  ctx2.moveTo(mx, SURFACE_Y);
+  ctx2.lineTo(mx, fishY);
+  ctx2.stroke();
+  ctx2.setLineDash([]);
+
+  // kleine Querstriche
+  ctx2.beginPath();
+  ctx2.moveTo(mx - 6, SURFACE_Y); ctx2.lineTo(mx + 6, SURFACE_Y);
+  ctx2.moveTo(mx - 6, fishY);     ctx2.lineTo(mx + 6, fishY);
+  ctx2.stroke();
+
+  ctx2.fillStyle = 'rgba(160,185,215,0.75)';
+  ctx2.font = '600 11px "Segoe UI", sans-serif';
+  ctx2.save();
+  ctx2.translate(mx + 14, (SURFACE_Y + fishY) / 2);
+  ctx2.rotate(-Math.PI / 2);
+  ctx2.fillText(`d = ${Math.round(depth2)}`, -22, 0);
+  ctx2.restore();
+
+  return { rA, rB, apparent, fishY };
+}
+
+/* --- Slider & Info für Sim 2 --- */
+const slider2     = document.getElementById('depthSlider');
+const depthBadge  = document.getElementById('depthBadge');
+const realDepthV  = document.getElementById('realDepthV');
+const appDepthV   = document.getElementById('appDepthV');
+const liftV       = document.getElementById('liftV');
+const formula2El  = document.getElementById('formula2');
+
+function update2UI() {
+  depthBadge.textContent = Math.round(depth2) + ' px';
+  realDepthV.textContent = Math.round(depth2) + ' px';
+
+  const rA = computeRay2(ANG_A, depth2);
+  const rB = computeRay2(ANG_B, depth2);
+  let appDepth = null;
+
+  if (rA && rB) {
+    const ap = intersectBack(rA, rB);
+    if (ap && ap.y > SURFACE_Y) {
+      appDepth = ap.y - SURFACE_Y;
+    }
+  }
+
+  if (appDepth !== null) {
+    const lift = depth2 - appDepth;
+    appDepthV.textContent = Math.round(appDepth) + ' px';
+    liftV.textContent     = Math.round(lift) + ' px';
+    formula2El.textContent =
+      `d′ / d = ${Math.round(appDepth)} / ${Math.round(depth2)} ≈ ` +
+      `${(appDepth / depth2).toFixed(2)}   ( 1 / 1,33 ≈ 0,75 )`;
+  } else {
+    appDepthV.textContent = '–';
+    liftV.textContent     = '–';
+    formula2El.textContent = 'Totalreflexion – kein Bild sichtbar';
+  }
+}
+
+function redraw2() { render2(); update2UI(); }
+
+slider2.addEventListener('input', () => {
+  depth2 = parseFloat(slider2.value);
+  redraw2();
+});
+
+
+/* ================================================================
+   START
+   ================================================================ */
+redraw1();
+redraw2();
+
+/* Neu zeichnen bei Fenstergrößenänderung (HiDPI / Resize) */
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { redraw1(); redraw2(); }, 120);
+});
+</script>
+</body>
+</html>
