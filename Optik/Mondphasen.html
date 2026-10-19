@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mondphasen-Simulation: Beobachtungs- und Modellebene (2D &amp; 3D)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 { color: #58a6ff; margin-bottom: 5px; font-size: 1.8rem; text-align: center; }
+        .subtitle { font-size: 1rem; color: #8b949e; margin-bottom: 20px; text-align: center; }
+        .container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; max-width: 1200px; width: 100%; }
+        .card {
+            background-color: #161b22; border: 1px solid #30363d; border-radius: 8px;
+            padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .card h3 { margin-top: 0; color: #c9d1d9; }
+        canvas { background-color: #010409; border-radius: 6px; border: 1px solid #30363d; }
+        .controls {
+            margin-top: 20px; width: 100%; max-width: 800px;
+            background-color: #161b22; border: 1px solid #30363d;
+            padding: 20px; border-radius: 8px;
+            display: flex; flex-direction: column; gap: 15px;
+        }
+        .slider-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-weight: bold; color: #58a6ff; }
+        input[type=range] { width: 100%; accent-color: #58a6ff; }
+        .info-box {
+            background-color: #1f242c; border-left: 4px solid #58a6ff;
+            padding: 12px; border-radius: 0 6px 6px 0;
+            font-size: 0.95rem; line-height: 1.5;
+        }
+        .legend-box {
+            background-color: #1a1f27; border: 1px solid #30363d;
+            padding: 10px 14px; border-radius: 6px;
+            font-size: 0.85rem; color: #c9d1d9;
+            display: flex; gap: 18px; flex-wrap: wrap; justify-content: center;
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-line {
+            width: 24px; height: 0; border-top: 2px dashed #ffd54a;
+        }
+        .legend-eye {
+            width: 14px; height: 10px; border-radius: 50%;
+            background: #fff; border: 1px solid #1a1a1a;
+            position: relative;
+        }
+        .legend-eye::after {
+            content: ''; position: absolute; top: 2px; left: 4px;
+            width: 5px; height: 5px; border-radius: 50%;
+            background: #1f6feb;
+        }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        button {
+            background-color: #21262d; color: #c9d1d9; border: 1px solid #30363d;
+            padding: 8px 12px; border-radius: 6px; cursor: pointer;
+            font-weight: 600; transition: background 0.2s;
+        }
+        button:hover { background-color: #30363d; color: #58a6ff; }
+
+        /* ---------- NEU: 3D-Modus ---------- */
+        .view-toggle { display: flex; gap: 6px; margin-bottom: 12px; }
+        .view-toggle button { padding: 5px 16px; font-size: 0.85rem; }
+        .view-toggle button.active {
+            background-color: #1f6feb; border-color: #58a6ff; color: #ffffff;
+        }
+        .view-toggle button.active:hover { background-color: #2b7ef5; color: #fff; }
+        #threeContainer {
+            width: 400px; height: 400px; max-width: 100%;
+            border-radius: 6px; border: 1px solid #30363d;
+            overflow: hidden; background-color: #010409;
+            display: none; position: relative;
+        }
+        #threeContainer canvas { display: block; border: none; border-radius: 0; }
+        #spaceHint { font-size: 0.85rem; color: #8b949e; margin-top: 8px; text-align: center; }
+        .mini-btn {
+            padding: 4px 10px; font-size: 0.78rem; border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Mondphasen im Modell &amp; aus der Erdperspektive</h1>
+    <div class="subtitle">Physikunterricht Klasse 7/8 – Verknüpfung von Beobachtungsebene &amp; Modellebene</div>
+
+    <div class="container">
+        <div class="card">
+            <h3>Modellebene (Aus dem Weltall)</h3>
+
+            <!-- NEU: Umschalter 2D / 3D -->
+            <div class="view-toggle">
+                <button id="btn2D" class="active">2D</button>
+                <button id="btn3D">3D</button>
+            </div>
+
+            <canvas id="spaceCanvas" width="400" height="400"></canvas>
+            <div id="threeContainer"></div>
+
+            <p id="spaceHint" style="font-size: 0.85rem; color: #8b949e; margin-top: 8px;">Sonne strahlt von links ein.</p>
+
+            <!-- NEU: Kamera-Schnellwahl (nur im 3D-Modus sinnvoll) -->
+            <div class="btn-group" id="camButtons" style="margin-top: 8px; display: none;">
+                <button class="mini-btn" id="btnCamOverview">Übersicht</button>
+                <button class="mini-btn" id="btnCamEarth">Blick von der Erde</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Beobachtungsebene (Von der Erde aus)</h3>
+            <canvas id="earthCanvas" width="400" height="400"></canvas>
+            <p id="phaseName" style="font-size: 1.1rem; font-weight: bold; color: #58a6ff; margin-top: 8px;">Neumond</p>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="slider-group">
+            <label for="orbitSlider">Mondposition auf der Umlaufbahn:</label>
+            <input type="range" id="orbitSlider" min="0" max="360" value="0" step="1">
+        </div>
+
+        <div class="legend-box">
+            <div class="legend-item"><div class="legend-eye"></div><span>Beobachter (steht auf der Erde)</span></div>
+            <div class="legend-item"><div class="legend-line"></div><span>Blickrichtung zum Mond</span></div>
+        </div>
+
+        <div class="btn-group">
+            <button onclick="setAngle(0)">Neumond</button>
+            <button onclick="setAngle(90)">Zunehm. Halbmond</button>
+            <button onclick="setAngle(180)">Vollmond</button>
+            <button onclick="setAngle(270)">Abnehm. Halbmond</button>
+        </div>
+
+        <div class="info-box" id="explanationText"></div>
+    </div>
+
+    <!-- ===================== 2D-Simulation (unverändert) ===================== -->
+    <script>
+        const spaceCanvas = document.getElementById('spaceCanvas');
+        const spaceCtx = spaceCanvas.getContext('2d');
+        const earthCanvas = document.getElementById('earthCanvas');
+        const earthCtx = earthCanvas.getContext('2d');
+        const orbitSlider = document.getElementById('orbitSlider');
+        const phaseNameEl = document.getElementById('phaseName');
+        const explanationText = document.getElementById('explanationText');
+
+        const starsSpace = generateStars(400, 400, 100);
+        const starsEarth = generateStars(400, 400, 100);
+
+        function generateStars(w, h, count) {
+            const arr = [];
+            for (let i = 0; i < count; i++) {
+                arr.push({
+                    x: Math.random() * w,
+                    y: Math.random() * h,
+                    size: Math.random() * 1.2 + 0.3,
+                    alpha: Math.random() * 0.6 + 0.3
+                });
+            }
+            return arr;
+        }
+
+        function drawStars(ctx, stars) {
+            stars.forEach(s => {
+                ctx.globalAlpha = s.alpha;
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+        }
+
+        function updateSimulation() {
+            const angleDeg = parseFloat(orbitSlider.value);
+            const angleRad = (angleDeg * Math.PI) / 180;
+            drawSpaceView(angleRad);
+            drawEarthView(angleDeg);
+            updateExplanation(angleDeg);
+        }
+
+        function setAngle(angle) {
+            orbitSlider.value = angle;
+            updateSimulation();
+        }
+
+        function drawEarth(ctx, cx, cy, r) {
+            const oceanGrad = ctx.createRadialGradient(cx - r*0.3, cy - r*0.3, r*0.1, cx, cy, r);
+            oceanGrad.addColorStop(0, '#5ab0ff');
+            oceanGrad.addColorStop(1, '#0d3d6b');
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+            ctx.fillStyle = oceanGrad;
+            ctx.fill();
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+            ctx.clip();
+            ctx.fillStyle = '#2d6e2d';
+            ctx.beginPath();
+            ctx.ellipse(cx + r*0.05, cy - r*0.05, r*0.35, r*0.45, 0.2, 0, 2*Math.PI);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(cx - r*0.5, cy + r*0.15, r*0.22, r*0.45, -0.3, 0, 2*Math.PI);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(cx + r*0.55, cy - r*0.25, r*0.28, r*0.28, 0.3, 0, 2*Math.PI);
+            ctx.fill();
+            ctx.restore();
+
+            const atmoGrad = ctx.createRadialGradient(cx, cy, r*0.95, cx, cy, r*1.2);
+            atmoGrad.addColorStop(0, 'rgba(100, 180, 255, 0.4)');
+            atmoGrad.addColorStop(1, 'rgba(100, 180, 255, 0)');
+            ctx.beginPath();
+            ctx.arc(cx, cy, r*1.2, 0, 2 * Math.PI);
+            ctx.fillStyle = atmoGrad;
+            ctx.fill();
+        }
+
+        function drawCraters(ctx, cx, cy, r) {
+            const craters = [
+                { x: -0.40, y: -0.30, size: 0.08 }, { x:  0.20, y: -0.40, size: 0.05 },
+                { x:  0.50, y:  0.10, size: 0.10 }, { x: -0.20, y:  0.30, size: 0.07 },
+                { x:  0.15, y:  0.50, size: 0.06 }, { x: -0.55, y:  0.20, size: 0.04 },
+                { x:  0.35, y: -0.15, size: 0.045 }, { x: -0.15, y: -0.15, size: 0.03 },
+                { x: -0.30, y: -0.50, size: 0.055 }, { x:  0.25, y:  0.40, size: 0.04 },
+                { x:  0.55, y: -0.35, size: 0.035 }, { x: -0.05, y:  0.10, size: 0.05 }
+            ];
+            craters.forEach(c => {
+                const px = cx + c.x * r;
+                const py = cy + c.y * r;
+                const pr = c.size * r;
+                ctx.beginPath();
+                ctx.arc(px, py, pr, 0, 2 * Math.PI);
+                ctx.fillStyle = 'rgba(120, 120, 110, 0.5)';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(px - pr*0.15, py - pr*0.15, pr*0.65, 0, 2 * Math.PI);
+                ctx.fillStyle = 'rgba(240, 240, 230, 0.2)';
+                ctx.fill();
+            });
+        }
+
+        // ---------- MODELLEBENE (Weltall, 2D) ----------
+        function drawSpaceView(angleRad) {
+            spaceCtx.clearRect(0, 0, spaceCanvas.width, spaceCanvas.height);
+            const cx = spaceCanvas.width / 2;
+            const cy = spaceCanvas.height / 2;
+            const orbitRadius = 130;
+            const moonRadius = 14;
+            const earthRadius = 20;
+
+            drawStars(spaceCtx, starsSpace);
+
+            // Lichtstrahlen
+            spaceCtx.strokeStyle = 'rgba(255, 220, 100, 0.12)';
+            spaceCtx.lineWidth = 1;
+            for (let i = 0; i < 25; i++) {
+                const y = 10 + i * (spaceCanvas.height - 20) / 24;
+                spaceCtx.beginPath();
+                spaceCtx.moveTo(70, y);
+                spaceCtx.lineTo(spaceCanvas.width, y);
+                spaceCtx.stroke();
+            }
+
+            // Sonne
+            const sunX = -30, sunY = cy, sunR = 90;
+            const sunGlow = spaceCtx.createRadialGradient(sunX, sunY, sunR * 0.5, sunX, sunY, sunR * 2.5);
+            sunGlow.addColorStop(0, 'rgba(255, 200, 60, 0.4)');
+            sunGlow.addColorStop(0.5, 'rgba(255, 160, 40, 0.15)');
+            sunGlow.addColorStop(1, 'rgba(255, 140, 20, 0)');
+            spaceCtx.fillStyle = sunGlow;
+            spaceCtx.beginPath();
+            spaceCtx.arc(sunX, sunY, sunR * 2.5, 0, 2 * Math.PI);
+            spaceCtx.fill();
+
+            const sunDisk = spaceCtx.createRadialGradient(sunX - sunR*0.3, sunY - sunR*0.3, sunR*0.1, sunX, sunY, sunR);
+            sunDisk.addColorStop(0, '#fffde0');
+            sunDisk.addColorStop(0.5, '#ffdd55');
+            sunDisk.addColorStop(1, '#ff9800');
+            spaceCtx.fillStyle = sunDisk;
+            spaceCtx.beginPath();
+            spaceCtx.arc(sunX, sunY, sunR, 0, 2 * Math.PI);
+            spaceCtx.fill();
+
+            spaceCtx.fillStyle = '#ffd54a';
+            spaceCtx.font = 'bold 13px sans-serif';
+            spaceCtx.fillText("☀️ Sonne", 20, cy - sunR - 8);
+            spaceCtx.font = '11px sans-serif';
+            spaceCtx.fillStyle = 'rgba(255, 220, 100, 0.75)';
+            spaceCtx.fillText("Licht →", 25, cy + sunR + 18);
+
+            // Umlaufbahn
+            spaceCtx.beginPath();
+            spaceCtx.arc(cx, cy, orbitRadius, 0, 2 * Math.PI);
+            spaceCtx.strokeStyle = 'rgba(88, 166, 255, 0.25)';
+            spaceCtx.setLineDash([4, 4]);
+            spaceCtx.lineWidth = 1;
+            spaceCtx.stroke();
+            spaceCtx.setLineDash([]);
+
+            drawEarth(spaceCtx, cx, cy, earthRadius);
+
+            // Mond
+            // HINWEIS: y-Komponente bewusst gedreht (cy + ...), damit die Modellebene
+            // mit der Beobachtungsebene und dem 3D-Modus konsistent ist:
+            // bei 90° steht der Mond "unten", die Sonne links -> von der Erde aus
+            // ist die rechte Mondhälfte beleuchtet.
+            const moonX = cx - orbitRadius * Math.cos(angleRad);
+            const moonY = cy + orbitRadius * Math.sin(angleRad);
+
+            // Beobachter auf der Erde, der zum Mond schaut
+            const dxMoon = moonX - cx;
+            const dyMoon = moonY - cy;
+            const distMoon = Math.sqrt(dxMoon*dxMoon + dyMoon*dyMoon) || 1;
+            const normX = dxMoon / distMoon;
+            const normY = dyMoon / distMoon;
+            const obsX = cx + normX * (earthRadius + 1);
+            const obsY = cy + normY * (earthRadius + 1);
+            const lineAngle = Math.atan2(normY, normX);
+
+            // Blicklinie
+            spaceCtx.beginPath();
+            spaceCtx.setLineDash([5, 5]);
+            spaceCtx.moveTo(obsX, obsY);
+            spaceCtx.lineTo(moonX, moonY);
+            spaceCtx.strokeStyle = 'rgba(255, 220, 80, 0.6)';
+            spaceCtx.lineWidth = 1.5;
+            spaceCtx.stroke();
+            spaceCtx.setLineDash([]);
+
+            // Pfeilspitze
+            const arrowTipX = moonX - normX * (moonRadius + 3);
+            const arrowTipY = moonY - normY * (moonRadius + 3);
+            const wingLen = 8, wingAngle = 0.4;
+            spaceCtx.beginPath();
+            spaceCtx.moveTo(arrowTipX, arrowTipY);
+            spaceCtx.lineTo(arrowTipX + wingLen * Math.cos(lineAngle + Math.PI - wingAngle),
+                           arrowTipY + wingLen * Math.sin(lineAngle + Math.PI - wingAngle));
+            spaceCtx.moveTo(arrowTipX, arrowTipY);
+            spaceCtx.lineTo(arrowTipX + wingLen * Math.cos(lineAngle + Math.PI + wingAngle),
+                           arrowTipY + wingLen * Math.sin(lineAngle + Math.PI + wingAngle));
+            spaceCtx.strokeStyle = 'rgba(255, 220, 80, 0.95)';
+            spaceCtx.lineWidth = 2;
+            spaceCtx.stroke();
+
+            // Auge als Beobachter
+            spaceCtx.save();
+            spaceCtx.translate(obsX, obsY);
+            spaceCtx.rotate(lineAngle);
+            spaceCtx.beginPath();
+            spaceCtx.ellipse(0, 0, 7, 5, 0, 0, 2 * Math.PI);
+            spaceCtx.fillStyle = '#ffffff';
+            spaceCtx.fill();
+            spaceCtx.strokeStyle = '#1a1a1a';
+            spaceCtx.lineWidth = 1.2;
+            spaceCtx.stroke();
+            spaceCtx.beginPath();
+            spaceCtx.arc(2.5, 0, 2.8, 0, 2 * Math.PI);
+            spaceCtx.fillStyle = '#1f6feb';
+            spaceCtx.fill();
+            spaceCtx.beginPath();
+            spaceCtx.arc(2.5, 0, 1.2, 0, 2 * Math.PI);
+            spaceCtx.fillStyle = '#000';
+            spaceCtx.fill();
+            spaceCtx.restore();
+
+            const labelOffX = -normY * 22;
+            const labelOffY = normX * 22;
+            spaceCtx.fillStyle = '#ffd54a';
+            spaceCtx.font = 'bold 10px sans-serif';
+            spaceCtx.textAlign = 'center';
+            spaceCtx.fillText("👁 Blick", obsX + labelOffX, obsY + labelOffY + 3);
+            spaceCtx.textAlign = 'start';
+
+            // Mond zeichnen
+            spaceCtx.beginPath();
+            spaceCtx.arc(moonX, moonY, moonRadius, 0, 2 * Math.PI);
+            spaceCtx.fillStyle = '#2a2a35';
+            spaceCtx.fill();
+
+            // Beleuchtete (linke) Hälfte
+            spaceCtx.save();
+            spaceCtx.beginPath();
+            spaceCtx.arc(moonX, moonY, moonRadius, Math.PI/2, -Math.PI/2, false);
+            spaceCtx.clip();
+            spaceCtx.beginPath();
+            spaceCtx.arc(moonX, moonY, moonRadius, 0, 2 * Math.PI);
+            spaceCtx.fillStyle = '#e8e8d8';
+            spaceCtx.fill();
+            drawCraters(spaceCtx, moonX, moonY, moonRadius);
+            spaceCtx.restore();
+
+            spaceCtx.beginPath();
+            spaceCtx.arc(moonX, moonY, moonRadius, 0, 2 * Math.PI);
+            spaceCtx.strokeStyle = 'rgba(180, 180, 180, 0.3)';
+            spaceCtx.lineWidth = 1;
+            spaceCtx.stroke();
+
+            spaceCtx.fillStyle = '#c9d1d9';
+            spaceCtx.font = '10px sans-serif';
+            spaceCtx.fillText("Mond", moonX - 12, moonY - moonRadius - 5);
+
+            // Legende unten
+            spaceCtx.fillStyle = 'rgba(255, 220, 80, 0.75)';
+            spaceCtx.font = '10px sans-serif';
+            spaceCtx.setLineDash([4, 4]);
+            spaceCtx.beginPath();
+            spaceCtx.moveTo(15, spaceCanvas.height - 14);
+            spaceCtx.lineTo(35, spaceCanvas.height - 14);
+            spaceCtx.strokeStyle = 'rgba(255, 220, 80, 0.7)';
+            spaceCtx.lineWidth = 1.5;
+            spaceCtx.stroke();
+            spaceCtx.setLineDash([]);
+            spaceCtx.fillText("Blickrichtung von der Erde zum Mond", 42, spaceCanvas.height - 10);
+        }
+
+        // ---------- BEOBACHTUNGSEBENE (Erde) ----------
+        function drawEarthView(angleDeg) {
+            earthCtx.clearRect(0, 0, earthCanvas.width, earthCanvas.height);
+            const cx = earthCanvas.width / 2;
+            const cy = earthCanvas.height / 2;
+            const radius = 100;
+
+            drawStars(earthCtx, starsEarth);
+
+            const groundY = earthCanvas.height - 25;
+            const groundGrad = earthCtx.createLinearGradient(0, groundY - 20, 0, earthCanvas.height);
+            groundGrad.addColorStop(0, 'rgba(15, 25, 15, 0)');
+            groundGrad.addColorStop(0.5, 'rgba(15, 30, 15, 0.6)');
+            groundGrad.addColorStop(1, 'rgba(8, 15, 8, 0.95)');
+            earthCtx.fillStyle = groundGrad;
+            earthCtx.fillRect(0, groundY - 20, earthCanvas.width, earthCanvas.height - groundY + 20);
+
+            earthCtx.beginPath();
+            earthCtx.moveTo(0, groundY + 5);
+            for (let x = 0; x <= earthCanvas.width; x += 10) {
+                const y = groundY + 5 - Math.sin(x * 0.015) * 8 - Math.sin(x * 0.05) * 3;
+                earthCtx.lineTo(x, y);
+            }
+            earthCtx.lineTo(earthCanvas.width, earthCanvas.height);
+            earthCtx.lineTo(0, earthCanvas.height);
+            earthCtx.closePath();
+            earthCtx.fillStyle = 'rgba(10, 20, 10, 0.95)';
+            earthCtx.fill();
+
+            const glowGrad = earthCtx.createRadialGradient(cx, cy, radius * 0.9, cx, cy, radius * 1.5);
+            glowGrad.addColorStop(0, 'rgba(230, 230, 210, 0.12)');
+            glowGrad.addColorStop(1, 'rgba(230, 230, 210, 0)');
+            earthCtx.fillStyle = glowGrad;
+            earthCtx.beginPath();
+            earthCtx.arc(cx, cy, radius * 1.5, 0, 2 * Math.PI);
+            earthCtx.fill();
+
+            earthCtx.beginPath();
+            earthCtx.arc(cx, cy, radius, 0, 2 * Math.PI);
+            earthCtx.fillStyle = '#16161e';
+            earthCtx.fill();
+
+            const phaseAngle = (angleDeg / 360) * 2 * Math.PI;
+            const cosPhase = Math.cos(phaseAngle);
+            const waxing = angleDeg <= 180;
+            const termWidth = Math.max(radius * Math.abs(cosPhase), 0.5);
+
+            earthCtx.save();
+            earthCtx.beginPath();
+            if (waxing) {
+                earthCtx.arc(cx, cy, radius, -Math.PI/2, Math.PI/2, false);
+                if (cosPhase >= 0) {
+                    earthCtx.ellipse(cx, cy, termWidth, radius, 0, Math.PI/2, -Math.PI/2, true);
+                } else {
+                    earthCtx.ellipse(cx, cy, termWidth, radius, 0, Math.PI/2, -Math.PI/2, false);
+                }
+            } else {
+                earthCtx.arc(cx, cy, radius, Math.PI/2, -Math.PI/2, false);
+                if (cosPhase >= 0) {
+                    earthCtx.ellipse(cx, cy, termWidth, radius, 0, -Math.PI/2, Math.PI/2, true);
+                } else {
+                    earthCtx.ellipse(cx, cy, termWidth, radius, 0, -Math.PI/2, Math.PI/2, false);
+                }
+            }
+            earthCtx.closePath();
+            earthCtx.fillStyle = '#e8e8d8';
+            earthCtx.fill();
+            earthCtx.clip();
+            drawCraters(earthCtx, cx, cy, radius);
+            earthCtx.restore();
+
+            earthCtx.beginPath();
+            earthCtx.arc(cx, cy, radius, 0, 2 * Math.PI);
+            earthCtx.strokeStyle = 'rgba(200, 200, 180, 0.15)';
+            earthCtx.lineWidth = 1.5;
+            earthCtx.stroke();
+
+            const observerX = earthCanvas.width * 0.85;
+            const observerY = groundY + 5 - Math.sin(observerX * 0.015) * 8 - Math.sin(observerX * 0.05) * 3;
+            earthCtx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+            earthCtx.beginPath();
+            earthCtx.arc(observerX, observerY - 12, 3, 0, 2 * Math.PI);
+            earthCtx.fill();
+            earthCtx.beginPath();
+            earthCtx.moveTo(observerX - 3, observerY);
+            earthCtx.lineTo(observerX - 2, observerY - 9);
+            earthCtx.lineTo(observerX + 2, observerY - 9);
+            earthCtx.lineTo(observerX + 3, observerY);
+            earthCtx.closePath();
+            earthCtx.fill();
+
+            earthCtx.fillStyle = '#ffd54a';
+            earthCtx.font = 'bold 11px sans-serif';
+            earthCtx.fillText("Du 👤", observerX - 30, observerY - 16);
+
+            earthCtx.fillStyle = 'rgba(255, 220, 80, 0.75)';
+            earthCtx.font = 'italic 11px sans-serif';
+            earthCtx.textAlign = 'center';
+            earthCtx.fillText("↑ Blick vom Boden nach oben zum Mond", earthCanvas.width / 2, 22);
+            earthCtx.textAlign = 'start';
+        }
+
+        function updateExplanation(angle) {
+            let name = "";
+            let text = "";
+            angle = ((angle % 360) + 360) % 360;
+
+            const hint = "<br><span style='color:#ffd54a;'>Das Auge im linken Bild zeigt: <strong>Hier stehst du auf der Erde</strong> und schaust in Richtung Mond. Die gelbe gestrichelte Linie ist dein Blick.</span>";
+
+            if (angle < 15 || angle > 345) {
+                name = "Neumond";
+                text = "<strong>Beobachtung:</strong> Am Nachthimmel ist kein Mond zu sehen.<br><strong>Modell-Erklärung:</strong> Der Mond steht zwischen Erde und Sonne. Seine beleuchtete Hälfte zeigt von der Erde weg – wir sehen nur die dunkle Rückseite." + hint;
+            } else if (angle < 75) {
+                name = "Zunehmende Sichel";
+                text = "<strong>Beobachtung:</strong> Eine schmale, helle Sichel ist rechts am Abendhimmel sichtbar.<br><strong>Modell-Erklärung:</strong> Wir blicken schräg auf die beleuchtete Hälfte des Mondes – nur ein kleiner Teil ist von der Erde aus sichtbar." + hint;
+            } else if (angle <= 105) {
+                name = "Zunehmender Halbmond (Erstes Viertel)";
+                text = "<strong>Beobachtung:</strong> Die rechte Hälfte des Mondes leuchtet hell.<br><strong>Modell-Erklärung:</strong> Der Mond steht im 90°-Winkel zur Sonne (von der Erde aus gesehen). Wir sehen genau die Hälfte der beleuchteten Seite." + hint;
+            } else if (angle < 165) {
+                name = "Zunehmender Mond (Buckelmond)";
+                text = "<strong>Beobachtung:</strong> Mehr als die Hälfte des Mondes ist von rechts her beleuchtet.<br><strong>Modell-Erklärung:</strong> Die beleuchtete Seite dreht sich zunehmend zur Erde – wir sehen einen Großteil der hellen Hälfte." + hint;
+            } else if (angle <= 195) {
+                name = "Vollmond";
+                text = "<strong>Beobachtung:</strong> Eine vollständige, helle Mondscheibe leuchtet die ganze Nacht.<br><strong>Modell-Erklärung:</strong> Die Erde steht zwischen Sonne und Mond. Wir blicken direkt auf die voll beleuchtete Seite des Mondes." + hint;
+            } else if (angle < 255) {
+                name = "Abnehmender Mond (Buckelmond)";
+                text = "<strong>Beobachtung:</strong> Der Mond wird von links nach rechts kleiner.<br><strong>Modell-Erklärung:</strong> Der Mond hat die Vollmondposition überschritten – die beleuchtete Seite dreht sich wieder von der Erde weg." + hint;
+            } else if (angle <= 285) {
+                name = "Abnehmender Halbmond (Letztes Viertel)";
+                text = "<strong>Beobachtung:</strong> Die linke Hälfte des Mondes leuchtet (in den Morgenstunden sichtbar).<br><strong>Modell-Erklärung:</strong> Der Mond steht wieder im 90°-Winkel zur Sonne – wir sehen die linke Hälfte der beleuchteten Seite." + hint;
+            } else {
+                name = "Abnehmende Sichel";
+                text = "<strong>Beobachtung:</strong> Eine schmale Sichel ist links in den Morgenstunden am Osthimmel sichtbar.<br><strong>Modell-Erklärung:</strong> Der Mond nähert sich wieder seiner Position zwischen Erde und Sonne." + hint;
+            }
+
+            phaseNameEl.innerText = name;
+            explanationText.innerHTML = text;
+        }
+
+        orbitSlider.addEventListener('input', updateSimulation);
+        updateSimulation();
+
+        // Hinweis, falls Three.js (CDN) nicht geladen werden kann
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                if (!window.__threeReady) {
+                    const el = document.getElementById('threeContainer');
+                    if (el && !el.dataset.failed) {
+                        el.dataset.failed = '1';
+                        el.innerHTML = '<p style="padding:20px;color:#8b949e;font-size:0.9rem;line-height:1.5">' +
+                            'Der 3D-Modus konnte nicht geladen werden.<br>' +
+                            'Dafür wird die Bibliothek <em>Three.js</em> aus dem Internet benötigt – bitte Internetverbindung prüfen.</p>';
+                    }
+                }
+            }, 5000);
+        });
+    </script>
+
+    <!-- ===================== 3D-Modus ===================== -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    /* ---------- Maße des Modells (didaktisch, nicht maßstabsgetreu) ---------- */
+    const EARTH_R  = 1.6;
+    const MOON_R   = 0.45;
+    const ORBIT_R  = 6.0;
+    const SUN_DIST = 16.0;
+
+    /* ---------- DOM ---------- */
+    const container  = document.getElementById('threeContainer');
+    const orbitSlider = document.getElementById('orbitSlider');
+    const btn2D = document.getElementById('btn2D');
+    const btn3D = document.getElementById('btn3D');
+    const camButtons = document.getElementById('camButtons');
+    const spaceHint = document.getElementById('spaceHint');
+
+    let scene, camera, renderer, controls;
+    let moonMesh, lookLine;
+    let threeReady = false;
+    let mode3D = false;
+
+    /* =========================================================
+       Prozedurale Texturen
+       ========================================================= */
+    function makeMoonTexture() {
+        const w = 1024, h = 512;
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+
+        ctx.fillStyle = '#cfcdc4';
+        ctx.fillRect(0, 0, w, h);
+
+        // Dunkle "Mare"
+        for (let i = 0; i < 16; i++) {
+            const x = Math.random() * w;
+            const y = Math.random() * h;
+            const rx = 40 + Math.random() * 100;
+            const ry = 30 + Math.random() * 80;
+            const g = ctx.createRadialGradient(x, y, 1, x, y, Math.max(rx, ry));
+            g.addColorStop(0, 'rgba(108,108,102,0.55)');
+            g.addColorStop(1, 'rgba(108,108,102,0)');
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.ellipse(x, y, rx, ry, Math.random() * Math.PI, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        // Krater
+        for (let i = 0; i < 420; i++) {
+            const x = Math.random() * w;
+            const y = Math.random() * h;
+            const r = 1 + Math.pow(Math.random(), 2.4) * 17;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, 2 * Math.PI);
+            ctx.fillStyle = `rgba(150,148,140,${0.20 + Math.random() * 0.35})`;
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x - r * 0.22, y - r * 0.22, r * 0.72, 0, 2 * Math.PI);
+            ctx.fillStyle = `rgba(242,240,230,${0.10 + Math.random() * 0.20})`;
+            ctx.fill();
+        }
+
+        const tex = new THREE.CanvasTexture(c);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.anisotropy = 4;
+        return tex;
+    }
+
+    function makeEarthTexture() {
+        const w = 1024, h = 512;
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+
+        // Ozean
+        const og = ctx.createLinearGradient(0, 0, 0, h);
+        og.addColorStop(0, '#123a63');
+        og.addColorStop(0.5, '#1c5a94');
+        og.addColorStop(1, '#123a63');
+        ctx.fillStyle = og;
+        ctx.fillRect(0, 0, w, h);
+
+        // Kontinente
+        const landColors = ['#2f6b2f', '#3a7a35', '#4b8a3f', '#5c8f45', '#6d7a3a', '#8a7a45'];
+        for (let k = 0; k < 8; k++) {
+            const cx0 = Math.random() * w;
+            const cy0 = h * 0.15 + Math.random() * h * 0.7;
+            const n = 14 + Math.floor(Math.random() * 20);
+            for (let i = 0; i < n; i++) {
+                const x = cx0 + (Math.random() - 0.5) * 300;
+                const y = cy0 + (Math.random() - 0.5) * 180;
+                const r = 18 + Math.random() * 58;
+                ctx.globalAlpha = 0.8;
+                ctx.beginPath();
+                ctx.ellipse(x, y, r, r * (0.45 + Math.random() * 0.7),
+                            Math.random() * Math.PI, 0, 2 * Math.PI);
+                ctx.fillStyle = landColors[Math.floor(Math.random() * landColors.length)];
+                ctx.fill();
+            }
+        }
+        ctx.globalAlpha = 1;
+
+        // Polareis
+        const north = ctx.createLinearGradient(0, 0, 0, 70);
+        north.addColorStop(0, 'rgba(255,255,255,0.95)');
+        north.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = north;
+        ctx.fillRect(0, 0, w, 70);
+
+        const south = ctx.createLinearGradient(0, h, 0, h - 70);
+        south.addColorStop(0, 'rgba(255,255,255,0.95)');
+        south.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = south;
+        ctx.fillRect(0, h - 70, w, 70);
+
+        const tex = new THREE.CanvasTexture(c);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.anisotropy = 4;
+        return tex;
+    }
+
+    function makeSunSprite() {
+        const s = 256;
+        const c = document.createElement('canvas');
+        c.width = c.height = s;
+        const ctx = c.getContext('2d');
+        const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+        g.addColorStop(0.00, 'rgba(255,255,240,1)');
+        g.addColorStop(0.16, 'rgba(255,240,170,1)');
+        g.addColorStop(0.30, 'rgba(255,195,70,0.85)');
+        g.addColorStop(0.58, 'rgba(255,150,30,0.22)');
+        g.addColorStop(1.00, 'rgba(255,140,20,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, s, s);
+
+        const tex = new THREE.CanvasTexture(c);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        const mat = new THREE.SpriteMaterial({
+            map: tex, transparent: true, depthWrite: false,
+            blending: THREE.AdditiveBlending
+        });
+        const sp = new THREE.Sprite(mat);
+        sp.scale.set(7, 7, 1);
+        return sp;
+    }
+
+    function makeLabel(text, color) {
+        const c = document.createElement('canvas');
+        c.width = 256; c.height = 64;
+        const ctx = c.getContext('2d');
+        ctx.font = 'bold 34px "Segoe UI", sans-serif';
+        ctx.fillStyle = color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, 128, 34);
+
+        const tex = new THREE.CanvasTexture(c);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        const mat = new THREE.SpriteMaterial({
+            map: tex, transparent: true, depthTest: false, depthWrite: false
+        });
+        const sprite = new THREE.Sprite(mat);
+        sprite.scale.set(3.2, 0.8, 1);
+        return sprite;
+    }
+
+    /* =========================================================
+       Szene aufbauen
+       ========================================================= */
+    function initThree() {
+        if (threeReady) return;
+
+        scene = new THREE.Scene();
+
+        camera = new THREE.PerspectiveCamera(50, 1, 0.05, 4000);
+        camera.position.set(14, 10, 10);
+        camera.up.set(0, 1, 0);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setClearColor(0x010409, 1);
+        container.appendChild(renderer.domElement);
+
+        // ---- Sterne ----
+        const starCount = 1400;
+        const starPos = new Float32Array(starCount * 3);
+        for (let i = 0; i < starCount; i++) {
+            const r = 400 + Math.random() * 900;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            starPos[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+            starPos[i * 3 + 1] = r * Math.cos(phi);
+            starPos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+        }
+        const starGeo = new THREE.BufferGeometry();
+        starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+        scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({
+            color: 0xffffff, size: 2.0, sizeAttenuation: false,
+            transparent: true, opacity: 0.85
+        })));
+
+        // ---- Licht (Sonne von links = -X) ----
+        const sunLight = new THREE.DirectionalLight(0xfff4d6, 2.6);
+        sunLight.position.set(-1, 0, 0);
+        scene.add(sunLight);
+        scene.add(new THREE.AmbientLight(0x223355, 0.9));   // dezentes "Erdschein"-Licht
+
+        // ---- Sonne ----
+        const sunSprite = makeSunSprite();
+        sunSprite.position.set(-SUN_DIST, 0, 0);
+        scene.add(sunSprite);
+
+        const sunCore = new THREE.Mesh(
+            new THREE.SphereGeometry(0.85, 24, 16),
+            new THREE.MeshBasicMaterial({ color: 0xfff6cf })
+        );
+        sunCore.position.copy(sunSprite.position);
+        scene.add(sunCore);
+
+        const sunLabel = makeLabel('Sonne', '#ffd54a');
+        sunLabel.position.set(-SUN_DIST, -4.4, 0);
+        scene.add(sunLabel);
+
+        // ---- Erde (Mittelpunkt) ----
+        const earthMesh = new THREE.Mesh(
+            new THREE.SphereGeometry(EARTH_R, 48, 32),
+            new THREE.MeshStandardMaterial({
+                map: makeEarthTexture(), roughness: 0.95, metalness: 0.0
+            })
+        );
+        scene.add(earthMesh);
+
+        const earthLabel = makeLabel('Erde', '#7fc9ff');
+        earthLabel.position.set(0, EARTH_R + 0.85, 0);
+        scene.add(earthLabel);
+
+        // ---- Mond ----
+        moonMesh = new THREE.Mesh(
+            new THREE.SphereGeometry(MOON_R, 32, 24),
+            new THREE.MeshStandardMaterial({
+                map: makeMoonTexture(), roughness: 1.0, metalness: 0.0
+            })
+        );
+        scene.add(moonMesh);
+
+        const moonLabel = makeLabel('Mond', '#c9d1d9');
+        moonLabel.scale.set(2.0, 0.5, 1);
+        moonLabel.position.set(0, MOON_R + 0.42, 0);
+        moonMesh.add(moonLabel);
+
+        // ---- Umlaufbahn ----
+        const orbitPts = [];
+        for (let i = 0; i <= 160; i++) {
+            const a = (i / 160) * Math.PI * 2;
+            orbitPts.push(new THREE.Vector3(-ORBIT_R * Math.cos(a), 0, ORBIT_R * Math.sin(a)));
+        }
+        const orbitGeo = new THREE.BufferGeometry().setFromPoints(orbitPts);
+        scene.add(new THREE.Line(orbitGeo, new THREE.LineBasicMaterial({
+            color: 0x58a6ff, transparent: true, opacity: 0.35
+        })));
+
+        // ---- Blicklinie Erde -> Mond ----
+        const lineGeo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(), new THREE.Vector3()
+        ]);
+        lookLine = new THREE.Line(lineGeo, new THREE.LineDashedMaterial({
+            color: 0xffd54a, dashSize: 0.25, gapSize: 0.18,
+            transparent: true, opacity: 0.9
+        }));
+        lookLine.frustumCulled = false;
+        lookLine.computeLineDistances();
+        scene.add(lookLine);
+
+        // ---- Kamera-Steuerung ----
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.07;
+        controls.minDistance = 2.2;
+        controls.maxDistance = 90;
+        controls.target.set(0, 0, 0);
+        controls.update();
+
+        // ---- Start ----
+        threeReady = true;
+        window.__threeReady = true;
+        updateMoonPosition();
+        animate();
+    }
+
+    /* =========================================================
+       Mondposition aus dem Slider
+       ========================================================= */
+    function updateMoonPosition() {
+        const deg = parseFloat(orbitSlider.value) || 0;
+        const a = deg * Math.PI / 180;
+
+        // Konsistent zum 2D-Modell:  x = -R*cos(a),  z = +R*sin(a)
+        moonMesh.position.set(-ORBIT_R * Math.cos(a), 0, ORBIT_R * Math.sin(a));
+
+        // Blicklinie von der Erdoberfläche zum Mond
+        const m = moonMesh.position.clone();
+        const dir = m.clone().normalize();
+        const start = dir.clone().multiplyScalar(EARTH_R);
+        const end = m.clone().sub(dir.clone().multiplyScalar(MOON_R));
+
+        const pos = lookLine.geometry.attributes.position;
+        pos.setXYZ(0, start.x, start.y, start.z);
+        pos.setXYZ(1, end.x, end.y, end.z);
+        pos.needsUpdate = true;
+        lookLine.geometry.computeBoundingSphere();
+        lookLine.computeLineDistances();
+    }
+
+    /* =========================================================
+       Render-Loop
+       ========================================================= */
+    function animate() {
+        requestAnimationFrame(animate);
+        if (!threeReady) return;
+
+        updateMoonPosition();
+        controls.update();
+
+        if (mode3D) renderer.render(scene, camera);
+    }
+
+    /* =========================================================
+       Kamera-Ansichten
+       ========================================================= */
+    function viewOverview() {
+        camera.fov = 50;
+        camera.updateProjectionMatrix();
+        camera.position.set(14, 10, 10);
+        camera.up.set(0, 1, 0);
+        controls.target.set(0, 0, 0);
+        controls.update();
+    }
+
+    function viewFromEarth() {
+        const m = moonMesh.position.clone();
+        const dir = m.clone().normalize();
+
+        camera.fov = 26;
+        camera.updateProjectionMatrix();
+        camera.position.copy(dir.clone().multiplyScalar(EARTH_R + 0.25));
+        camera.up.set(0, 1, 0);
+        controls.target.copy(m);
+        controls.update();
+    }
+
+    /* =========================================================
+       Größe anpassen
+       ========================================================= */
+    function resizeThree() {
+        if (!renderer) return;
+        const w = container.clientWidth || 400;
+        const h = container.clientHeight || 400;
+        renderer.setSize(w, h, false);
+        renderer.domElement.style.width = '100%';
+        renderer.domElement.style.height = '100%';
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+    }
+
+    /* =========================================================
+       2D <-> 3D Umschaltung
+       ========================================================= */
+    function setMode(is3D) {
+        if (is3D === mode3D) return;
+        mode3D = is3D;
+
+        if (is3D) {
+            container.style.display = 'block';
+            spaceCanvas.style.display = 'none';
+            camButtons.style.display = 'flex';
+
+            initThree();
+            resizeThree();
+            updateMoonPosition();
+            renderer.render(scene, camera);
+
+            spaceHint.textContent = 'Maus: ziehen = drehen · Rad = zoomen · Sonne strahlt von links ein.';
+        } else {
+            container.style.display = 'none';
+            spaceCanvas.style.display = 'block';
+            camButtons.style.display = 'none';
+
+            spaceHint.textContent = 'Sonne strahlt von links ein.';
+        }
+
+        btn2D.classList.toggle('active', !is3D);
+        btn3D.classList.toggle('active', is3D);
+    }
+
+    btn2D.addEventListener('click', () => setMode(false));
+    btn3D.addEventListener('click', () => setMode(true));
+
+    document.getElementById('btnCamOverview').addEventListener('click', viewOverview);
+    document.getElementById('btnCamEarth').addEventListener('click', viewFromEarth);
+
+    /* Fenstergröße / Container-Größe */
+    window.addEventListener('resize', resizeThree);
+    if (window.ResizeObserver) {
+        new ResizeObserver(() => { if (mode3D) resizeThree(); }).observe(container);
+    }
+    </script>
+</body>
+</html>
