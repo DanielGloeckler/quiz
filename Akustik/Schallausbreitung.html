@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schallausbreitung – Teilchenmodell</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #0b111a; color: #e6edf7; overflow: hidden;
+  }
+  .app { display: flex; height: 100vh; height: 100dvh; }
+
+  /* ---------- Bühne ---------- */
+  .stage { position: relative; flex: 1; min-width: 0; background: #0b111a; }
+  #cv {
+    position: absolute; left: 12px; top: 12px; border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.6); touch-action: none;
+  }
+
+  /* ---------- Panel ---------- */
+  .panel {
+    width: 340px; flex: none; background: #131c2b; border-left: 1px solid #22304a;
+    padding: 20px 18px 28px; overflow-y: auto;
+  }
+  .panel h1 { font-size: 19px; margin: 0 0 4px; letter-spacing: .2px; }
+  .panel .sub { margin: 0 0 16px; font-size: 12.5px; color: #8fa3bf; line-height: 1.45; }
+  
+  .why-box {
+    background: #0e1622; border-left: 3px solid #2b6cff; border-radius: 0 8px 8px 0;
+    padding: 10px 12px; margin-bottom: 20px; font-size: 12.5px; line-height: 1.5; color: #a9bcd4;
+  }
+  .why-box strong { color: #fff; }
+
+  .group { margin-bottom: 18px; }
+
+  .label {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; font-weight: 700; color: #9db0ca;
+    text-transform: uppercase; letter-spacing: .7px; margin-bottom: 8px;
+  }
+  .label output {
+    font-weight: 700; color: #ffd166; text-transform: none; letter-spacing: 0; font-size: 13px;
+  }
+
+  input[type=range] {
+    width: 100%; -webkit-appearance: none; appearance: none; height: 6px; border-radius: 3px;
+    background: #22304a; outline: none; display: block;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+    background: #ffd166; border: 2px solid #0e1622; cursor: pointer;
+    box-shadow: 0 0 0 1px #ffd166;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%; background: #ffd166;
+    border: 2px solid #0e1622; cursor: pointer;
+  }
+
+  .check {
+    display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: #c2d1e4;
+    padding: 6px 0; cursor: pointer; user-select: none;
+  }
+  .check input { width: 16px; height: 16px; accent-color: #2b6cff; cursor: pointer; }
+
+  .btn {
+    width: 100%; padding: 11px; border-radius: 10px; border: 1px solid #2b3d5a;
+    background: #1a2637; color: #cfe0f5; font: inherit; font-weight: 600; font-size: 13.5px;
+    cursor: pointer; transition: background .15s; margin-bottom: 8px;
+  }
+  .btn:hover { background: #22304a; }
+  .btn.primary { background: #2b6cff; border-color: #2b6cff; color: #fff; }
+  .btn.primary:hover { background: #1e5ce6; }
+
+  .tip {
+    font-size: 13px; line-height: 1.5; color: #a9bcd4; background: #0e1622;
+    border-left: 3px solid #ffd166; border-radius: 0 8px 8px 0;
+    padding: 10px 12px; margin: 0; min-height: 44px;
+  }
+
+  .hint { font-size: 12px; color: #6f83a0; line-height: 1.5; margin: 16px 0 0; }
+
+  @media (max-width: 880px) {
+    body { overflow: auto; }
+    .app { flex-direction: column; height: auto; min-height: 100dvh; }
+    .stage { height: 58vh; min-height: 320px; }
+    .panel { width: auto; border-left: 0; border-top: 1px solid #22304a; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="stage" id="stage">
+    <canvas id="cv"></canvas>
+  </div>
+
+  <aside class="panel">
+    <h1>Schall im Teilchenmodell</h1>
+    <p class="sub">Interaktive Simulation von Verdichtung &amp; Verdünnung in der Luft.</p>
+
+    <div class="why-box">
+      <strong>Warum simulieren?</strong><br>
+      Die Bewegung von Luftmolekülen bei einer Schallwelle ist mikroskopisch und nicht sichtbar. Diese Simulation macht das Unsichtbare sichtbar: Du siehst, wie sich die Moleküle verdichten (Verdichtung) und auseinanderziehen (Verdünnung).
+    </div>
+
+    <section class="group">
+      <label class="label" for="freqRange">Frequenz (Tonhöhe) <output id="freqVal">440 Hz</output></label>
+      <input type="range" id="freqRange" min="100" max="1000" step="10" value="440">
+    </section>
+
+    <section class="group">
+      <label class="label" for="ampRange">Amplitude (Lautstärke) <output id="ampVal">50</output></label>
+      <input type="range" id="ampRange" min="10" max="100" step="5" value="50">
+    </section>
+
+    <section class="group">
+      <label class="check"><input type="checkbox" id="chkColor" checked> Dichte farblich hervorheben</label>
+      <label class="check"><input type="checkbox" id="chkWave"> Druckwelle (Graph) anzeigen</label>
+      <label class="check"><input type="checkbox" id="chkTrails"> Molekülbahnen (Trails)</label>
+    </section>
+
+    <section class="group">
+      <button type="button" class="btn primary" id="btnPlay">Pause</button>
+      <button type="button" class="btn" id="btnReset">Zurücksetzen</button>
+    </section>
+
+    <section class="group">
+      <p class="tip" id="tip"></p>
+    </section>
+
+    <p class="hint">Tipp: Bewege die Maus über die Bühne, um die Moleküle zu "stören" (optional). Die Farben zeigen die lokale Dichte der Luft an.</p>
+  </aside>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const stage = document.getElementById('stage');
+  const cv    = document.getElementById('cv');
+  const ctx   = cv.getContext('2d');
+
+  let W = 800, H = 500;
+  let dpr = 1;
+  let isPlaying = true;
+  let time = 0;
+  let lastTime = 0;
+
+  // Parameter
+  let frequency = 440; // Hz
+  let amplitude = 50;  // 0-100
+  let showColors = true;
+  let showWave = false;
+  let showTrails = false;
+
+  // Wellengeschwindigkeit (Pixel pro Sekunde)
+  const waveSpeed = 250; 
+
+  // Partikel-Array
+  let particles = [];
+  const COLS = 40;
+  const ROWS = 20;
+  const GRID_SPACING = 20;
+
+  /* ------------------------------------------------------------------ */
+  /*  Initialisierung                                                    */
+  /* ------------------------------------------------------------------ */
+  function initParticles() {
+    particles = [];
+    // Wir berechnen die Startpositionen relativ zur Canvas-Größe
+    const startX = W * 0.15;
+    const endX = W * 0.95;
+    const startY = H * 0.15;
+    const endY = H * 0.85;
+
+    const colWidth = (endX - startX) / COLS;
+    const rowHeight = (endY - startY) / ROWS;
+
+    for (let i = 0; i < COLS; i++) {
+      for (let j = 0; j < ROWS; j++) {
+        const baseX = startX + i * colWidth;
+        const baseY = startY + j * rowHeight;
+        
+        particles.push({
+          baseX: baseX,
+          baseY: baseY,
+          x: baseX,
+          y: baseY,
+          phaseOffset: (Math.random() - 0.5) * 0.5, // Kleiner zufälliger Versatz für natürlicheren Look
+          color: '#60a5fa'
+        });
+      }
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /*  Physik-Update (Wellengleichung)                                    */
+  /* ------------------------------------------------------------------ */
+  function updateParticles() {
+    // Wellenzahl k = 2 * PI / Wellenlänge
+    // Da die Frequenz hoch ist, müssen wir das visuell skalieren.
+    // Wir mappen 440 Hz auf eine sichtbare Wellenlänge.
+    const visualFreq = frequency / 100; 
+    const k = visualFreq * 0.5; 
+    
+    // Winkelgeschwindigkeit omega = k * v
+    const omega = k * waveSpeed;
+
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      
+      // Auslenkung: A * sin(k * x0 - omega * t + phi)
+      // Die Partikel bewegen sich in X-Richtung (longitudinal)
+      const displacement = (amplitude / 100) * GRID_SPACING * 0.8 * 
+                           Math.sin(k * p.baseX - omega * time + p.phaseOffset);
+      
+      p.x = p.baseX + displacement;
+
+      // Lokale Dichte berechnen für die Farbe (Ableitung der Auslenkung)
+      // Dichte ~ -cos(k * x - omega * t)
+      if (showColors) {
+        const density = -Math.cos(k * p.baseX - omega * time + p.phaseOffset);
+        // Farbe von Blau (Verdünnung) zu Rot (Verdichtung)
+        if (density > 0) {
+          // Verdichtung (Rot/Orange)
+          const r = 255;
+          const g = Math.floor(100 + density * 100);
+          const b = Math.floor(100 + density * 50);
+          p.color = `rgba(${r}, ${g}, ${b}, 0.9)`;
+        } else {
+          // Verdünnung (Blau)
+          const r = Math.floor(100 + density * 50);
+          const g = Math.floor(150 + density * 50);
+          const b = 255;
+          p.color = `rgba(${r}, ${g}, ${b}, 0.9)`;
+        }
+      } else {
+        p.color = '#60a5fa';
+      }
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /*  Zeichnen                                                           */
+  /* ------------------------------------------------------------------ */
+  function drawSpeaker() {
+    const lx = W * 0.08;
+    const ly = H / 2;
+    const size = 40;
+
+    // Gehäuse
+    ctx.fillStyle = '#1e293b';
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(lx - size/2, ly - size, size, size*2, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    // Membran (pulsierend)
+    const pulse = Math.sin(frequency / 100 * time) * 5;
+    ctx.fillStyle = '#475569';
+    ctx.beginPath();
+    ctx.ellipse(lx + size/2 + pulse, ly, 8, size * 0.8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#64748b';
+    ctx.stroke();
+
+    // Hochtöner (kleiner Kreis)
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.arc(lx, ly - size * 0.5, 8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bass (großer Kreis)
+    ctx.beginPath();
+    ctx.arc(lx, ly + size * 0.2, 14, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawWaveGraph() {
+    if (!showWave) return;
+    
+    const startX = W * 0.15;
+    const endX = W * 0.95;
+    const graphY = H * 0.92;
+    const graphHeight = 30;
+
+    ctx.save();
+    // Hintergrund für den Graphen
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.6)';
+    ctx.fillRect(startX, graphY - graphHeight/2, endX - startX, graphHeight);
+    ctx.strokeStyle = 'rgba(100, 116, 139, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(startX, graphY - graphHeight/2, endX - startX, graphHeight);
+
+    // Null-Linie
+    ctx.beginPath();
+    ctx.moveTo(startX, graphY);
+    ctx.lineTo(endX, graphY);
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Wellenkurve (Druckwelle)
+    ctx.beginPath();
+    const visualFreq = frequency / 100;
+    const k = visualFreq * 0.5;
+    const omega = k * waveSpeed;
+    const amp = (amplitude / 100) * (graphHeight / 2);
+
+    for (let x = startX; x <= endX; x += 2) {
+      const y = graphY + amp * Math.cos(k * x - omega * time);
+      if (x === startX) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = '#ffd166';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Beschriftung
+    ctx.fillStyle = '#a9bcd4';
+    ctx.font = '11px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Druckwelle (Verdichtung = hoch, Verdünnung = tief)', startX, graphY - graphHeight/2 - 6);
+    ctx.restore();
+  }
+
+  function drawTrails() {
+    if (!showTrails) return;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(96, 165, 250, 0.15)';
+    ctx.lineWidth = 1;
+    for (const p of particles) {
+      ctx.beginPath();
+      ctx.moveTo(p.baseX, p.y);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    
+    // Hintergrund
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#0b111a');
+    bg.addColorStop(1, '#131c2b');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Raster (dezent)
+    ctx.strokeStyle = 'rgba(45, 60, 85, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = W * 0.15; x < W * 0.95; x += 20) {
+      ctx.moveTo(x, H * 0.15);
+      ctx.lineTo(x, H * 0.85);
+    }
+    for (let y = H * 0.15; y < H * 0.85; y += 20) {
+      ctx.moveTo(W * 0.15, y);
+      ctx.lineTo(W * 0.95, y);
+    }
+    ctx.stroke();
+
+    // Lautsprecher
+    drawSpeaker();
+
+    // Trails (Molekülbahnen)
+    drawTrails();
+
+    // Partikel zeichnen
+    for (const p of particles) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.fill();
+      
+      // Leichter Glow-Effekt für verdichtete Bereiche
+      if (showColors && p.color.includes('255')) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = p.color.replace('0.9', '0.2');
+        ctx.fill();
+      }
+    }
+
+    // Druckwelle (Graph)
+    drawWaveGraph();
+
+    // Tipps aktualisieren
+    updateTip();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /*  Tipps / Erklärungen                                                */
+  /* ------------------------------------------------------------------ */
+  function updateTip() {
+    const tipEl = document.getElementById('tip');
+    let tip = '';
+
+    if (frequency > 600) {
+      tip = 'Hohe Frequenz: Die Wellenberge (Verdichtungen) liegen näher zusammen. Das entspricht einem hohen Ton.';
+    } else if (frequency < 250) {
+      tip = 'Niedrige Frequenz: Die Wellenberge sind weiter auseinander. Das entspricht einem tiefen Ton.';
+    } else {
+      tip = 'Mittlere Frequenz: Die Schallwelle breitet sich mit einer konstanten Geschwindigkeit aus. Die Moleküle schwingen nur um ihre Ruhelage.';
+    }
+
+    if (amplitude > 80) {
+      tip += ' Die hohe Amplitude (Lautstärke) führt zu einer starken Verdichtung und Verdünnung.';
+    } else if (amplitude < 30) {
+      tip += ' Die geringe Amplitude (Lautstärke) zeigt sich in einer schwachen Verdichtung.';
+    }
+
+    tipEl.textContent = tip;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /*  Animations-Loop                                                    */
+  /* ------------------------------------------------------------------ */
+  function animate(timestamp) {
+    if (!lastTime) lastTime = timestamp;
+    const dt = (timestamp - lastTime) / 1000;
+    lastTime = timestamp;
+
+    if (isPlaying) {
+      time += dt;
+      updateParticles();
+    }
+
+    draw();
+    requestAnimationFrame(animate);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /*  Größe / Layout                                                     */
+  /* ------------------------------------------------------------------ */
+  function resize() {
+    const w = stage.clientWidth - 24;
+    const h = stage.clientHeight - 24;
+    W = Math.max(300, w);
+    H = Math.max(240, h);
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    
+    cv.width = Math.round(W * dpr);
+    cv.height = Math.round(H * dpr);
+    cv.style.width = W + 'px';
+    cv.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    
+    // Partikel neu initialisieren, wenn sich die Größe ändert
+    initParticles();
+    // Einmaliges Update, damit sie sofort an der richtigen Position sind
+    updateParticles();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /*  Bedienelemente                                                     */
+  /* ------------------------------------------------------------------ */
+  const freqRange = document.getElementById('freqRange');
+  const ampRange = document.getElementById('ampRange');
+  const chkColor = document.getElementById('chkColor');
+  const chkWave = document.getElementById('chkWave');
+  const chkTrails = document.getElementById('chkTrails');
+  const btnPlay = document.getElementById('btnPlay');
+
+  freqRange.addEventListener('input', (e) => {
+    frequency = parseFloat(e.target.value);
+    document.getElementById('freqVal').textContent = frequency + ' Hz';
+  });
+
+  ampRange.addEventListener('input', (e) => {
+    amplitude = parseFloat(e.target.value);
+    document.getElementById('ampVal').textContent = amplitude;
+  });
+
+  chkColor.addEventListener('change', (e) => {
+    showColors = e.target.checked;
+  });
+
+  chkWave.addEventListener('change', (e) => {
+    showWave = e.target.checked;
+  });
+
+  chkTrails.addEventListener('change', (e) => {
+    showTrails = e.target.checked;
+  });
+
+  btnPlay.addEventListener('click', () => {
+    isPlaying = !isPlaying;
+    btnPlay.textContent = isPlaying ? 'Pause' : 'Abspielen';
+    if (isPlaying) {
+      lastTime = 0; // Reset für flüssige Fortsetzung
+    }
+  });
+
+  document.getElementById('btnReset').addEventListener('click', () => {
+    time = 0;
+    frequency = 440;
+    amplitude = 50;
+    freqRange.value = frequency;
+    ampRange.value = amplitude;
+    document.getElementById('freqVal').textContent = frequency + ' Hz';
+    document.getElementById('ampVal').textContent = amplitude;
+    updateParticles();
+    draw();
+  });
+
+  /* ------------------------------------------------------------------ */
+  /*  Start                                                              */
+  /* ------------------------------------------------------------------ */
+  const ro = new ResizeObserver(() => resize());
+  ro.observe(stage);
+
+  // Initialisierung
+  resize();
+  requestAnimationFrame(animate);
+
+  // Polyfill für roundRect (falls älterer Browser)
+  if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+      if (w < 2 * r) r = w / 2;
+      if (h < 2 * r) r = h / 2;
+      this.beginPath();
+      this.moveTo(x + r, y);
+      this.arcTo(x + w, y, x + w, y + h, r);
+      this.arcTo(x + w, y + h, x, y + h, r);
+      this.arcTo(x, y + h, x, y, r);
+      this.arcTo(x, y, x + w, y, r);
+      this.closePath();
+      return this;
+    };
+  }
+})();
+</script>
+</body>
+</html>
