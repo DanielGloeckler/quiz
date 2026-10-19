@@ -126,6 +126,7 @@
     <section class="group">
       <label class="check"><input type="checkbox" id="chkColor" checked> Dichte farblich hervorheben</label>
       <label class="check"><input type="checkbox" id="chkChain" checked> Kettenreaktion (Stöße) zeigen</label>
+      <label class="check"><input type="checkbox" id="chkRest" checked> Ruhelage markieren</label>
       <label class="check"><input type="checkbox" id="chkZoom" checked> Mikroskop-Ansicht anzeigen</label>
     </section>
 
@@ -138,7 +139,7 @@
       <p class="tip" id="tip"></p>
     </section>
 
-    <p class="hint">Tipp: Ziehe das gestrichelte Rechteck (Zoom-Fenster) über die Hauptansicht, um die Kettenreaktion im Mikroskop genau zu beobachten.</p>
+    <p class="hint">💡 <strong>Ausprobieren:</strong> Klicke auf ein Molekül, um seine Schwingung im s-t-Diagramm zu verfolgen. Das gestrichelte Rechteck lässt sich verschieben (Zoom-Bereich).</p>
   </aside>
 </div>
 
@@ -162,6 +163,7 @@
   let speedFactor = 0.2;
   let showColors = true;
   let showChain = true;
+  let showRest = true;
   let showZoom = true;
 
   const waveSpeed = 250; 
@@ -185,12 +187,17 @@
   let musicBoxX = 0;
   let earX = 0;
 
+  // Ausgewähltes Teilchen (s-t-Diagramm)
+  let selectedParticleIdx = -1;
+  let selectedHistory = []; // {t, disp}
+  const HISTORY_WINDOW = 2.5; // Sekunden Simulationszeit
+
   /* ------------------------------------------------------------------ */
   /*  Initialisierung                                                    */
   /* ------------------------------------------------------------------ */
   function initParticles() {
     particles = [];
-    const startX = W * 0.18; // Etwas weiter rechts, da die Box mehr Platz braucht
+    const startX = W * 0.18;
     const endX = W * 0.85; 
     const startY = H * 0.15;
     const endY = H * 0.70;
@@ -214,13 +221,11 @@
       }
     }
 
-    // Zoom-Box initialisieren
     zoomBox.w = (endX - startX) / 6;
     zoomBox.h = (endY - startY) / 6;
     zoomBox.x = startX + (endX - startX) * 0.3;
     zoomBox.y = startY + (endY - startY) * 0.2;
 
-    // Mikroskop-Bereich (unteres Viertel)
     microView.x = W * 0.1;
     microView.y = H * 0.78;
     microView.w = W * 0.8;
@@ -228,6 +233,10 @@
 
     musicBoxX = W * 0.09;
     earX = W * 0.88;
+
+    // Auswahl zurücksetzen
+    selectedParticleIdx = -1;
+    selectedHistory = [];
   }
 
   /* ------------------------------------------------------------------ */
@@ -241,23 +250,19 @@
     for (let i = 0; i < particles.length; i++) {
       const p = particles[i];
       
-      // Auslenkung in X-Richtung (longitudinal)
       const displacement = (amplitude / 100) * GRID_SPACING * 1.8 * 
                            Math.sin(k * p.baseX - omega * time + p.phaseOffset);
       
       p.x = p.baseX + displacement;
 
-      // Farbe basierend auf Dichte
       if (showColors) {
         const density = -Math.cos(k * p.baseX - omega * time + p.phaseOffset);
         if (density > 0) {
-          // Verdichtung (Rot/Orange)
           const r = 255;
           const g = Math.floor(100 + density * 100);
           const b = Math.floor(100 + density * 50);
           p.color = `rgba(${r}, ${g}, ${b}, 0.9)`;
         } else {
-          // Verdünnung (Blau)
           const r = Math.floor(100 + density * 50);
           const g = Math.floor(150 + density * 50);
           const b = 255;
@@ -267,29 +272,38 @@
         p.color = '#60a5fa';
       }
     }
+
+    // Verlauf für s-t-Diagramm aufzeichnen
+    trackHistory();
+  }
+
+  function trackHistory() {
+    if (selectedParticleIdx < 0 || selectedParticleIdx >= particles.length) return;
+    const p = particles[selectedParticleIdx];
+    selectedHistory.push({ t: time, disp: p.x - p.baseX });
+    // Alte Einträge jenseits des Fensters verwerfen
+    while (selectedHistory.length > 0 && selectedHistory[0].t < time - HISTORY_WINDOW) {
+      selectedHistory.shift();
+    }
   }
 
   /* ------------------------------------------------------------------ */
   /*  Zeichnen                                                           */
   /* ------------------------------------------------------------------ */
-  
-  // Musikbox zeichnen (mit Vibration und Schallwellen)
   function drawMusicBox() {
     const baseLx = musicBoxX;
     const ly = H * 0.45; 
     const size = 50;
 
-    // 1. Vibration des gesamten Gehäuses (leichtes Zittern)
-    // Wir nehmen eine hochfrequente Sinuswelle, die aber für das Auge sichtbar bleibt.
     const vibrate = Math.sin(time * 50) * 1.5;
     const lx = baseLx + vibrate;
 
-    // 2. Schallwellen-Ringe (die von der Box ausgehen)
+    // Schallwellen-Ringe
     ctx.save();
     for (let i = 0; i < 3; i++) {
-      const ringPhase = (time * 2 + i * 0.5) % 3; // 0 bis 3
-      const ringRadius = ringPhase * 40; // Radius wächst
-      const opacity = 1 - (ringPhase / 3); // Verblasst
+      const ringPhase = (time * 2 + i * 0.5) % 3;
+      const ringRadius = ringPhase * 40;
+      const opacity = 1 - (ringPhase / 3);
       
       if (opacity > 0) {
         ctx.beginPath();
@@ -301,7 +315,7 @@
     }
     ctx.restore();
 
-    // 3. Box-Gehäuse
+    // Gehäuse
     ctx.fillStyle = '#1e293b';
     ctx.strokeStyle = '#334155';
     ctx.lineWidth = 2;
@@ -310,13 +324,10 @@
     ctx.fill();
     ctx.stroke();
 
-    // 4. Membran / Schalltrichter (schwingt vor und zurück)
-    // Die Membran bewegt sich relativ zur Box.
-    const pulse = Math.sin(frequency / 100 * time) * 12; // Stärkerer Ausschlag
-    
+    // Membran
+    const pulse = Math.sin(frequency / 100 * time) * 12;
     ctx.fillStyle = '#475569';
     ctx.beginPath();
-    // Eine Art Kegel, der sich vor und zurück bewegt
     ctx.moveTo(lx + size/2, ly - size * 0.8);
     ctx.quadraticCurveTo(lx + size/2 + pulse, ly, lx + size/2, ly + size * 0.8);
     ctx.lineTo(lx + size/2 - 5, ly + size * 0.8);
@@ -326,27 +337,24 @@
     ctx.strokeStyle = '#64748b';
     ctx.stroke();
 
-    // 5. Noten / Dekoration
+    // Noten
     ctx.fillStyle = '#ffd166';
     ctx.font = '16px sans-serif';
     ctx.fillText('♪', lx - 15, ly - 10);
     ctx.fillText('♫', lx + 5, ly + 15);
 
-    // 6. Beschriftung
+    // Beschriftung
     ctx.fillStyle = '#a9bcd4';
     ctx.font = 'bold 11px system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('Musikbox', lx, ly - size - 15);
   }
 
-  // Ohr zeichnen
   function drawEar() {
     const ex = earX;
     const ey = H * 0.45;
 
     ctx.save();
-    
-    // Ohr-Außenform
     ctx.fillStyle = '#1e293b';
     ctx.strokeStyle = '#475569';
     ctx.lineWidth = 2;
@@ -355,17 +363,15 @@
     ctx.fill();
     ctx.stroke();
 
-    // Ohrmuschel-Innenleben
     ctx.fillStyle = '#334155';
     ctx.beginPath();
     ctx.ellipse(ex + 5, ey, 12, 25, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Trommelfell (schwingt basierend auf der Welle am Ohr)
     const k = (frequency / 100) * 0.5;
     const omega = k * waveSpeed;
     const pressureAtEar = Math.cos(k * earX - omega * time);
-    const drumDisplacement = pressureAtEar * 5; // Ausschlag
+    const drumDisplacement = pressureAtEar * 5;
 
     ctx.fillStyle = '#94a3b8';
     ctx.beginPath();
@@ -374,7 +380,6 @@
     ctx.strokeStyle = '#cbd5e1';
     ctx.stroke();
 
-    // Beschriftung
     ctx.fillStyle = '#a9bcd4';
     ctx.font = 'bold 11px system-ui, sans-serif';
     ctx.textAlign = 'center';
@@ -383,7 +388,54 @@
     ctx.restore();
   }
 
-  // Kettenreaktion (Stöße) zeichnen
+  function drawRestPositions() {
+    if (!showRest) return;
+
+    const startY = H * 0.15;
+    const endY = H * 0.70;
+
+    // Alle Spalten-Ruhelagen als zarte gestrichelte Linien
+    ctx.save();
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.18)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 5]);
+    const drawnCols = new Set();
+    for (const p of particles) {
+      const key = Math.round(p.baseX);
+      if (drawnCols.has(key)) continue;
+      drawnCols.add(key);
+      ctx.beginPath();
+      ctx.moveTo(p.baseX, startY);
+      ctx.lineTo(p.baseX, endY);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Ruhelage des ausgewählten Teilchens hervorheben
+    if (selectedParticleIdx >= 0 && selectedParticleIdx < particles.length) {
+      const p = particles[selectedParticleIdx];
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 209, 102, 0.75)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      ctx.moveTo(p.baseX, startY);
+      ctx.lineTo(p.baseX, endY);
+      ctx.stroke();
+
+      // Kleine "Häkchen" (Ticks) am oberen und unteren Rand
+      ctx.setLineDash([]);
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(p.baseX - 5, startY);
+      ctx.lineTo(p.baseX + 5, startY);
+      ctx.moveTo(p.baseX - 5, endY);
+      ctx.lineTo(p.baseX + 5, endY);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
   function drawChainReaction() {
     if (!showChain) return;
     
@@ -413,6 +465,25 @@
         }
       }
     }
+    ctx.restore();
+  }
+
+  function drawSelectedParticleMarker() {
+    if (selectedParticleIdx < 0 || selectedParticleIdx >= particles.length) return;
+    const p = particles[selectedParticleIdx];
+    ctx.save();
+    // Äußerer Puls-Ring
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 8 + Math.sin(time * 6) * 1.5, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255, 209, 102, 0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // Innerer Ring
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+    ctx.strokeStyle = '#ffd166';
+    ctx.lineWidth = 2;
+    ctx.stroke();
     ctx.restore();
   }
 
@@ -453,7 +524,6 @@
     const scaleX = microView.w / zoomBox.w;
     const scaleY = microView.h / zoomBox.h;
 
-    // Verbindungslinien im Mikroskop
     ctx.strokeStyle = 'rgba(255, 170, 40, 0.6)';
     ctx.lineWidth = 2;
 
@@ -461,7 +531,6 @@
       for (let j = i + 1; j < particles.length; j++) {
         const p1 = particles[i];
         const p2 = particles[j];
-
         if (Math.abs(p1.baseY - p2.baseY) > 5) continue;
         
         const inBox1 = p1.baseX >= zoomBox.x && p1.baseX <= zoomBox.x + zoomBox.w &&
@@ -480,7 +549,6 @@
                const my1 = microView.y + (p1.y - zoomBox.y) * scaleY;
                const mx2 = microView.x + (p2.x - zoomBox.x) * scaleX;
                const my2 = microView.y + (p2.y - zoomBox.y) * scaleY;
-               
                ctx.beginPath();
                ctx.moveTo(mx1, my1);
                ctx.lineTo(mx2, my2);
@@ -491,7 +559,6 @@
       }
     }
 
-    // Partikel im Mikroskop
     for (const p of particles) {
       if (p.baseX >= zoomBox.x && p.baseX <= zoomBox.x + zoomBox.w &&
           p.baseY >= zoomBox.y && p.baseY <= zoomBox.y + zoomBox.h) {
@@ -512,6 +579,127 @@
         }
       }
     }
+    ctx.restore();
+  }
+
+  /* ---------- s-t-Diagramm (Auslenkung über Zeit) ---------- */
+  function drawSTGraph() {
+    if (selectedParticleIdx < 0) return;
+
+    const gw = 240, gh = 130;
+    const gx = W - gw - 20, gy = 20;
+
+    ctx.save();
+
+    // Hintergrund
+    ctx.fillStyle = 'rgba(14, 22, 34, 0.94)';
+    ctx.strokeStyle = 'rgba(255, 209, 102, 0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(gx, gy, gw, gh, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    // Titel
+    ctx.fillStyle = '#ffd166';
+    ctx.font = 'bold 11px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('s-t-Diagramm (Auslenkung über Zeit)', gx + 12, gy + 18);
+
+    // Kleiner Hinweis "Klick auf Molekül"
+    ctx.fillStyle = '#8fa3bf';
+    ctx.font = '9px system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('Auswahl: gelber Ring', gx + gw - 12, gy + 18);
+
+    // Plot-Bereich
+    const padL = 30, padR = 14, padT = 30, padB = 20;
+    const plotX = gx + padL;
+    const plotY = gy + padT;
+    const plotW = gw - padL - padR;
+    const plotH = gh - padT - padB;
+
+    // Nulllinie
+    const zeroY = plotY + plotH / 2;
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(plotX, zeroY);
+    ctx.lineTo(plotX + plotW, zeroY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Y-Achse
+    ctx.beginPath();
+    ctx.moveTo(plotX, plotY);
+    ctx.lineTo(plotX, plotY + plotH);
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.7)';
+    ctx.stroke();
+
+    // X-Achse
+    ctx.beginPath();
+    ctx.moveTo(plotX, plotY + plotH);
+    ctx.lineTo(plotX + plotW, plotY + plotH);
+    ctx.stroke();
+
+    // Achsenbeschriftung
+    ctx.fillStyle = '#8fa3bf';
+    ctx.font = '10px system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('s', plotX - 6, plotY + 8);
+    ctx.textAlign = 'right';
+    ctx.fillText('0', plotX - 6, zeroY + 3);
+    ctx.textAlign = 'left';
+    ctx.fillText('t', plotX + plotW + 2, plotY + plotH + 3);
+
+    // Kurve zeichnen
+    if (selectedHistory.length > 1) {
+      const maxDisp = Math.max(
+        ...selectedHistory.map(h => Math.abs(h.disp)),
+        1 // Minimum, um Division durch 0 zu vermeiden
+      );
+      const tEnd = selectedHistory[selectedHistory.length - 1].t;
+      const tStart = Math.max(tEnd - HISTORY_WINDOW, selectedHistory[0].t);
+      const timeSpan = Math.max(tEnd - tStart, 0.001);
+
+      ctx.strokeStyle = '#ffd166';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+
+      let started = false;
+      for (const h of selectedHistory) {
+        if (h.t < tStart) continue;
+        const x = plotX + ((h.t - tStart) / timeSpan) * plotW;
+        const y = zeroY - (h.disp / maxDisp) * (plotH / 2) * 0.9;
+        if (!started) { ctx.moveTo(x, y); started = true; }
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Aktueller Punkt (rechts)
+      const last = selectedHistory[selectedHistory.length - 1];
+      if (last.t >= tStart) {
+        const x = plotX + ((last.t - tStart) / timeSpan) * plotW;
+        const y = zeroY - (last.disp / maxDisp) * (plotH / 2) * 0.9;
+        ctx.fillStyle = '#ffd166';
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 209, 102, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, 7, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    } else {
+      // Noch keine Daten
+      ctx.fillStyle = '#6f83a0';
+      ctx.font = 'italic 11px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Noch keine Daten…', plotX + plotW / 2, zeroY + 4);
+    }
+
     ctx.restore();
   }
 
@@ -538,6 +726,9 @@
     }
     ctx.stroke();
 
+    // Ruhelage (vor den Partikeln, damit Partikel darüber liegen)
+    drawRestPositions();
+
     // Musikbox & Ohr
     drawMusicBox();
     drawEar();
@@ -553,9 +744,15 @@
       ctx.fill();
     }
 
+    // Markierung des ausgewählten Teilchens
+    drawSelectedParticleMarker();
+
     // Zoom-Box und Mikroskop
     drawZoomBox();
     drawMicroscope();
+
+    // s-t-Diagramm (ganz oben, damit es gut sichtbar ist)
+    drawSTGraph();
 
     updateTip();
   }
@@ -564,16 +761,17 @@
     const tipEl = document.getElementById('tip');
     let tip = '';
 
-    if (speedFactor < 0.15) {
-      tip = 'Extreme Zeitlupe: Sieh dir im Mikroskop an, wie die Moleküle bei Rot zusammenrücken und sich gegenseitig anstoßen (Kettenreaktion).';
+    if (selectedParticleIdx >= 0) {
+      const p = particles[selectedParticleIdx];
+      const disp = p.x - p.baseX;
+      tip = `Ausgewähltes Molekül: Auslenkung gerade ${disp.toFixed(1)} px aus der Ruhelage. `;
+      tip += 'Im s-t-Diagramm (oben rechts) siehst du seine Schwingung.';
+    } else if (speedFactor < 0.15) {
+      tip = 'Extreme Zeitlupe: Klicke auf ein Molekül, um seine Schwingung im s-t-Diagramm zu beobachten. Die gestrichelten Linien zeigen die Ruhelage.';
     } else if (speedFactor < 0.5) {
-      tip = 'Zeitlupe: Die Musikbox schwingt sichtbar. Die Verdichtungen (rot) wandern zum Ohr. Das Trommelfell beginnt zu schwingen.';
+      tip = 'Zeitlupe: Die Musikbox schwingt sichtbar. Klicke auf ein Molekül, um seine Bewegung zu verfolgen.';
     } else {
-      tip = 'Normale Geschwindigkeit: Der Schall breitet sich schnell aus und erreicht das Ohr.';
-    }
-
-    if (showChain) {
-      tip += ' Die gelben Linien zeigen die Stöße zwischen den Molekülen.';
+      tip = 'Normale Geschwindigkeit: Der Schall breitet sich schnell aus. Klicke auf ein Molekül für das s-t-Diagramm.';
     }
 
     tipEl.textContent = tip;
@@ -617,46 +815,72 @@
   }
 
   /* ------------------------------------------------------------------ */
-  /*  Interaktion (Zoom-Fenster verschieben)                             */
+  /*  Interaktion                                                       */
   /* ------------------------------------------------------------------ */
   cv.addEventListener('pointerdown', e => {
     const rect = cv.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    if (x >= zoomBox.x && x <= zoomBox.x + zoomBox.w &&
+    // 1) Zoom-Box? → Zoom verschieben
+    if (showZoom && x >= zoomBox.x && x <= zoomBox.x + zoomBox.w &&
         y >= zoomBox.y && y <= zoomBox.y + zoomBox.h) {
       isDraggingZoom = true;
       dragOffsetX = x - zoomBox.x;
       dragOffsetY = y - zoomBox.y;
       cv.setPointerCapture(e.pointerId);
       cv.style.cursor = 'grabbing';
+      return;
     }
-  });
 
-  cv.addEventListener('pointermove', e => {
-    if (!isDraggingZoom) {
-      const rect = cv.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      if (x >= zoomBox.x && x <= zoomBox.x + zoomBox.w &&
-          y >= zoomBox.y && y <= zoomBox.y + zoomBox.h) {
-        cv.style.cursor = 'grab';
+    // 2) Teilchen in der Nähe? → Auswählen
+    let bestIdx = -1, bestDist = 12;
+    for (let i = 0; i < particles.length; i++) {
+      const d = Math.hypot(particles[i].x - x, particles[i].y - y);
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
+    }
+    if (bestIdx >= 0) {
+      if (selectedParticleIdx === bestIdx) {
+        // Erneuter Klick auf dasselbe Teilchen → abwählen
+        selectedParticleIdx = -1;
+        selectedHistory = [];
       } else {
-        cv.style.cursor = 'default';
+        selectedParticleIdx = bestIdx;
+        selectedHistory = [];
       }
       return;
     }
 
+    // 3) Sonst: ins Leere geklickt → Auswahl aufheben
+    selectedParticleIdx = -1;
+    selectedHistory = [];
+  });
+
+  cv.addEventListener('pointermove', e => {
     const rect = cv.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    zoomBox.x = x - dragOffsetX;
-    zoomBox.y = y - dragOffsetY;
+    if (isDraggingZoom) {
+      zoomBox.x = x - dragOffsetX;
+      zoomBox.y = y - dragOffsetY;
+      zoomBox.x = Math.max(W * 0.15, Math.min(zoomBox.x, W * 0.85 - zoomBox.w));
+      zoomBox.y = Math.max(H * 0.15, Math.min(zoomBox.y, H * 0.70 - zoomBox.h));
+      return;
+    }
 
-    zoomBox.x = Math.max(W * 0.15, Math.min(zoomBox.x, W * 0.85 - zoomBox.w));
-    zoomBox.y = Math.max(H * 0.15, Math.min(zoomBox.y, H * 0.70 - zoomBox.h));
+    // Cursor-Feedback
+    let onZoom = showZoom && x >= zoomBox.x && x <= zoomBox.x + zoomBox.w &&
+                 y >= zoomBox.y && y <= zoomBox.y + zoomBox.h;
+    if (onZoom) {
+      cv.style.cursor = 'grab';
+      return;
+    }
+    let onParticle = false;
+    for (const p of particles) {
+      if (Math.hypot(p.x - x, p.y - y) < 10) { onParticle = true; break; }
+    }
+    cv.style.cursor = onParticle ? 'pointer' : 'default';
   });
 
   cv.addEventListener('pointerup', e => {
@@ -675,6 +899,7 @@
   const ampRange = document.getElementById('ampRange');
   const chkColor = document.getElementById('chkColor');
   const chkChain = document.getElementById('chkChain');
+  const chkRest = document.getElementById('chkRest');
   const chkZoom = document.getElementById('chkZoom');
   const btnPlay = document.getElementById('btnPlay');
 
@@ -695,6 +920,7 @@
 
   chkColor.addEventListener('change', (e) => { showColors = e.target.checked; });
   chkChain.addEventListener('change', (e) => { showChain = e.target.checked; });
+  chkRest.addEventListener('change', (e) => { showRest = e.target.checked; });
   chkZoom.addEventListener('change', (e) => { showZoom = e.target.checked; });
 
   btnPlay.addEventListener('click', () => {
