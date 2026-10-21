@@ -7,7 +7,7 @@
 <style>
   :root{
     --bg:#eef2f7; --panel:#fff; --ink:#0f172a; --muted:#64748b;
-    --line:#e2e8f0; --accent:#2563eb;
+    --line:#e2e8f0; --accent:#2563eb; --frost:#0369a1; --frost-bg:#e0f2fe;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -28,7 +28,12 @@
   .viz{display:flex;flex-direction:column;gap:12px}
   .sim-wrap{position:relative;border-radius:14px;overflow:hidden;height:440px;
     background:linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);
-    border:1px solid var(--line)}
+    border:1px solid var(--line);
+    transition:box-shadow .25s, border-color .25s}
+  .sim-wrap.frozen{
+    border-color:#bae6fd;
+    box-shadow:0 0 0 3px rgba(186,230,253,0.5), 0 4px 20px rgba(56,189,248,0.15);
+  }
   #sim{display:block;width:100%;height:100%;touch-action:none}
 
   /* ==== Ankreuz-Icon für B-Feldrichtung ==== */
@@ -60,32 +65,21 @@
     transition:color .15s;
   }
   .field-toggle[aria-pressed="true"]{
-    border-color:var(--accent);
-    background:#eff6ff;
-    color:var(--accent);
+    border-color:var(--accent); background:#eff6ff; color:var(--accent);
   }
   .field-toggle[aria-pressed="true"] .icon-wrap{
-    border-color:var(--accent);
-    background:var(--accent);
-    transform:rotate(0deg) scale(1.02);
+    border-color:var(--accent); background:var(--accent); transform:scale(1.02);
   }
-  .field-toggle[aria-pressed="true"] .check{
-    color:#fff;
-  }
+  .field-toggle[aria-pressed="true"] .check{color:#fff}
 
-  /* Feldrichtungs-Pille am Magnet */
+  /* Magnet-Richtungs-Pille */
   .magnet-dir-pill{
-    position:absolute;
-    pointer-events:none;
-    opacity:0;
+    position:absolute; pointer-events:none; opacity:0;
     transform:translateY(-4px);
     transition:opacity .2s, transform .2s;
     z-index:5;
   }
-  .magnet-dir-pill.visible{
-    opacity:1;
-    transform:translateY(0);
-  }
+  .magnet-dir-pill.visible{opacity:1; transform:translateY(0)}
 
   .scope-wrap{background:#fff;border-radius:14px;padding:10px;height:180px;
     position:relative;border:1px solid var(--line)}
@@ -102,9 +96,16 @@
     color:#94a3b8;transition:color .15s;margin-top:2px}
   .meter-arrow{font-size:26px;font-weight:700;color:#475569;
     transition:color .15s, transform .15s}
-  .frozen-tag{display:none;font-size:10px;background:#fef3c7;color:#92400e;
-    padding:2px 7px;border-radius:5px;font-weight:700;letter-spacing:.03em}
+  .frozen-tag{display:none;font-size:10.5px;
+    background:linear-gradient(135deg,#e0f2fe 0%,#bae6fd 100%);
+    color:#0369a1;padding:3px 9px;border-radius:6px;
+    font-weight:700;letter-spacing:.04em;border:1px solid #7dd3fc;
+    animation:frozenGlow 2.4s ease-in-out infinite}
   .frozen-tag.visible{display:inline-block}
+  @keyframes frozenGlow{
+    0%,100%{box-shadow:0 0 0 0 rgba(125,211,252,0.4)}
+    50%    {box-shadow:0 0 0 5px rgba(125,211,252,0)}
+  }
 
   .ctrl{margin-bottom:12px}
   .ctrl:last-child{margin-bottom:0}
@@ -131,10 +132,10 @@
 
   .hint{margin-top:10px;padding:10px 12px;border-radius:9px;font-size:12.5px;
     line-height:1.55;border:1px solid #dbeafe;background:#eff6ff;color:#1e40af;
-    min-height:86px}
+    min-height:86px;transition:background .2s, border-color .2s, color .2s}
   .hint.warn{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
   .hint.neutral{background:#f8fafc;border-color:#e2e8f0;color:#475569}
-  .hint.frozen{background:#fef3c7;border-color:#fde68a;color:#92400e}
+  .hint.frozen{background:#f0f9ff;border-color:#bae6fd;color:#075985}
 
   .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;
     color:var(--muted);margin-top:8px}
@@ -146,7 +147,7 @@
 <div class="app">
   <header>
     <h1>Elektromagnetische Induktion</h1>
-    <p><strong>Ziehe den Magneten mit der Maus (oder dem Finger) durch die Spule.</strong> Wenn du den Magneten <strong>anhalten</strong> lässt, wird das zuletzt induzierte B-Feld <strong>zur Beobachtung eingefroren</strong>. Über das <strong>Ankreuz-Icon oben rechts</strong> kannst du zusätzlich die <strong>B-Feldrichtung des Magneten</strong> einblenden – so wird die Lenz'sche Regel direkt sichtbar.</p>
+    <p><strong>Ziehe den Magneten mit der Maus (oder dem Finger) durch die Spule.</strong> Wenn du den Magneten <strong>anhalten</strong> lässt, wird der letzte Zustand <strong>zur Beobachtung eingefroren</strong> (blaues Badge). Über das <strong>Ankreuz-Icon oben rechts</strong> kannst du zusätzlich die <strong>B-Feldrichtung des Magneten</strong> einblenden.</p>
   </header>
 
   <div class="layout">
@@ -181,7 +182,7 @@
         <div class="meter-left">
           <div class="meter-label">
             Induzierte Spannung
-            <span class="frozen-tag" id="frozenTag">⏸ eingefroren</span>
+            <span class="frozen-tag" id="frozenTag">❄ eingefroren</span>
           </div>
           <div class="meter-value" id="valU">0,0 V</div>
         </div>
@@ -227,7 +228,7 @@
 "use strict";
 
 /* =========================================================
-   DOM & Referenzen
+   DOM
    ========================================================= */
 const simC   = document.getElementById('sim');
 const simX   = simC.getContext('2d');
@@ -239,6 +240,7 @@ const hintEl = document.getElementById('hint');
 const frozenTag = document.getElementById('frozenTag');
 const fieldToggle = document.getElementById('fieldToggle');
 const magnetPill = document.getElementById('magnetPill');
+const simWrap = document.getElementById('simWrap');
 
 /* =========================================================
    State
@@ -271,7 +273,8 @@ const state = {
   simW: 0, simH: 0,
   coilW: 0, coilH: 0, magW: 0, magH: 0,
   hintArrowAlpha: 1.0,
-  scopeW: 0, scopeH: 0
+  scopeW: 0, scopeH: 0,
+  freezeTime: 0     // Zeitpunkt des Einfrierens (für sanfte Badge-Einblendung)
 };
 
 const WINDOW = 4;
@@ -336,11 +339,14 @@ function computePhysics(dt){
                      && state.inducedB_dir !== 0;
 
   if (shouldFreeze){
+    if (!state.isFrozen) state.freezeTime = state.elapsed;
     state.isFrozen = true;
     state.voltage  = 0;
   } else {
-    state.isFrozen = false;
-
+    if (state.isFrozen){
+      // Auftauen
+      state.isFrozen = false;
+    }
     const product = d * v;
     if (Math.abs(product) < 0.5){
       state.inducedB_dir = 0;
@@ -359,7 +365,7 @@ function computePhysics(dt){
 }
 
 /* =========================================================
-   Hauptansicht zeichnen
+   Zeichnen
    ========================================================= */
 function drawSim(){
   const W = state.simW, H = state.simH;
@@ -370,13 +376,15 @@ function drawSim(){
 
   drawFieldLines(state.magnetX, cy, state.magW, state.magH);
   drawCoil(cx, cy, state.coilW, state.coilH);
+  drawFrostVignette();
   drawCurrentArrows(cx, cy, state.coilW, state.coilH);
   drawInducedField(cx, cy, state.coilW, state.coilH);
   drawMagnet(state.magnetX, cy, state.magW, state.magH);
+  drawFrozenBadge(cx, cy, state.coilH);
 
   if (state.mode === 'manual' && state.hintArrowAlpha > 0.02 &&
       state.elapsed < 3 && !state.dragging &&
-      Math.abs(state.velocity) < 1){
+      Math.abs(state.velocity) < 1 && !state.isFrozen){
     drawDragHint(state.magnetX, cy, state.magH);
   }
 
@@ -386,19 +394,90 @@ function drawSim(){
   simX.textBaseline = 'middle';
   simX.fillText('Spule (N = ' + state.turns + ')', cx, cy + state.coilH/2 + 26);
 
-  // Pill-Position an Magnet ausrichten
   const pillW = 110, pillH = 26;
   magnetPill.style.left = (state.magnetX - pillW/2) + 'px';
   magnetPill.style.top  = (cy - state.magH/2 - pillH - 6) + 'px';
-  magnetPill.classList.toggle('visible', state.showMagnetB);
+  magnetPill.classList.toggle('visible', state.showMagnetB && !state.isFrozen);
+}
+
+/* Weiche blaue Vignette um die Szene, wenn eingefroren */
+function drawFrostVignette(){
+  if (!state.isFrozen) return;
+  const W = state.simW, H = state.simH;
+  const grad = simX.createRadialGradient(
+    W/2, H/2, Math.min(W, H) * 0.32,
+    W/2, H/2, Math.max(W, H) * 0.72
+  );
+  grad.addColorStop(0, 'rgba(186, 230, 253, 0)');
+  grad.addColorStop(0.7, 'rgba(186, 230, 253, 0.12)');
+  grad.addColorStop(1, 'rgba(125, 211, 252, 0.30)');
+  simX.fillStyle = grad;
+  simX.fillRect(0, 0, W, H);
+}
+
+/* Sauberes Badge über der Spule */
+function drawFrozenBadge(cx, cy, h){
+  if (!state.isFrozen) return;
+
+  const text = '❄  eingefroren';
+  simX.font = '700 12px ' + FONT;
+  const tw = simX.measureText(text).width;
+  const bw = tw + 28;
+  const bh = 26;
+  const bx = cx - bw/2;
+  const by = cy - h/2 - bh - 16;
+
+  // dezente Verbindungslinie zur Spule
+  simX.save();
+  simX.strokeStyle = 'rgba(125, 211, 252, 0.45)';
+  simX.lineWidth = 1.2;
+  simX.setLineDash([3, 4]);
+  simX.beginPath();
+  simX.moveTo(cx, by + bh);
+  simX.lineTo(cx, cy - h/2 - 2);
+  simX.stroke();
+  simX.restore();
+
+  // Badge
+  simX.save();
+  const grad = simX.createLinearGradient(0, by, 0, by + bh);
+  grad.addColorStop(0, 'rgba(255, 255, 255, 0.98)');
+  grad.addColorStop(1, 'rgba(224, 242, 254, 0.98)');
+  simX.fillStyle = grad;
+  simX.strokeStyle = 'rgba(56, 189, 248, 0.9)';
+  simX.lineWidth = 1.5;
+  simX.shadowColor = 'rgba(56, 189, 248, 0.28)';
+  simX.shadowBlur = 12;
+
+  roundRect(simX, bx, by, bw, bh, 13);
+  simX.fill();
+  simX.stroke();
+  simX.shadowBlur = 0;
+
+  simX.fillStyle = '#0369a1';
+  simX.textAlign = 'center';
+  simX.textBaseline = 'middle';
+  simX.font = '700 12px ' + FONT;
+  simX.fillText(text, cx, by + bh/2 + 1);
+  simX.restore();
+}
+
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y,     x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x,     y + h, r);
+  ctx.arcTo(x,     y + h, x,     y,     r);
+  ctx.arcTo(x,     y,     x + w, y,     r);
+  ctx.closePath();
 }
 
 /* =========================================================
-   Feldlinien des Magneten (mit optionaler Richtungsanzeige)
+   Feldlinien mit optionaler Richtungsanzeige
    ========================================================= */
 function drawFieldLines(mx, my, w, h){
-  const nx = mx + w/2, ny = my;   // Nordpol (rechts)
-  const sx = mx - w/2, sy = my;   // Südpol (links)
+  const nx = mx + w/2, ny = my;
+  const sx = mx - w/2, sy = my;
   const showDir = state.showMagnetB;
 
   simX.save();
@@ -409,7 +488,6 @@ function drawFieldLines(mx, my, w, h){
     const alpha = 0.15 + 0.45 * Math.min(1, state.flux / state.B_max);
     simX.strokeStyle = `rgba(37,99,235,${alpha})`;
 
-    // Obere Feldlinie: N → S (Bezier)
     const P0 = { x: nx, y: ny };
     const P1 = { x: nx + w*0.7, y: ny - hh };
     const P2 = { x: sx - w*0.7, y: sy - hh };
@@ -421,7 +499,6 @@ function drawFieldLines(mx, my, w, h){
     simX.stroke();
     if (showDir) drawBezierArrows(P0, P1, P2, P3, alpha);
 
-    // Untere Feldlinie
     const Q0 = { x: nx, y: ny };
     const Q1 = { x: nx + w*0.7, y: ny + hh };
     const Q2 = { x: sx - w*0.7, y: sy + hh };
@@ -436,8 +513,6 @@ function drawFieldLines(mx, my, w, h){
   simX.restore();
 }
 
-/* Pfeile entlang einer kubischen Bezierkurve zeichnen.
-   Richtung folgt der Kurve von P0 nach P3 = N → S außerhalb des Magneten. */
 function drawBezierArrows(P0, P1, P2, P3, alpha){
   const ts = [0.22, 0.5, 0.78];
   simX.save();
@@ -522,19 +597,25 @@ function drawCurrentArrows(cx, cy, w, h){
   const frozen = state.isFrozen;
 
   simX.save();
-  simX.lineWidth = frozen ? 2 : 2.4;
+  simX.lineWidth = 2.4;
   simX.lineCap = 'round';
 
-  const baseAlpha = frozen ? 0.45 : (0.55 + 0.45 * Math.min(1, mag * 1.3));
-  simX.strokeStyle = `rgba(220,38,38,${baseAlpha})`;
-  simX.fillStyle   = `rgba(220,38,38,${baseAlpha})`;
-
-  if (frozen) simX.setLineDash([3, 3]);
+  if (frozen){
+    // Eingefroren: solid, gedimmt, mit leichtem Glow
+    simX.strokeStyle = 'rgba(220, 38, 38, 0.55)';
+    simX.fillStyle   = 'rgba(220, 38, 38, 0.55)';
+    simX.shadowColor = 'rgba(220, 38, 38, 0.25)';
+    simX.shadowBlur  = 4;
+  } else {
+    const baseAlpha = 0.55 + 0.45 * Math.min(1, mag * 1.3);
+    simX.strokeStyle = `rgba(220,38,38,${baseAlpha})`;
+    simX.fillStyle   = `rgba(220,38,38,${baseAlpha})`;
+  }
 
   for (let i = 1; i < nT; i++){
     const ex = cx - w/2 + (i/nT) * w;
     const py = cy + ry * 0.72;
-    const len = (frozen ? 10 : 12) * Math.min(1, mag * 2);
+    const len = 12 * Math.min(1, mag * 2);
     const x0 = ex - (dir * len) / 2;
     const x1 = ex + (dir * len) / 2;
 
@@ -543,7 +624,6 @@ function drawCurrentArrows(cx, cy, w, h){
     simX.lineTo(x1, py);
     simX.stroke();
 
-    simX.setLineDash([]);
     const ah = 5.5;
     simX.beginPath();
     simX.moveTo(x1, py);
@@ -551,7 +631,6 @@ function drawCurrentArrows(cx, cy, w, h){
     simX.lineTo(x1 - dir*ah, py + ah*0.55);
     simX.closePath();
     simX.fill();
-    if (frozen) simX.setLineDash([3, 3]);
   }
   simX.restore();
 }
@@ -569,26 +648,26 @@ function drawInducedField(cx, cy, w, h){
   const x1 = cx + (dir * len) / 2;
 
   simX.save();
+  simX.lineCap = 'round';
 
   if (frozen){
-    simX.lineWidth = 2.6;
-    simX.strokeStyle = 'rgba(234,88,12,0.55)';
-    simX.fillStyle   = 'rgba(234,88,12,0.55)';
-    simX.setLineDash([5, 4]);
+    // Solid, gedimmt, mit warmem Glow
+    simX.lineWidth = 3.0;
+    simX.strokeStyle = 'rgba(234, 88, 12, 0.75)';
+    simX.fillStyle   = 'rgba(234, 88, 12, 0.75)';
+    simX.shadowColor = 'rgba(251, 146, 60, 0.4)';
+    simX.shadowBlur  = 7;
   } else {
     simX.lineWidth = 3.2;
-    simX.strokeStyle = 'rgba(234,88,12,0.92)';
-    simX.fillStyle   = 'rgba(234,88,12,0.92)';
-    simX.setLineDash([]);
+    simX.strokeStyle = 'rgba(234, 88, 12, 0.92)';
+    simX.fillStyle   = 'rgba(234, 88, 12, 0.92)';
   }
-  simX.lineCap = 'round';
 
   simX.beginPath();
   simX.moveTo(x0, py);
   simX.lineTo(x1, py);
   simX.stroke();
 
-  simX.setLineDash([]);
   const ah = 8;
   simX.beginPath();
   simX.moveTo(x1, py);
@@ -597,11 +676,13 @@ function drawInducedField(cx, cy, w, h){
   simX.closePath();
   simX.fill();
 
+  simX.shadowBlur = 0;
+
   simX.font = '600 11px ' + FONT;
   simX.textAlign = 'center';
   simX.textBaseline = 'alphabetic';
-  simX.fillStyle = frozen ? 'rgba(234,88,12,0.72)' : 'rgba(234,88,12,0.92)';
-  simX.fillText(frozen ? '⏸ induziertes B (eingefroren)' : 'induziertes B', cx, py - 12);
+  simX.fillStyle = frozen ? 'rgba(194, 65, 12, 0.85)' : 'rgba(234, 88, 12, 0.92)';
+  simX.fillText('induziertes B', cx, py - 12);
 
   simX.restore();
 }
@@ -765,7 +846,7 @@ function niceCeil(x){
 }
 
 /* =========================================================
-   Hinweistext
+   Hinweise
    ========================================================= */
 function updateHint(){
   const dir = state.inducedB_dir;
@@ -779,10 +860,10 @@ function updateHint(){
     hintEl.innerHTML =
       '<b>Magnet angehalten – Feld eingefroren.</b><br>' +
       'Die induzierte Spannung ist jetzt <b>0</b> (keine Flussänderung). ' +
-      'Das zuletzt induzierte B-Feld und die Stromrichtung sind zur Beobachtung sichtbar: ' +
+      'Der letzte Feldzustand bleibt sichtbar: ' +
       (fluxIncreasing
-        ? 'es zeigt <b>gegen</b> das äußere Feld (Lenz: „Abstoßung" beim Annähern).'
-        : 'es zeigt <b>in Richtung</b> des äußeren Feldes (Lenz: „Festhalten" beim Entfernen).') +
+        ? 'das induzierte B-Feld zeigte <b>gegen</b> das äußere Feld (Lenz: „Abstoßung" beim Annähern).'
+        : 'das induzierte B-Feld zeigte <b>in Richtung</b> des äußeren Feldes (Lenz: „Festhalten" beim Entfernen).') +
       '<br>Bewege den Magneten, um wieder live zu messen.';
     return;
   }
@@ -826,6 +907,7 @@ function updateReadout(){
     dirArrow.textContent = '—';
     dirArrow.style.color = '#475569';
     frozenTag.classList.add('visible');
+    simWrap.classList.add('frozen');
   } else {
     valU.textContent = fmtV(U);
     if (a < 0.01){
@@ -842,6 +924,7 @@ function updateReadout(){
       dirArrow.style.color = '#60a5fa';
     }
     frozenTag.classList.remove('visible');
+    simWrap.classList.remove('frozen');
   }
 }
 
@@ -884,7 +967,7 @@ function update(){
 }
 
 /* =========================================================
-   Maus-/Touch-Interaktion
+   Maus/Touch
    ========================================================= */
 function pointerToLocal(ev){
   const r = simC.getBoundingClientRect();
@@ -936,7 +1019,7 @@ simC.addEventListener('pointerleave', () => {
 });
 
 /* =========================================================
-   B-Feld-Ankreuz-Icon
+   B-Feld Ankreuz-Icon
    ========================================================= */
 fieldToggle.addEventListener('click', () => {
   state.showMagnetB = !state.showMagnetB;
@@ -979,6 +1062,7 @@ document.querySelectorAll('.mode-btn[data-mode]').forEach(btn => {
     freqCtrl.style.display = mode === 'auto' ? '' : 'none';
 
     state.isFrozen = false;
+    simWrap.classList.remove('frozen');
 
     if (mode === 'auto'){
       state.elapsed = 0;
@@ -1003,6 +1087,7 @@ resetBtn.addEventListener('click', () => {
   state.scopeYMax = 1.0;
   state.elapsed = 0;
   state.hintArrowAlpha = 1.0;
+  simWrap.classList.remove('frozen');
 });
 
 /* =========================================================
