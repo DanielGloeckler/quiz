@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elektromagnetische Induktion – interaktive Simulation</title>
+<style>
+  :root{
+    --bg:#eef2f7; --panel:#ffffff; --ink:#0f172a; --muted:#64748b;
+    --line:#e2e8f0; --accent:#2563eb; --pos:#dc2626; --neg:#2563eb;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .app{max-width:1400px;margin:0 auto;padding:16px}
+  header h1{font-size:22px;margin:0 0 4px}
+  header p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.45;max-width:900px}
+
+  .layout{display:grid;grid-template-columns:1fr 320px;gap:16px;margin-top:16px}
+  @media(max-width:980px){.layout{grid-template-columns:1fr}}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:14px;box-shadow:0 1px 2px rgba(15,23,42,.06)}
+  .panel h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 10px;font-weight:700}
+
+  .viz{display:flex;flex-direction:column;gap:12px}
+  .sim-wrap{position:relative;border-radius:14px;overflow:hidden;height:400px;
+    background:linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%)}
+  #sim{display:block;width:100%;height:100%}
+
+  .scope-wrap{background:#fff;border-radius:14px;padding:10px;height:200px;position:relative}
+  #scope{display:block;width:100%;height:100%}
+
+  .meter{background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);
+    color:#f1f5f9;border-radius:12px;padding:14px 18px;margin-bottom:12px;
+    display:flex;justify-content:space-between;align-items:center}
+  .meter-label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:#94a3b8;font-weight:600}
+  .meter-value{font-family:ui-monospace,"SF Mono",Consolas,monospace;
+    font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;
+    color:#94a3b8;transition:color .15s}
+
+  .ctrl{margin-bottom:14px}
+  .ctrl:last-child{margin-bottom:0}
+  .ctrl label{display:flex;justify-content:space-between;align-items:baseline;
+    font-size:12.5px;color:var(--muted);margin-bottom:6px;font-weight:600}
+  .ctrl output{font-variant-numeric:tabular-nums;color:var(--accent);
+    font-weight:700;font-size:13.5px}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;
+    border-radius:99px;background:linear-gradient(90deg,#bfdbfe,#dbeafe);
+    outline:none;margin:0}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;
+    border-radius:50%;background:var(--accent);border:3px solid #fff;
+    box-shadow:0 1px 4px rgba(37,99,235,.5);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;
+    background:var(--accent);border:3px solid #fff;
+    box-shadow:0 1px 4px rgba(37,99,235,.5);cursor:pointer}
+
+  .btn-row{display:flex;gap:8px;margin-top:4px}
+  .btn{flex:1;padding:9px 12px;border:1.5px solid var(--line);background:#f8fafc;
+    border-radius:9px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;
+    color:#334155;transition:.15s}
+  .btn:hover{border-color:#bfdbfe;background:#f1f7ff}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn.primary:hover{background:#1d4ed8}
+
+  .hint{margin-top:12px;padding:10px 12px;border-radius:9px;font-size:12.5px;
+    line-height:1.5;border:1px solid #dbeafe;background:#eff6ff;color:#1e40af;
+    min-height:54px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;
+    color:var(--muted);margin-top:8px}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .dot{width:10px;height:10px;border-radius:50%}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Elektromagnetische Induktion</h1>
+    <p>Ein Stabmagnet schwingt durch eine Spule. Beobachte, wie die Induktionsspannung entsteht: Sie ist proportional zur <strong>Änderungsrate des magnetischen Flusses</strong> (Faraday) und ihre Richtung folgt der <strong>Lenz'schen Regel</strong>.</p>
+  </header>
+
+  <div class="layout">
+    <div class="viz">
+      <div class="sim-wrap"><canvas id="sim"></canvas></div>
+      <div class="scope-wrap"><canvas id="scope"></canvas></div>
+    </div>
+
+    <div>
+      <div class="meter">
+        <div>
+          <div class="meter-label">Induzierte Spannung</div>
+          <div class="meter-value" id="valU">0,0 V</div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:12px">
+        <h2>Steuerung</h2>
+
+        <div class="ctrl">
+          <label for="turns">Windungszahl N <output id="turnsOut">100</output></label>
+          <input type="range" id="turns" min="10" max="500" step="10" value="100">
+        </div>
+
+        <div class="ctrl">
+          <label for="field">Magnetfeldstärke B <output id="fieldOut">1,0</output></label>
+          <input type="range" id="field" min="0.2" max="2" step="0.1" value="1">
+        </div>
+
+        <div class="ctrl">
+          <label for="speed">Geschwindigkeit <output id="speedOut">0,50 Hz</output></label>
+          <input type="range" id="speed" min="0.1" max="1.2" step="0.05" value="0.5">
+        </div>
+
+        <div class="btn-row">
+          <button class="btn primary" id="playBtn">⏸ Pause</button>
+          <button class="btn" id="resetBtn">↺ Reset</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Was passiert?</h2>
+        <div class="hint" id="hint"></div>
+        <div class="legend">
+          <span><span class="dot" style="background:#dc2626"></span>U &gt; 0</span>
+          <span><span class="dot" style="background:#2563eb"></span>U &lt; 0</span>
+          <span><span class="dot" style="background:#94a3b8"></span>U ≈ 0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* =========================================================
+   DOM & State
+   ========================================================= */
+const simC   = document.getElementById('sim');
+const simX   = simC.getContext('2d');
+const scopeC = document.getElementById('scope');
+const scopeX = scopeC.getContext('2d');
+const valU   = document.getElementById('valU');
+const hintEl = document.getElementById('hint');
+
+const state = {
+  turns: 100,
+  B_max: 1.0,
+  freq: 0.5,
+  playing: true,
+  elapsed: 0,
+  lastTime: performance.now(),
+  magnetX: 0,
+  velocity: 0,
+  voltage: 0,
+  samples: [],
+  amplitude: 220,
+  sigma: 90,
+  centerX: 0,
+  scopeYMax: 1.0
+};
+
+const WINDOW = 4;        // s, Sichtfenster im Oszilloskop
+const SCALE  = 0.0004;   // Skalierung U = -N · dΦ/dt · SCALE
+
+/* =========================================================
+   Canvas-Größe
+   ========================================================= */
+let simW = 0, simH = 0, scopeW = 0, scopeH = 0;
+
+function resize(){
+  const dpr = window.devicePixelRatio || 1;
+
+  const r1 = simC.getBoundingClientRect();
+  simW = Math.max(200, r1.width);
+  simH = Math.max(200, r1.height);
+  simC.width  = Math.round(simW * dpr);
+  simC.height = Math.round(simH * dpr);
+  simX.setTransform(dpr,0,0,dpr,0,0);
+
+  const r2 = scopeC.getBoundingClientRect();
+  scopeW = Math.max(200, r2.width);
+  scopeH = Math.max(80,  r2.height);
+  scopeC.width  = Math.round(scopeW * dpr);
+  scopeC.height = Math.round(scopeH * dpr);
+  scopeX.setTransform(dpr,0,0,dpr,0,0);
+
+  state.centerX   = simW / 2;
+  state.amplitude = Math.min(240, Math.max(100, simW/2 - 100));
+}
+
+new ResizeObserver(resize).observe(simC);
+new ResizeObserver(resize).observe(scopeC);
+
+/* =========================================================
+   Zeichnen: Hauptansicht
+   ========================================================= */
+function drawFieldLines(mx, my, w, h){
+  const nx = mx + w/2, ny = my;   // Nordpol rechts
+  const sx = mx - w/2, sy = my;   // Südpol links
+
+  simX.save();
+  simX.strokeStyle = 'rgba(100,116,139,0.32)';
+  simX.lineWidth = 1.3;
+
+  for (let k = 1; k <= 3; k++){
+    const hh = k * (h/2 + 14);
+
+    // obere Feldlinie
+    simX.beginPath();
+    simX.moveTo(nx, ny);
+    simX.bezierCurveTo(nx + w*0.7, ny - hh, sx - w*0.7, sy - hh, sx, sy);
+    simX.stroke();
+
+    // untere Feldlinie
+    simX.beginPath();
+    simX.moveTo(nx, ny);
+    simX.bezierCurveTo(nx + w*0.7, ny + hh, sx - w*0.7, sy + hh, sx, sy);
+    simX.stroke();
+  }
+  simX.restore();
+}
+
+function drawCoil(cx, cy, w, h){
+  const ry = h/2, rx = 7;
+
+  simX.save();
+
+  // leichte Fläche, damit Feldlinien durchscheinen
+  simX.fillStyle = 'rgba(251,191,36,0.10)';
+  simX.beginPath();
+  simX.rect(cx - w/2, cy - ry, w, 2*ry);
+  simX.fill();
+
+  // End-Ellipsen
+  simX.lineWidth = 2.5;
+  simX.strokeStyle = '#b45309';
+  simX.fillStyle   = 'rgba(245,158,11,0.35)';
+  for (const ex of [cx - w/2, cx + w/2]){
+    simX.beginPath();
+    simX.ellipse(ex, cy, rx, ry, 0, 0, Math.PI*2);
+    simX.fill();
+    simX.stroke();
+  }
+
+  // Silhouette oben / unten
+  simX.beginPath();
+  simX.moveTo(cx - w/2, cy - ry);
+  simX.lineTo(cx + w/2, cy - ry);
+  simX.moveTo(cx - w/2, cy + ry);
+  simX.lineTo(cx + w/2, cy + ry);
+  simX.stroke();
+
+  // Windungen (vordere Hälften dunkler als hintere)
+  const nT = Math.min(Math.max(4, Math.round(state.turns / 25)), 12);
+  for (let i = 1; i < nT; i++){
+    const ex = cx - w/2 + (i/nT) * w;
+
+    // hinten
+    simX.beginPath();
+    simX.lineWidth  = 1.2;
+    simX.strokeStyle = 'rgba(180,83,9,0.30)';
+    simX.ellipse(ex, cy, rx, ry, 0, Math.PI, Math.PI*2);
+    simX.stroke();
+
+    // vorne
+    simX.beginPath();
+    simX.lineWidth  = 1.8;
+    simX.strokeStyle = 'rgba(180,83,9,0.75)';
+    simX.ellipse(ex, cy, rx, ry, 0, 0, Math.PI);
+    simX.stroke();
+  }
+  simX.restore();
+}
+
+function drawMagnet(mx, my, w, h){
+  const left = mx - w/2, top = my - h/2;
+
+  simX.save();
+
+  // Südpol (blau, links)
+  simX.fillStyle = '#1d4ed8';
+  simX.fillRect(left, top, w/2, h);
+
+  // Nordpol (rot, rechts)
+  simX.fillStyle = '#dc2626';
+  simX.fillRect(left + w/2, top, w/2, h);
+
+  // Umriss
+  simX.strokeStyle = '#1e293b';
+  simX.lineWidth = 2;
+  simX.strokeRect(left, top, w, h);
+
+  // Beschriftung
+  simX.fillStyle = '#ffffff';
+  simX.font = 'bold 18px ui-sans-serif,system-ui,sans-serif';
+  simX.textAlign = 'center';
+  simX.textBaseline = 'middle';
+  simX.fillText('S', left + w*0.25, my);
+  simX.fillText('N', left + w*0.75, my);
+
+  simX.restore();
+}
+
+function drawCurrentIndicator(cx, cy, w, h){
+  const U = state.voltage;
+  const a = Math.abs(U);
+
+  const ix = cx + w/2 + 55;
+  const iy = cy;
+  const r  = 26;
+
+  simX.save();
+
+  // Kreis
+  simX.beginPath();
+  simX.arc(ix, iy, r, 0, Math.PI*2);
+  simX.fillStyle   = '#f8fafc';
+  simX.fill();
+  simX.strokeStyle = '#cbd5e1';
+  simX.lineWidth   = 2;
+  simX.stroke();
+
+  // Beschriftung
+  simX.fillStyle = '#64748b';
+  simX.font = '600 11px ui-sans-serif,system-ui,sans-serif';
+  simX.textAlign = 'center';
+  simX.textBaseline = 'middle';
+  simX.fillText('Strom I', ix, iy - r - 12);
+
+  if (a > 0.005){
+    const dir = U > 0 ? 1 : -1;
+    const intensity = Math.min(1, a * 2);
+    const color = U > 0 ? '#dc2626' : '#2563eb';
+
+    simX.globalAlpha = 0.4 + 0.6 * intensity;
+    simX.strokeStyle = color;
+    simX.fillStyle   = color;
+    simX.lineWidth   = 3.5;
+    simX.lineCap     = 'round';
+
+    // Bogen
+    const a0 = -Math.PI * 0.5;
+    const a1 = a0 + dir * Math.PI * 1.3;
+    simX.beginPath();
+    simX.arc(ix, iy, r*0.65, a0, a1, dir < 0);
+    simX.stroke();
+
+    // Pfeilspitze tangential (über zwei Punkte bestimmt)
+    const e = 0.05 * dir;
+    const xb = ix + r*0.65 * Math.cos(a1 - e);
+    const yb = iy + r*0.65 * Math.sin(a1 - e);
+    const xt = ix + r*0.65 * Math.cos(a1);
+    const yt = iy + r*0.65 * Math.sin(a1);
+    const dx = xt - xb, dy = yt - yb;
+    const len = Math.hypot(dx, dy) || 1;
+    const ux = dx/len, uy = dy/len;
+    const px = -uy, py = ux;
+    const ah = 9;
+
+    simX.beginPath();
+    simX.moveTo(xt + ux*ah*0.4, yt + uy*ah*0.4);
+    simX.lineTo(xt - ux*ah + px*ah*0.5, yt - uy*ah + py*ah*0.5);
+    simX.lineTo(xt - ux*ah - px*ah*0.5, yt - uy*ah - py*ah*0.5);
+    simX.closePath();
+    simX.fill();
+
+    simX.globalAlpha = 1;
+  } else {
+    simX.fillStyle = '#94a3b8';
+    simX.font = '11px ui-sans-serif,system-ui,sans-serif';
+    simX.fillText('kein', ix, iy - 4);
+    simX.fillText('Strom', ix, iy + 10);
+  }
+
+  simX.restore();
+}
+
+function drawSim(){
+  simX.clearRect(0, 0, simW, simH);
+
+  const cx = state.centerX;
+  const cy = simH / 2;
+
+  // adaptive Größen
+  const coilH = Math.min(190, simH * 0.5);
+  const coilW = coilH * 0.9;
+  const magH  = Math.max(30, coilH * 0.23);
+  const magW  = magH * 2.5;
+
+  // 1. Feldlinien (hinter der Spule)
+  drawFieldLines(state.magnetX, cy, magW, magH);
+
+  // 2. Spule
+  drawCoil(cx, cy, coilW, coilH);
+
+  // 3. Magnet (vorne)
+  drawMagnet(state.magnetX, cy, magW, magH);
+
+  // 4. Stromanzeige
+  drawCurrentIndicator(cx, cy, coilW, coilH);
+
+  // Beschriftung
+  simX.fillStyle = '#475569';
+  simX.font = '600 12px ui-sans-serif,system-ui,sans-serif';
+  simX.textAlign = 'center';
+  simX.textBaseline = 'middle';
+  simX.fillText('Spule  (N = ' + state.turns + ')', cx, cy + coilH/2 + 22);
+}
+
+/* =========================================================
+   Zeichnen: Oszilloskop
+   ========================================================= */
+function drawScope(){
+  scopeX.clearRect(0, 0, scopeW, scopeH);
+
+  const pad = { l: 56, r: 14, t: 14, b: 24 };
+  const pw  = scopeW - pad.l - pad.r;
+  const ph  = scopeH - pad.t - pad.b;
+  const y0  = pad.t + ph/2;
+
+  // Skala
+  let maxAbs = 0.05;
+  for (const s of state.samples) maxAbs = Math.max(maxAbs, Math.abs(s.U));
+  const target = niceCeil(maxAbs * 1.15);
+  state.scopeYMax += (target - state.scopeYMax) * 0.08;
+  const yMax = state.scopeYMax;
+
+  // Gitter
+  scopeX.strokeStyle = '#f1f5f9';
+  scopeX.lineWidth = 1;
+  for (let i = 0; i <= 4; i++){
+    const y = pad.t + (i/4) * ph;
+    scopeX.beginPath(); scopeX.moveTo(pad.l, y); scopeX.lineTo(pad.l + pw, y); scopeX.stroke();
+  }
+  for (let i = 0; i <= 8; i++){
+    const x = pad.l + (i/8) * pw;
+    scopeX.beginPath(); scopeX.moveTo(x, pad.t); scopeX.lineTo(x, pad.t + ph); scopeX.stroke();
+  }
+
+  // y-Achse
+  scopeX.strokeStyle = '#94a3b8';
+  scopeX.lineWidth = 1.5;
+  scopeX.beginPath();
+  scopeX.moveTo(pad.l, pad.t);
+  scopeX.lineTo(pad.l, pad.t + ph);
+  scopeX.stroke();
+
+  // Nulllinie
+  scopeX.strokeStyle = '#cbd5e1';
+  scopeX.setLineDash([4,4]);
+  scopeX.beginPath();
+  scopeX.moveTo(pad.l, y0);
+  scopeX.lineTo(pad.l + pw, y0);
+  scopeX.stroke();
+  scopeX.setLineDash([]);
+
+  // Kurve
+  if (state.samples.length > 1){
+    const t1 = state.elapsed;
+    const t0 = t1 - WINDOW;
+
+    scopeX.strokeStyle = '#2563eb';
+    scopeX.lineWidth = 2.2;
+    scopeX.lineJoin = 'round';
+    scopeX.lineCap = 'round';
+    scopeX.beginPath();
+
+    let started = false;
+    for (const s of state.samples){
+      if (s.t < t0) continue;
+      const x = pad.l + ((s.t - t0) / WINDOW) * pw;
+      const y = y0 - (s.U / yMax) * (ph/2);
+      if (!started){ scopeX.moveTo(x, y); started = true; }
+      else scopeX.lineTo(x, y);
+    }
+    scopeX.stroke();
+  }
+
+  // Beschriftung
+  scopeX.fillStyle = '#64748b';
+  scopeX.font = '11px ui-sans-serif,system-ui,sans-serif';
+  scopeX.textAlign = 'right';
+  scopeX.textBaseline = 'middle';
+  scopeX.fillText('+' + axisLabel(yMax),  pad.l - 6, pad.t + 6);
+  scopeX.fillText('0',                   pad.l - 6, y0);
+  scopeX.fillText('−' + axisLabel(yMax), pad.l - 6, pad.t + ph - 6);
+
+  scopeX.textAlign = 'center';
+  scopeX.textBaseline = 'alphabetic';
+  scopeX.fillText('t  (letzte ' + WINDOW + ' s)', pad.l + pw/2, scopeH - 6);
+}
+
+/* =========================================================
+   Formatierung
+   ========================================================= */
+function axisLabel(x){
+  const a = Math.abs(x);
+  if (a >= 10) return x.toFixed(0) + ' V';
+  if (a >= 1)  return x.toFixed(1).replace('.', ',') + ' V';
+  return (x * 1000).toFixed(0) + ' mV';
+}
+
+function fmtV(U){
+  const a = Math.abs(U);
+  if (a < 0.0005) return '0,0 V';
+  if (a < 1){
+    const s = (U * 1000).toFixed(0);
+    return (s.startsWith('-') ? '−' + s.slice(1) : s) + ' mV';
+  }
+  const s = U.toFixed(2).replace('.', ',');
+  return s.startsWith('-') ? '−' + s.slice(1) : s;
+}
+
+function niceCeil(x){
+  if (!(x > 0)) return 1;
+  const e = Math.pow(10, Math.floor(Math.log10(x)));
+  const f = x / e;
+  let n;
+  if (f <= 1) n = 1;
+  else if (f <= 2) n = 2;
+  else if (f <= 2.5) n = 2.5;
+  else if (f <= 5) n = 5;
+  else n = 10;
+  return n * e;
+}
+
+/* =========================================================
+   Update-Loop
+   ========================================================= */
+function update(){
+  const now = performance.now();
+  const dt  = Math.min((now - state.lastTime) / 1000, 0.05);
+  state.lastTime = now;
+
+  if (state.playing) state.elapsed += dt;
+
+  // Magnetbewegung: harmonische Schwingung um das Spulenzentrum
+  const omega = 2 * Math.PI * state.freq;
+  const phase = omega * state.elapsed;
+  state.magnetX  = state.centerX + state.amplitude * Math.sin(phase);
+  state.velocity = state.playing ? state.amplitude * omega * Math.cos(phase) : 0;
+
+  // Physik: Φ(d) = B · exp(-(d/σ)²)
+  const d    = state.magnetX - state.centerX;
+  const sig2 = state.sigma * state.sigma;
+  const expT = Math.exp(-(d*d) / sig2);
+  const dFlux_dt = state.B_max * (-2*d / sig2) * expT * state.velocity;
+
+  // Faraday: U = −N · dΦ/dt
+  const U = -state.turns * dFlux_dt * SCALE;
+  state.voltage = U;
+
+  // Samples für Oszilloskop
+  if (state.playing){
+    state.samples.push({ t: state.elapsed, U });
+    while (state.samples.length && state.samples[0].t < state.elapsed - WINDOW - 0.5){
+      state.samples.shift();
+    }
+  }
+
+  drawSim();
+  drawScope();
+  updateUI();
+
+  requestAnimationFrame(update);
+}
+
+function updateUI(){
+  const U = state.voltage;
+  const a = Math.abs(U);
+
+  valU.textContent = fmtV(U);
+  if (a < 0.01) valU.style.color = '#94a3b8';
+  else valU.style.color = U > 0 ? '#f87171' : '#60a5fa';
+
+  const d = state.magnetX - state.centerX;
+  let h;
+  if (!state.playing){
+    h = 'Magnet steht still – keine Feldänderung, also keine Induktionsspannung.';
+  } else if (a < 0.01){
+    if (Math.abs(d) < 30){
+      h = 'Der Magnet ist gerade im Spulenzentrum: Der Fluss Φ ist <b>maximal</b>, seine Änderungsrate aber null → U = 0.';
+    } else {
+      h = 'Der Magnet ist weit von der Spule entfernt – der Fluss durch die Spule ist praktisch null.';
+    }
+  } else if (state.velocity * d < 0){
+    h = 'Der Fluss durch die Spule <b>wächst</b>. Nach <b>Lenz</b> wirkt die Spule mit einem Gegenfeld: U hat ein Vorzeichen.';
+  } else {
+    h = 'Der Fluss durch die Spule <b>nimmt ab</b>. Nach <b>Lenz</b> versucht die Spule, ihn aufrechtzuerhalten: U kehrt das Vorzeichen.';
+  }
+  hintEl.innerHTML = h;
+}
+
+/* =========================================================
+   Steuerelemente
+   ========================================================= */
+const turnsEl = document.getElementById('turns');
+const fieldEl = document.getElementById('field');
+const speedEl = document.getElementById('speed');
+const turnsOut = document.getElementById('turnsOut');
+const fieldOut = document.getElementById('fieldOut');
+const speedOut = document.getElementById('speedOut');
+const playBtn  = document.getElementById('playBtn');
+const resetBtn = document.getElementById('resetBtn');
+
+turnsEl.addEventListener('input', e => {
+  state.turns = +e.target.value;
+  turnsOut.textContent = state.turns;
+});
+fieldEl.addEventListener('input', e => {
+  state.B_max = +e.target.value;
+  fieldOut.textContent = state.B_max.toFixed(1).replace('.', ',');
+});
+speedEl.addEventListener('input', e => {
+  state.freq = +e.target.value;
+  speedOut.textContent = state.freq.toFixed(2).replace('.', ',') + ' Hz';
+});
+
+playBtn.addEventListener('click', () => {
+  state.playing = !state.playing;
+  playBtn.textContent = state.playing ? '⏸ Pause' : '▶ Abspielen';
+  playBtn.classList.toggle('primary', state.playing);
+});
+
+resetBtn.addEventListener('click', () => {
+  state.elapsed = 0;
+  state.samples = [];
+  state.voltage = 0;
+  state.magnetX = state.centerX;
+  state.velocity = 0;
+  state.scopeYMax = 1.0;
+  state.playing = true;
+  playBtn.textContent = '⏸ Pause';
+  playBtn.classList.add('primary');
+});
+
+/* =========================================================
+   Start
+   ========================================================= */
+resize();
+state.lastTime = performance.now();
+state.magnetX = state.centerX;
+requestAnimationFrame(update);
+</script>
+</body>
+</html>
