@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>I-U-Kennlinien – interaktive Simulation (Physik Kl. 9/10)</title>
+<style>
+  :root{
+    --bg:#eef2f7; --panel:#ffffff; --ink:#0f172a; --muted:#64748b;
+    --line:#e2e8f0; --accent:#2563eb; --accent-soft:#eff6ff;
+    --hot:#dc2626; --warn:#b45309; --ok:#047857;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .app{max-width:1280px; margin:0 auto; padding:20px}
+  header h1{font-size:22px; margin:0 0 4px}
+  header p{margin:0; color:var(--muted); font-size:13.5px; line-height:1.45}
+
+  .layout{display:grid; grid-template-columns:360px 1fr; gap:16px; margin-top:16px; align-items:start}
+  @media (max-width:920px){ .layout{grid-template-columns:1fr} }
+
+  .panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:14px; box-shadow:0 1px 2px rgba(15,23,42,.06);
+  }
+  .panel + .panel{margin-top:14px}
+  .panel h2{font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--muted); margin:0 0 10px; font-weight:700}
+
+  /* Bauteilkarten */
+  .cards{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .card{
+    display:flex; flex-direction:column; gap:2px; text-align:left; cursor:pointer;
+    background:#f8fafc; border:1.5px solid var(--line); border-radius:10px;
+    padding:9px 10px; font:inherit; color:inherit; transition:.15s;
+  }
+  .card:hover{border-color:#bfdbfe; background:#f1f7ff}
+  .card .t{font-size:12.5px; font-weight:650; line-height:1.25}
+  .card .s{font-size:10.5px; color:var(--muted); line-height:1.25}
+  .card.active{border-color:var(--accent); background:var(--accent-soft); box-shadow:0 0 0 3px rgba(37,99,235,.10)}
+
+  /* Regler */
+  .ctrl{margin-top:12px}
+  .ctrl label{display:flex; justify-content:space-between; align-items:baseline;
+    font-size:12.5px; color:var(--muted); margin-bottom:6px; font-weight:600}
+  .ctrl output{font-variant-numeric:tabular-nums; color:var(--accent); font-weight:700; font-size:14px}
+  input[type=range]{
+    -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:99px;
+    background:linear-gradient(90deg,#bfdbfe,#dbeafe); outline:none; margin:0;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:20px; height:20px; border-radius:50%;
+    background:var(--accent); border:3px solid #fff; box-shadow:0 1px 4px rgba(37,99,235,.5); cursor:pointer;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:16px; height:16px; border-radius:50%; background:var(--accent);
+    border:3px solid #fff; box-shadow:0 1px 4px rgba(37,99,235,.5); cursor:pointer;
+  }
+  .switch{display:flex; align-items:center; gap:8px; font-size:13px; color:#334155;
+    margin-top:12px; cursor:pointer; user-select:none}
+  .switch input{width:17px; height:17px; accent-color:var(--accent); cursor:pointer}
+
+  /* Messwerte */
+  .stats{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .stat{background:#f8fafc; border:1px solid var(--line); border-radius:10px; padding:8px 10px}
+  .stat .k{font-size:10.5px; color:var(--muted); letter-spacing:.03em}
+  .stat .v{font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; margin-top:1px}
+
+  .hint{margin-top:12px; font-size:12.5px; line-height:1.5; border-radius:10px; padding:10px 12px; border:1px solid}
+  .hint.ok{background:#ecfdf5; border-color:#a7f3d0; color:#065f46}
+  .hint.warn{background:#fffbeb; border-color:#fde68a; color:#92400e}
+
+  /* Plot */
+  .plot-panel{display:flex; flex-direction:column; min-height:560px}
+  .plot-head{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px}
+  .toggles{display:flex; gap:14px; flex-wrap:wrap}
+  .tg{display:flex; align-items:center; gap:6px; font-size:12.5px; color:#334155; cursor:pointer; user-select:none}
+  .tg input{accent-color:var(--accent); width:15px; height:15px; cursor:pointer}
+  .plot-wrap{position:relative; flex:1; min-height:430px}
+  canvas{position:absolute; inset:0; display:block; cursor:crosshair; border-radius:10px}
+  .foot{font-size:11.5px; color:var(--muted); margin-top:8px; line-height:1.5}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>I-U-Kennlinien verschiedener Bauteile</h1>
+    <p>Spannung mit dem Regler (oder direkt im Diagramm) einstellen und beobachten, wie sich Stromstärke und Widerstand ändern.
+       Der Punkt markiert den <strong>Arbeitspunkt</strong>, die gestrichelte Linie zeigt den Quotienten <em>R = U/I</em>.</p>
+  </header>
+
+  <div class="layout">
+    <!-- linke Spalte -->
+    <div>
+      <section class="panel">
+        <h2>Bauteil wählen</h2>
+        <div class="cards" id="cards"></div>
+        <div id="options"></div>
+
+        <div class="ctrl">
+          <label for="uRange">Spannung U <output id="uOut">3,0 V</output></label>
+          <input type="range" id="uRange" min="0" max="10" step="0.05" value="3">
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Messwerte im Arbeitspunkt</h2>
+        <div class="stats">
+          <div class="stat"><div class="k">Spannung U</div><div class="v" id="vU">–</div></div>
+          <div class="stat"><div class="k">Stromstärke I</div><div class="v" id="vI">–</div></div>
+          <div class="stat"><div class="k">R = U / I</div><div class="v" id="vR">–</div></div>
+          <div class="stat"><div class="k">Leistung P = U · I</div><div class="v" id="vP">–</div></div>
+        </div>
+        <div class="hint" id="hint"></div>
+      </section>
+    </div>
+
+    <!-- rechte Spalte -->
+    <section class="panel plot-panel">
+      <div class="plot-head">
+        <h2 style="margin:0">Kennlinie I(U)</h2>
+        <div class="toggles">
+          <label class="tg"><input type="checkbox" id="tgPoints"> Messpunkte</label>
+          <label class="tg"><input type="checkbox" id="tgTangent"> Tangente (r = dU/dI)</label>
+        </div>
+      </div>
+      <div class="plot-wrap" id="plotWrap">
+        <canvas id="plot"></canvas>
+      </div>
+      <div class="foot">
+        Modellrechnung – reale Bauteile weichen ab (Fertigung, Temperatur, Alterung).
+        Die Simulation ergänzt das Schülerexperiment, ersetzt es aber nicht.
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* =========================================================
+   1) Physikalische Modelle
+   ========================================================= */
+
+const V_T = 0.025852;          // Temperaturspannung bei ca. 300 K in V
+
+/* Diode mit Serienwiderstand: U = n·V_T·ln(I/Is + 1) + I·Rs
+   -> numerisch nach I auflösen (Bisektion, f monoton steigend) */
+function diodeCurrent(U, Is, n, Rs){
+  if (U <= 0) return 0;
+  const nVt = n * V_T;
+  let lo = 0, hi = 1e3;
+  for (let k = 0; k < 100; k++){
+    const mid = 0.5 * (lo + hi);
+    const f = nVt * Math.log(mid / Is + 1) + mid * Rs - U;
+    if (f > 0) hi = mid; else lo = mid;
+  }
+  return 0.5 * (lo + hi);
+}
+
+/* Selbsterwärmung: stationäres Gleichgewicht  P = k·ΔT
+   R hängt von der Übertemperatur ΔT ab -> Fixpunktiteration */
+function selfHeat(U, RofdT, k, maxdT = 2500){
+  if (U <= 0) return { I: 0, dT: 0, R: RofdT(0) };
+  let dT = 0;
+  for (let it = 0; it < 800; it++){
+    const R = Math.max(RofdT(dT), 1e-9);
+    let target = (U * U) / R / k;
+    if (!isFinite(target)) target = maxdT;
+    target = Math.min(Math.max(target, 0), maxdT);
+    const next = dT + 0.15 * (target - dT);
+    if (Math.abs(next - dT) < 1e-7){ dT = next; break; }
+    dT = next;
+  }
+  const R = Math.max(RofdT(dT), 1e-9);
+  return { I: U / R, dT, R };
+}
+
+/* =========================================================
+   2) Zustand & Bauteile
+   ========================================================= */
+
+const state = {
+  comp: "ohm",
+  U: 3,
+  cooling: false,     // Wasserbad-Kühlung Eisendraht
+  light: 100,         // Beleuchtungsstärke LDR in lx
+  showPoints: false,
+  showTangent: false
+};
+
+const COMPONENTS = [
+  {
+    id: "ohm",
+    name: "Ohmscher Widerstand",
+    sub: "Konstantandraht, 10 Ω",
+    umax: 10,
+    I: U => U / 10,
+    hint: () => "Die Kennlinie ist eine <b>Gerade durch den Ursprung</b>: R = U/I ist bei jeder Spannung gleich groß. " +
+                "Nur hier gilt das <b>Ohm’sche Gesetz</b> R = U/I = konstant."
+  },
+  {
+    id: "eisen",
+    name: "Eisendraht",
+    sub: "Selbsterwärmung / Wasserbad",
+    umax: 10,
+    option: "cooling",
+    I: U => state.cooling ? U / 4 : selfHeat(U, dT => 4 * (1 + 0.006 * dT), 0.03).I,
+    hint: () => state.cooling
+      ? "Im Wasserbad bleibt die Temperatur konstant: R ≈ 4 Ω, die Kennlinie ist eine <b>Gerade</b> – der Draht verhält sich ohmsch."
+      : "Der Draht erwärmt sich, der Widerstand <b>steigt</b> mit der Temperatur (Kaltleiter). Die Kennlinie flacht ab: " +
+        "U/I ist <b>nicht</b> konstant, R = U/I ist hier nur noch die <i>Definition</i> des Widerstands im Arbeitspunkt."
+  },
+  {
+    id: "graphit",
+    name: "Graphit",
+    sub: "Heißleiter (NTC)",
+    umax: 10,
+    I: U => selfHeat(U, dT => 8 / (1 + 0.0015 * dT), 0.06).I,
+    hint: () => "Graphit leitet beim Erwärmen <b>besser</b>: R sinkt, die Kennlinie krümmt sich nach oben. " +
+                "Der Quotient U/I wird mit steigender Spannung kleiner – kein ohmsches Verhalten."
+  },
+  {
+    id: "diode",
+    name: "Diode (Si)",
+    sub: "Silizium, mit Vorwiderstand",
+    umax: 1.0,
+    I: U => diodeCurrent(U, 1e-9, 1.8, 5),
+    hint: () => "Erst ab der <b>Schwellenspannung</b> (ca. 0,7 V) fließt nennenswert Strom, danach steigt I sehr stark an. " +
+                "R = U/I hängt extrem von U ab – die Diode ist ein stark <b>nichtlineares</b> Bauteil."
+  },
+  {
+    id: "led",
+    name: "Leuchtdiode",
+    sub: "LED rot, mit Vorwiderstand",
+    umax: 2.2,
+    I: U => diodeCurrent(U, 5e-18, 2.0, 10),
+    hint: () => "Ähnlich wie die Diode, aber mit höherer Schwellenspannung (ca. 1,8 V). " +
+                "Ohne <b>Vorwiderstand</b> würde der Strom sehr schnell sehr groß – deshalb wird die LED immer mit R betrieben."
+  },
+  {
+    id: "ldr",
+    name: "LDR",
+    sub: "lichtabhängiger Widerstand",
+    umax: 10,
+    option: "light",
+    I: U => U / ldrResistance(state.light),
+    hint: () => "Ein LDR ist <b>ohmsch</b>, aber sein Widerstand hängt vom Licht ab: hell → kleiner R, dunkel → großer R. " +
+                "Bei fester Beleuchtung bleibt die Kennlinie eine Gerade."
+  }
+];
+
+function ldrResistance(lux){
+  // typischer Verlauf: R ~ E^(-0,75); 1200 Ω bei 100 lx
+  return 1200 * Math.pow(100 / Math.max(lux, 1), 0.75);
+}
+
+/* =========================================================
+   3) Hilfsfunktionen
+   ========================================================= */
+
+function fmtNum(x, dec){
+  if (!isFinite(x)) return "–";
+  if (x === 0) return "0";
+  const a = Math.abs(x);
+  let s;
+  if (a >= 1000) s = x.toFixed(0);
+  else if (a >= 100) s = x.toFixed(1);
+  else if (a >= 10) s = x.toFixed(dec != null ? Math.min(dec, 2) : 1);
+  else if (a >= 1) s = x.toFixed(2);
+  else s = x.toFixed(3);
+  if (s.includes(".")) s = s.replace(/0+$/, "").replace(/\.$/, "");
+  return s.replace(".", ",");
+}
+
+function niceStep(x){
+  if (!(x > 0) || !isFinite(x)) return 1;
+  const e = Math.pow(10, Math.floor(Math.log10(x)));
+  const f = x / e;
+  let n;
+  if (f <= 1) n = 1;
+  else if (f <= 2) n = 2;
+  else if (f <= 2.5) n = 2.5;
+  else if (f <= 5) n = 5;
+  else n = 10;
+  return n * e;
+}
+function niceCeil(x){
+  if (!(x > 0)) return 1;
+  const s = niceStep(x / 5);
+  return Math.ceil(x / s - 1e-9) * s;
+}
+
+const compById = id => COMPONENTS.find(c => c.id === id);
+
+/* =========================================================
+   4) DOM
+   ========================================================= */
+
+const canvas  = document.getElementById("plot");
+const ctx     = canvas.getContext("2d");
+const wrap    = document.getElementById("plotWrap");
+const cardsEl = document.getElementById("cards");
+const optEl   = document.getElementById("options");
+const uRange  = document.getElementById("uRange");
+const uOut    = document.getElementById("uOut");
+const hintEl  = document.getElementById("hint");
+const el = {
+  U: document.getElementById("vU"),
+  I: document.getElementById("vI"),
+  R: document.getElementById("vR"),
+  P: document.getElementById("vP")
+};
+
+const FONT = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+
+/* =========================================================
+   5) Kurve & Achsen
+   ========================================================= */
+
+let curve = [];
+let xMax = 10, yMax = 10, unitFactor = 1000, unitName = "mA";
+let W = 0, H = 0;
+const PAD = { l: 66, r: 24, t: 24, b: 54 };
+
+function computeCurve(){
+  const c = compById(state.comp);
+  const N = 500;
+  const pts = [];
+  let imax = 0;
+  for (let i = 0; i <= N; i++){
+    const u = c.umax * i / N;
+    let cur = c.I(u);
+    if (!isFinite(cur) || cur < 0) cur = 0;
+    pts.push({ u, i: cur });
+    if (cur > imax) imax = cur;
+  }
+  curve = pts;
+  xMax  = c.umax;
+  unitFactor = imax < 1 ? 1000 : 1;
+  unitName   = imax < 1 ? "mA" : "A";
+  yMax = niceCeil(Math.max(imax * unitFactor, 1e-3));
+}
+
+/* =========================================================
+   6) Zeichnen
+   ========================================================= */
+
+function draw(){
+  if (W < 80 || H < 80) return;
+  const pad = PAD;
+  const pw = W - pad.l - pad.r;
+  const ph = H - pad.t - pad.b;
+  const X = u  => pad.l + (Math.min(Math.max(u, 0), xMax) / xMax) * pw;
+  const Y = iv => pad.t + ph - (Math.min(Math.max(iv, 0), yMax) / yMax) * ph;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.font = "12px " + FONT;
+  ctx.textBaseline = "middle";
+
+  const xStep = niceStep(xMax / 5);
+  const yStep = niceStep(yMax / 5);
+
+  /* --- Gitter + Beschriftung --- */
+  ctx.lineWidth = 1;
+  for (let i = 0; i * xStep <= xMax + 1e-9; i++){
+    const v = i * xStep, x = X(v);
+    ctx.strokeStyle = "#e9eef6";
+    ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + ph); ctx.stroke();
+    ctx.fillStyle = "#7b8aa1"; ctx.textAlign = "center";
+    ctx.fillText(fmtNum(v), x, pad.t + ph + 18);
+  }
+  for (let i = 0; i * yStep <= yMax + 1e-9; i++){
+    const v = i * yStep, y = Y(v);
+    ctx.strokeStyle = "#e9eef6";
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + pw, y); ctx.stroke();
+    ctx.fillStyle = "#7b8aa1"; ctx.textAlign = "right";
+    ctx.fillText(fmtNum(v), pad.l - 10, y);
+  }
+
+  /* --- Achsen --- */
+  ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t);
+  ctx.lineTo(pad.l, pad.t + ph);
+  ctx.lineTo(pad.l + pw, pad.t + ph);
+  ctx.stroke();
+
+  /* --- Achsentitel --- */
+  ctx.fillStyle = "#475569";
+  ctx.textAlign = "center";
+  ctx.font = "600 12.5px " + FONT;
+  ctx.fillText("U in V", pad.l + pw / 2, H - 16);
+
+  ctx.save();
+  ctx.translate(18, pad.t + ph / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText("I in " + unitName, 0, 0);
+  ctx.restore();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(pad.l, pad.t, pw, ph);
+  ctx.clip();
+
+  const c = compById(state.comp);
+
+  /* --- Fläche unter der Kurve --- */
+  ctx.beginPath();
+  ctx.moveTo(X(0), Y(0));
+  for (const p of curve) ctx.lineTo(X(p.u), Y(p.i * unitFactor));
+  ctx.lineTo(X(xMax), Y(0));
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ph);
+  grad.addColorStop(0, "rgba(37,99,235,0.20)");
+  grad.addColorStop(1, "rgba(37,99,235,0.015)");
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  /* --- Kennlinie --- */
+  ctx.beginPath();
+  curve.forEach((p, idx) => {
+    const x = X(p.u), y = Y(p.i * unitFactor);
+    idx ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  });
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "#2563eb";
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.stroke();
+
+  /* --- Messpunkte (wie im Schülerexperiment) --- */
+  if (state.showPoints){
+    const n = 10;
+    for (let i = 1; i <= n; i++){
+      const u = xMax * i / n;
+      const cur = c.I(u);
+      if (!isFinite(cur)) continue;
+      ctx.beginPath();
+      ctx.arc(X(u), Y(cur * unitFactor), 4, 0, Math.PI * 2);
+      ctx.fillStyle = "#fff";
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#2563eb";
+      ctx.stroke();
+    }
+  }
+
+  /* --- Tangente = differentieller Widerstand --- */
+  if (state.showTangent){
+    const h = xMax / 2000;
+    const U0 = Math.min(Math.max(state.U, h), xMax - h);
+    const slope = (c.I(U0 + h) - c.I(U0 - h)) / (2 * h);   // A/V
+    const slopeDisp = slope * unitFactor;                   // Anzeigeeinheiten/V
+    const iv = c.I(state.U) * unitFactor;
+    const du = xMax * 0.38;
+    ctx.beginPath();
+    ctx.moveTo(X(state.U - du), Y(iv - slopeDisp * du));
+    ctx.lineTo(X(state.U + du), Y(iv + slopeDisp * du));
+    ctx.setLineDash([7, 5]);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#f59e0b";
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  /* --- Arbeitspunkt + Hilfslinien --- */
+  const Uop = state.U;
+  const Iop = c.I(Uop) * unitFactor;
+
+  ctx.setLineDash([5, 5]);
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = "#dc2626";
+  ctx.beginPath();
+  ctx.moveTo(X(Uop), Y(0));
+  ctx.lineTo(X(Uop), Y(Iop));
+  ctx.lineTo(X(0), Y(Iop));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.beginPath();
+  ctx.arc(X(Uop), Y(Iop), 9, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(220,38,38,0.16)";
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(X(Uop), Y(Iop), 5.5, 0, Math.PI * 2);
+  ctx.fillStyle = "#dc2626";
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#ffffff";
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+/* =========================================================
+   7) Anzeige / Text
+   ========================================================= */
+
+function updateReadout(){
+  const c = compById(state.comp);
+  const U = state.U;
+  const I = Math.max(0, c.I(U) || 0);
+  const R = I > 1e-12 ? U / I : Infinity;
+  const P = U * I;
+
+  el.U.textContent = fmtNum(U) + " V";
+  el.I.textContent = fmtNum(I * unitFactor) + " " + unitName;
+  el.R.textContent = isFinite(R) ? fmtNum(R) + " Ω" : "–";
+  el.P.textContent = P >= 0.1 ? fmtNum(P) + " W" : fmtNum(P * 1000) + " mW";
+
+  uOut.textContent = fmtNum(U) + " V";
+}
+
+function updateHint(){
+  const c = compById(state.comp);
+  const rAt = u => {
+    const i = c.I(u);
+    return i > 1e-12 ? u / i : NaN;
+  };
+  const r1 = rAt(c.umax * 0.25);
+  const r2 = rAt(c.umax * 0.9);
+  let ohmic = true;
+  if (isFinite(r1) && isFinite(r2) && r1 > 0){
+    ohmic = Math.abs(r2 - r1) / r1 < 0.08;
+  }
+  hintEl.className = "hint " + (ohmic ? "ok" : "warn");
+  hintEl.innerHTML = c.hint();
+}
+
+/* =========================================================
+   8) Aufbau / Aktualisierung
+   ========================================================= */
+
+function buildCards(){
+  cardsEl.innerHTML = "";
+  COMPONENTS.forEach(c => {
+    const b = document.createElement("button");
+    b.className = "card" + (c.id === state.comp ? " active" : "");
+    b.dataset.id = c.id;
+    b.innerHTML = `<span class="t">${c.name}</span><span class="s">${c.sub}</span>`;
+    b.addEventListener("click", () => {
+      if (state.comp === c.id) return;
+      state.comp = c.id;
+      state.U = Math.min(state.U, c.umax);
+      buildCards();
+      buildOptions();
+      applySlider();
+      refresh();
+    });
+    cardsEl.appendChild(b);
+  });
+}
+
+function buildOptions(){
+  const c = compById(state.comp);
+  optEl.innerHTML = "";
+
+  if (c.option === "cooling"){
+    const lab = document.createElement("label");
+    lab.className = "switch";
+    lab.innerHTML = `<input type="checkbox" ${state.cooling ? "checked" : ""}>
+                     <span>Wasserbad-Kühlung (Temperatur konstant)</span>`;
+    optEl.appendChild(lab);
+    lab.querySelector("input").addEventListener("change", e => {
+      state.cooling = e.target.checked;
+      refresh();
+    });
+  }
+
+  if (c.option === "light"){
+    const box = document.createElement("div");
+    box.className = "ctrl";
+    box.innerHTML = `<label for="lightRange">Beleuchtungsstärke
+                       <output id="lightOut">${fmtNum(state.light)} lx</output></label>
+                     <input type="range" id="lightRange" min="5" max="1000" step="5" value="${state.light}">`;
+    optEl.appendChild(box);
+    const inp = box.querySelector("input");
+    const out = box.querySelector("output");
+    inp.addEventListener("input", e => {
+      state.light = +e.target.value;
+      out.textContent = fmtNum(state.light) + " lx";
+      refresh();
+    });
+  }
+}
+
+function applySlider(){
+  const c = compById(state.comp);
+  uRange.min = 0;
+  uRange.max = c.umax;
+  uRange.step = c.umax / 200;
+  uRange.value = state.U;
+}
+
+/* Kurve + Anzeige + Zeichnung neu berechnen (nach Parameteränderung) */
+function refresh(){
+  computeCurve();
+  updateReadout();
+  updateHint();
+  draw();
+}
+
+/* =========================================================
+   9) Canvas-Größe / Interaktion
+   ========================================================= */
+
+function resize(){
+  const r = wrap.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  W = Math.max(320, Math.floor(r.width));
+  H = Math.max(300, Math.floor(r.height));
+  canvas.width  = Math.floor(W * dpr);
+  canvas.height = Math.floor(H * dpr);
+  canvas.style.width  = W + "px";
+  canvas.style.height = H + "px";
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  draw();
+}
+
+new ResizeObserver(resize).observe(wrap);
+window.addEventListener("resize", resize);
+
+/* Spannung durch Klicken/Ziehen im Diagramm setzen */
+let dragging = false;
+
+function setUFromPointer(ev){
+  const r = canvas.getBoundingClientRect();
+  const pw = W - PAD.l - PAD.r;
+  if (pw <= 0) return;
+  let u = ((ev.clientX - r.left) - PAD.l) / pw * xMax;
+  u = Math.min(Math.max(u, 0), xMax);
+  const step = xMax / 200;
+  u = Math.round(u / step) * step;
+  state.U = u;
+  uRange.value = u;
+  updateReadout();
+  draw();
+}
+
+canvas.addEventListener("pointerdown", e => {
+  dragging = true;
+  canvas.setPointerCapture(e.pointerId);
+  setUFromPointer(e);
+});
+canvas.addEventListener("pointermove", e => {
+  if (dragging) setUFromPointer(e);
+});
+canvas.addEventListener("pointerup",   e => { dragging = false; });
+canvas.addEventListener("pointercancel", () => { dragging = false; });
+
+/* Regler */
+uRange.addEventListener("input", e => {
+  state.U = +e.target.value;
+  updateReadout();
+  draw();
+});
+
+/* Schalter */
+document.getElementById("tgPoints").addEventListener("change", e => {
+  state.showPoints = e.target.checked;
+  draw();
+});
+document.getElementById("tgTangent").addEventListener("change", e => {
+  state.showTangent = e.target.checked;
+  draw();
+});
+
+/* =========================================================
+   10) Start
+   ========================================================= */
+
+buildCards();
+buildOptions();
+applySlider();
+computeCurve();
+updateReadout();
+updateHint();
+resize();
+</script>
+</body>
+</html>
