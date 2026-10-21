@@ -159,6 +159,7 @@
           <span class="icon-wrap"><span class="check">✓</span></span>
           <span>B-Feldrichtung</span>
         </button>
+        <!-- KORRIGIERTE PILLE: N → S (außerhalb des Magneten) -->
         <div class="magnet-dir-pill" id="magnetPill">
           <svg width="110" height="26" viewBox="0 0 110 26">
             <defs>
@@ -167,10 +168,10 @@
               </marker>
             </defs>
             <text x="0" y="18" font-family="ui-sans-serif,system-ui" font-size="13" font-weight="700" fill="#2563eb">B:</text>
-            <line x1="20" y1="13" x2="60" y2="13" stroke="#2563eb" stroke-width="2.5" marker-end="url(#pillArrow)"/>
-            <text x="66" y="18" font-family="ui-sans-serif,system-ui" font-size="11" font-weight="600" fill="#2563eb">S</text>
-            <text x="86" y="18" font-family="ui-sans-serif,system-ui" font-size="11" font-weight="600" fill="#64748b">→</text>
-            <text x="100" y="18" font-family="ui-sans-serif,system-ui" font-size="11" font-weight="600" fill="#2563eb">N</text>
+            <!-- N ist rechts, S ist links. Der Pfeil zeigt von N nach S (nach links) -->
+            <text x="82" y="18" font-family="ui-sans-serif,system-ui" font-size="11" font-weight="600" fill="#2563eb">N</text>
+            <line x1="76" y1="13" x2="40" y2="13" stroke="#2563eb" stroke-width="2.5" marker-end="url(#pillArrow)"/>
+            <text x="24" y="18" font-family="ui-sans-serif,system-ui" font-size="11" font-weight="600" fill="#2563eb">S</text>
           </svg>
         </div>
       </div>
@@ -274,7 +275,7 @@ const state = {
   coilW: 0, coilH: 0, magW: 0, magH: 0,
   hintArrowAlpha: 1.0,
   scopeW: 0, scopeH: 0,
-  freezeTime: 0     // Zeitpunkt des Einfrierens (für sanfte Badge-Einblendung)
+  freezeTime: 0
 };
 
 const WINDOW = 4;
@@ -344,7 +345,6 @@ function computePhysics(dt){
     state.voltage  = 0;
   } else {
     if (state.isFrozen){
-      // Auftauen
       state.isFrozen = false;
     }
     const product = d * v;
@@ -400,7 +400,6 @@ function drawSim(){
   magnetPill.classList.toggle('visible', state.showMagnetB && !state.isFrozen);
 }
 
-/* Weiche blaue Vignette um die Szene, wenn eingefroren */
 function drawFrostVignette(){
   if (!state.isFrozen) return;
   const W = state.simW, H = state.simH;
@@ -415,7 +414,6 @@ function drawFrostVignette(){
   simX.fillRect(0, 0, W, H);
 }
 
-/* Sauberes Badge über der Spule */
 function drawFrozenBadge(cx, cy, h){
   if (!state.isFrozen) return;
 
@@ -427,7 +425,6 @@ function drawFrozenBadge(cx, cy, h){
   const bx = cx - bw/2;
   const by = cy - h/2 - bh - 16;
 
-  // dezente Verbindungslinie zur Spule
   simX.save();
   simX.strokeStyle = 'rgba(125, 211, 252, 0.45)';
   simX.lineWidth = 1.2;
@@ -438,7 +435,6 @@ function drawFrozenBadge(cx, cy, h){
   simX.stroke();
   simX.restore();
 
-  // Badge
   simX.save();
   const grad = simX.createLinearGradient(0, by, 0, by + bh);
   grad.addColorStop(0, 'rgba(255, 255, 255, 0.98)');
@@ -472,9 +468,6 @@ function roundRect(ctx, x, y, w, h, r){
   ctx.closePath();
 }
 
-/* =========================================================
-   Feldlinien mit optionaler Richtungsanzeige
-   ========================================================= */
 function drawFieldLines(mx, my, w, h){
   const nx = mx + w/2, ny = my;
   const sx = mx - w/2, sy = my;
@@ -539,9 +532,6 @@ function drawBezierArrows(P0, P1, P2, P3, alpha){
   simX.restore();
 }
 
-/* =========================================================
-   Spule
-   ========================================================= */
 function drawCoil(cx, cy, w, h){
   const ry = h/2, rx = 8;
 
@@ -601,7 +591,6 @@ function drawCurrentArrows(cx, cy, w, h){
   simX.lineCap = 'round';
 
   if (frozen){
-    // Eingefroren: solid, gedimmt, mit leichtem Glow
     simX.strokeStyle = 'rgba(220, 38, 38, 0.55)';
     simX.fillStyle   = 'rgba(220, 38, 38, 0.55)';
     simX.shadowColor = 'rgba(220, 38, 38, 0.25)';
@@ -651,7 +640,6 @@ function drawInducedField(cx, cy, w, h){
   simX.lineCap = 'round';
 
   if (frozen){
-    // Solid, gedimmt, mit warmem Glow
     simX.lineWidth = 3.0;
     simX.strokeStyle = 'rgba(234, 88, 12, 0.75)';
     simX.fillStyle   = 'rgba(234, 88, 12, 0.75)';
@@ -744,9 +732,6 @@ function drawDragHint(mx, my, mh){
   simX.restore();
 }
 
-/* =========================================================
-   Oszilloskop
-   ========================================================= */
 function drawScope(){
   const W = state.scopeW, H = state.scopeH;
   scopeX.clearRect(0, 0, W, H);
@@ -845,9 +830,6 @@ function niceCeil(x){
   return n * e;
 }
 
-/* =========================================================
-   Hinweise
-   ========================================================= */
 function updateHint(){
   const dir = state.inducedB_dir;
   const mag = state.inducedB_mag;
@@ -894,9 +876,6 @@ function updateHint(){
   }
 }
 
-/* =========================================================
-   Anzeige
-   ========================================================= */
 function updateReadout(){
   const U = state.voltage;
   const a = Math.abs(U);
@@ -928,9 +907,6 @@ function updateReadout(){
   }
 }
 
-/* =========================================================
-   Update-Loop
-   ========================================================= */
 function update(){
   const now = performance.now();
   const dt  = Math.min((now - state.lastTime) / 1000, 0.05);
@@ -966,9 +942,6 @@ function update(){
   requestAnimationFrame(update);
 }
 
-/* =========================================================
-   Maus/Touch
-   ========================================================= */
 function pointerToLocal(ev){
   const r = simC.getBoundingClientRect();
   return { x: ev.clientX - r.left, y: ev.clientY - r.top };
@@ -1018,17 +991,11 @@ simC.addEventListener('pointerleave', () => {
   if (!state.dragging) simC.style.cursor = 'default';
 });
 
-/* =========================================================
-   B-Feld Ankreuz-Icon
-   ========================================================= */
 fieldToggle.addEventListener('click', () => {
   state.showMagnetB = !state.showMagnetB;
   fieldToggle.setAttribute('aria-pressed', String(state.showMagnetB));
 });
 
-/* =========================================================
-   Steuerelemente
-   ========================================================= */
 const turnsEl = document.getElementById('turns');
 const fieldEl = document.getElementById('field');
 const speedEl = document.getElementById('speed');
@@ -1090,9 +1057,6 @@ resetBtn.addEventListener('click', () => {
   simWrap.classList.remove('frozen');
 });
 
-/* =========================================================
-   Start
-   ========================================================= */
 resize();
 state.magnetX = state.centerX - (state.maxX - state.minX) * 0.32;
 state.prevMagnetX = state.magnetX;
